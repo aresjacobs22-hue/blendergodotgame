@@ -1,0 +1,13 @@
+# Rojo / tooling
+sourcemap.json
+.cache/
+*.rbxlx.lock
+*.rbxl.lock
+
+# Python
+__pycache__/
+*.pyc
+
+# OS / editors
+.DS_Store
+.vscode/

@@ -1,0 +1,120 @@
+{
+  "name": "ACHROMA",
+  "tree": {
+    "$className": "DataModel",
+
+    "ReplicatedStorage": {
+      "$className": "ReplicatedStorage",
+      "Shared": {
+        "$path": "src/ReplicatedStorage/Shared"
+      },
+      "Remotes": {
+        "$className": "Folder",
+        "Ready": { "$className": "RemoteEvent" },
+        "Notify": { "$className": "RemoteEvent" },
+        "Jumpscare": { "$className": "RemoteEvent" },
+        "OpenKeypad": { "$className": "RemoteEvent" },
+        "SubmitCode": { "$className": "RemoteEvent" },
+        "LeaveHiding": { "$className": "RemoteEvent" },
+        "Flashlight": { "$className": "RemoteEvent" },
+        "Battery": { "$className": "RemoteEvent" },
+        "RoundResult": { "$className": "RemoteEvent" },
+        "Apparition": { "$className": "RemoteEvent" },
+        "Escaped": { "$className": "RemoteEvent" }
+      },
+      "GameState": {
+        "$className": "Folder"
+      }
+    },
+
+    "ServerScriptService": {
+      "$className": "ServerScriptService",
+      "Server": {
+        "$path": "src/ServerScriptService/Server"
+      }
+    },
+
+    "StarterPlayer": {
+      "$className": "StarterPlayer",
+      "$properties": {
+        "CameraMode": "LockFirstPerson",
+        "CameraMaxZoomDistance": 0.5,
+        "CameraMinZoomDistance": 0.5,
+        "CharacterWalkSpeed": 10,
+        "CharacterUseJumpPower": true,
+        "CharacterJumpPower": 0,
+        "AutoJumpEnabled": false,
+        "EnableMouseLockOption": false
+      },
+      "StarterPlayerScripts": {
+        "$className": "StarterPlayerScripts",
+        "Client": {
+          "$path": "src/StarterPlayer/StarterPlayerScripts/Client"
+        }
+      }
+    },
+
+    "Players": {
+      "$className": "Players",
+      "$properties": {
+        "CharacterAutoLoads": false
+      }
+    },
+
+    "Workspace": {
+      "$className": "Workspace",
+      "$properties": {
+        "StreamingEnabled": false
+      }
+    },
+
+    "Lighting": {
+      "$className": "Lighting",
+      "$properties": {
+        "Technology": "Future",
+        "Ambient": [0.02, 0.02, 0.02],
+        "OutdoorAmbient": [0, 0, 0],
+        "Brightness": 0,
+        "ClockTime": 0,
+        "EnvironmentDiffuseScale": 0,
+        "EnvironmentSpecularScale": 0.3,
+        "GlobalShadows": true,
+        "FogColor": [0.01, 0.01, 0.01],
+        "FogStart": 5,
+        "FogEnd": 95,
+        "ExposureCompensation": 0.15
+      },
+      "Monochrome": {
+        "$className": "ColorCorrectionEffect",
+        "$properties": {
+          "Saturation": -1,
+          "Contrast": 0.22,
+          "Brightness": 0.01
+        }
+      },
+      "Glow": {
+        "$className": "BloomEffect",
+        "$properties": {
+          "Intensity": 0.7,
+          "Size": 32,
+          "Threshold": 1.4
+        }
+      }
+    },
+
+    "SoundService": {
+      "$className": "SoundService",
+      "$properties": {
+        "AmbientReverb": "StoneCorridor",
+        "RespectFilteringEnabled": true
+      }
+    },
+
+    "StarterGui": {
+      "$className": "StarterGui",
+      "$properties": {
+        "ResetPlayerGuiOnSpawn": false
+      }
+    }
+  }
+}
