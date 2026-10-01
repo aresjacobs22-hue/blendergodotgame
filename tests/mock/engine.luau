@@ -137,6 +137,8 @@ local EVENTS = {
 	InputBegan = true,
 	InputEnded = true,
 	Loaded = true,
+	MouseEnter = true,
+	MouseLeave = true,
 }
 
 ---------------------------------------------------------------------------
@@ -337,10 +339,18 @@ function Methods.FindFirstChildOfClass(self, className: string)
 	return nil
 end
 
-function Methods.FindFirstChildWhichIsA(self, className: string)
+function Methods.FindFirstChildWhichIsA(self, className: string, recursive: boolean?)
 	for _, c in rawget(self, "_children") do
 		if c:IsA(className) then
 			return c
+		end
+	end
+	if recursive then
+		for _, c in rawget(self, "_children") do
+			local found = c:FindFirstChildWhichIsA(className, true)
+			if found then
+				return found
+			end
 		end
 	end
 	return nil
@@ -438,9 +448,13 @@ function Methods.MoveTo(self, target)
 	rawset(self, "_moveTarget", target)
 end
 
-for _, name in { "SetStateEnabled", "Play", "Stop", "SetNetworkOwner", "Disconnect" } do
+for _, name in { "SetStateEnabled", "SetNetworkOwner" } do
 	Methods[name] = function() end
 end
+ClassMethods.Sound = {
+	Play = function() end,
+	Stop = function() end,
+}
 
 -- remotes: routed between the fake server and the single fake client
 Methods.FireServer = function(self, ...)

@@ -14,6 +14,7 @@ local ClientState = {
 	interference = 0, -- 0..1, makes your flashlight stutter
 	sprinting = false,
 	crouching = false,
+	brightness = 0, -- settings: added to the screen brightness
 }
 
 return ClientState

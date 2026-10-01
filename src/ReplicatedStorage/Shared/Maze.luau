@@ -6,28 +6,32 @@
 -- north (+z) and east (+x) edge; its south/west edges belong to the neighbour, so
 -- boundary edges are stored on the virtual cells at x = -1 / z = -1.
 --
--- Edge kinds: "wall", "open", "door" (house door), "doorway" (arch, no door),
--- "hole" (broken wall), "exit" (the locked exit door).
+-- Edge kinds: "wall", "open", "door" (hinged door), "doorway" (arch, no door),
+-- "hole" (broken wall), "exit" (the way out).
+--
+-- Every map has a "hub" (where you wake up) at the south edge with the exit in its
+-- south wall: either the fixed 5x3 house blueprint, or one open hall.
 
 export type Cell = { x: number, z: number }
 export type Locker = { x: number, z: number, side: string, house: boolean }
-export type Writing = { x: number, z: number, side: string, text: string }
+export type Writing = { x: number, z: number, side: string }
 export type Layout = {
 	seed: number,
 	width: number,
 	depth: number,
 	cellSize: number,
 	edges: { [string]: string },
-	rooms: { [string]: string },
-	house: { x0: number, z0: number, w: number, d: number },
-	entrance: Cell,
-	exitCell: Cell,
-	keys: { Cell },
+	rooms: { [string]: string }, -- hub cells -> room name
+	hub: { kind: string, x0: number, z0: number, w: number, d: number },
+	entrance: Cell, -- maze cell just outside the hub's main doorway
+	exitCell: Cell, -- hub cell whose south wall is the exit
+	spots: { Cell }, -- objective items (keys / generators / photos / hearts)
 	batteries: { Cell },
 	lockers: { Locker },
 	lights: { Cell },
 	writings: { Writing },
 	deadEnds: { Cell },
+	roomBlocks: { { Cell } }, -- 2x2 rooms carved into the maze
 	monsterSpawn: Cell,
 	code: string,
 }
@@ -36,13 +40,19 @@ export type MazeConfig = {
 	CellSize: number,
 	Width: number,
 	Depth: number,
-	HouseWidth: number,
-	HouseDepth: number,
+	Hub: string,
+	HubWidth: number,
+	HubDepth: number,
 	DeadEndBraid: number,
 	ExtraOpenings: number,
-	KeyCount: number,
+	Openness: number,
+	Rooms: number,
+	RoomDoors: boolean,
+	SpotCount: number,
 	BatteryCount: number,
-	MazeLockerCount: number,
+	LockerCount: number,
+	LampChance: number,
+	LampSpacing: number,
 	WritingCount: number,
 }
 
@@ -87,27 +97,6 @@ local HOUSE_LOCKERS: { { any } } = {
 	{ 4, 2, "N" }, -- study wardrobe
 }
 
-local WRITINGS = {
-	"IT SEES YOU",
-	"DON'T RUN",
-	"FOUR KEYS\nFOUR NUMBERS",
-	"HIDE",
-	"IT HEARS YOUR FEET",
-	"WHERE DID THE COLOR GO",
-	"I WOKE UP HERE TOO",
-	"TURN OFF YOUR LIGHT",
-	"LISTEN FOR THE CLICKING",
-	"IT WAS ME ALL ALONG",
-	"NOT ALONE",
-	"DON'T LOOK BEHIND YOU",
-	"WAKE UP WAKE UP WAKE UP",
-	"THE DOOR IS A LIE",
-	"IT KNOWS THE LOCKERS",
-	"STAY QUIET",
-	"NO WAY OUT",
-	"5 3 4 3", -- a red herring
-}
-
 function Maze.key(x: number, z: number): string
 	return x .. "," .. z
 end
@@ -143,7 +132,7 @@ function Maze.inBounds(layout: Layout, x: number, z: number): boolean
 	return x >= 0 and x < layout.width and z >= 0 and z < layout.depth
 end
 
-function Maze.isHouse(layout: Layout, x: number, z: number): boolean
+function Maze.isHub(layout: Layout, x: number, z: number): boolean
 	return layout.rooms[Maze.key(x, z)] ~= nil
 end
 
@@ -278,13 +267,16 @@ local function manhattan(a: Cell, b: Cell): number
 end
 
 function Maze.generate(seed: number, cfg: MazeConfig): Layout
-	assert(cfg.HouseWidth == 5 and cfg.HouseDepth == 3, "the house blueprint is 5 x 3 cells")
-	assert(cfg.Width >= 9 and cfg.Depth >= 6, "maze too small for the house")
+	local isHouse = cfg.Hub == "house"
+	local hw = if isHouse then 5 else cfg.HubWidth
+	local hd = if isHouse then 3 else cfg.HubDepth
+	assert(cfg.Width >= hw + 4 and cfg.Depth >= hd + 3, "maze too small for its hub")
 
 	local rng = Maze.makeRng(seed)
 	local W, D = cfg.Width, cfg.Depth
-	local x0 = math.floor((W - cfg.HouseWidth) / 2)
+	local x0 = math.floor((W - hw) / 2)
 	local z0 = 0
+	local mid = math.floor(hw / 2)
 
 	local layout: Layout = {
 		seed = seed,
@@ -293,15 +285,16 @@ function Maze.generate(seed: number, cfg: MazeConfig): Layout
 		cellSize = cfg.CellSize,
 		edges = {},
 		rooms = {},
-		house = { x0 = x0, z0 = z0, w = cfg.HouseWidth, d = cfg.HouseDepth },
-		entrance = { x = x0 + 2, z = z0 + cfg.HouseDepth },
-		exitCell = { x = x0 + 2, z = z0 },
-		keys = {},
+		hub = { kind = cfg.Hub, x0 = x0, z0 = z0, w = hw, d = hd },
+		entrance = { x = x0 + mid, z = z0 + hd },
+		exitCell = { x = x0 + mid, z = z0 },
+		spots = {},
 		batteries = {},
 		lockers = {},
 		lights = {},
 		writings = {},
 		deadEnds = {},
+		roomBlocks = {},
 		monsterSpawn = { x = 0, z = D - 1 },
 		code = "",
 	}
@@ -311,24 +304,38 @@ function Maze.generate(seed: number, cfg: MazeConfig): Layout
 		edges[Maze.edgeKey(x, z, dir)] = kind
 	end
 
-	-- 1. The house: rooms, open floor inside rooms, then doors/holes/exit.
-	for rz = 0, cfg.HouseDepth - 1 do
-		for rx = 0, cfg.HouseWidth - 1 do
-			layout.rooms[Maze.key(x0 + rx, z0 + rz)] = HOUSE_ROOMS[rz + 1][rx + 1]
+	-- 1. The hub.
+	local hubRoom = function(rx: number, rz: number): string
+		if isHouse then
+			return HOUSE_ROOMS[rz + 1][rx + 1]
+		end
+		return "hub"
+	end
+	for rz = 0, hd - 1 do
+		for rx = 0, hw - 1 do
+			layout.rooms[Maze.key(x0 + rx, z0 + rz)] = hubRoom(rx, rz)
 		end
 	end
-	for rz = 0, cfg.HouseDepth - 1 do
-		for rx = 0, cfg.HouseWidth - 1 do
-			local room = HOUSE_ROOMS[rz + 1][rx + 1]
-			if rx + 1 < cfg.HouseWidth and HOUSE_ROOMS[rz + 1][rx + 2] == room then
+	for rz = 0, hd - 1 do
+		for rx = 0, hw - 1 do
+			local room = hubRoom(rx, rz)
+			if rx + 1 < hw and hubRoom(rx + 1, rz) == room then
 				setEdge(x0 + rx, z0 + rz, "E", "open")
 			end
-			if rz + 1 < cfg.HouseDepth and HOUSE_ROOMS[rz + 2][rx + 1] == room then
+			if rz + 1 < hd and hubRoom(rx, rz + 1) == room then
 				setEdge(x0 + rx, z0 + rz, "N", "open")
 			end
 		end
 	end
-	for _, link in HOUSE_LINKS do
+	local links: { { any } } = if isHouse
+		then HOUSE_LINKS
+		else {
+			{ mid, hd - 1, "N", "doorway" }, -- main way into the maze
+			{ 0, 0, "W", "doorway" },
+			{ hw - 1, hd - 1, "E", "doorway" },
+			{ mid, 0, "S", "exit" },
+		}
+	for _, link in links do
 		setEdge(x0 + (link[1] :: number), z0 + (link[2] :: number), link[3] :: string, link[4] :: string)
 	end
 
@@ -336,7 +343,7 @@ function Maze.generate(seed: number, cfg: MazeConfig): Layout
 		return Maze.inBounds(layout, x, z) and layout.rooms[Maze.key(x, z)] == nil
 	end
 
-	-- 2. Carve the maze with a randomized depth-first search from the house entrance.
+	-- 2. Carve the maze with a randomized depth-first search from the hub entrance.
 	local visited: { [string]: boolean } = {}
 	local stack: { Cell } = { layout.entrance }
 	visited[Maze.key(layout.entrance.x, layout.entrance.z)] = true
@@ -383,8 +390,8 @@ function Maze.generate(seed: number, cfg: MazeConfig): Layout
 		return true
 	end
 
-	-- 3. Braid: knock through some dead ends and a few random walls so there are loops
-	--    to run around. A pure tree maze is a death trap with a monster in it.
+	-- 3. Braid: knock through dead ends and random walls so there are loops to run
+	--    around. A pure tree maze is a death trap with a monster in it.
 	for _, c in mazeCells do
 		if Maze.passableCount(layout, c.x, c.z) == 1 and rng() < cfg.DeadEndBraid then
 			openRandomWall(c)
@@ -394,7 +401,70 @@ function Maze.generate(seed: number, cfg: MazeConfig): Layout
 		openRandomWall(mazeCells[rng(1, #mazeCells)])
 	end
 
-	-- 4. Place things.
+	-- 4. Rooms: open 2x2 blocks (optionally with doors on every way in).
+	local inRoom: { [string]: boolean } = {}
+	local tries = 0
+	while #layout.roomBlocks < cfg.Rooms and tries < 200 do
+		tries += 1
+		local bx = rng(0, W - 2)
+		local bz = rng(0, D - 2)
+		local cells = { { x = bx, z = bz }, { x = bx + 1, z = bz }, { x = bx, z = bz + 1 }, { x = bx + 1, z = bz + 1 } }
+		local ok = true
+		for _, c in cells do
+			if not isMaze(c.x, c.z) or inRoom[Maze.key(c.x, c.z)] or manhattan(c, layout.entrance) <= 1 then
+				ok = false
+				break
+			end
+		end
+		-- keep rooms from touching each other
+		if ok then
+			for _, block in layout.roomBlocks do
+				for _, a in block do
+					for _, c in cells do
+						if manhattan(a, c) <= 1 then
+							ok = false
+						end
+					end
+				end
+			end
+		end
+		if ok then
+			setEdge(bx, bz, "E", "open")
+			setEdge(bx, bz + 1, "E", "open")
+			setEdge(bx, bz, "N", "open")
+			setEdge(bx + 1, bz, "N", "open")
+			for _, c in cells do
+				inRoom[Maze.key(c.x, c.z)] = true
+			end
+			table.insert(layout.roomBlocks, cells)
+		end
+	end
+	if cfg.RoomDoors then
+		for _, block in layout.roomBlocks do
+			for _, c in block do
+				for _, d in DIRS do
+					local nx, nz = c.x + DX[d], c.z + DZ[d]
+					if isMaze(nx, nz) and not inRoom[Maze.key(nx, nz)] and Maze.getEdge(layout, c.x, c.z, d) == "open" then
+						setEdge(c.x, c.z, d, "door")
+					end
+				end
+			end
+		end
+	end
+
+	-- 5. Open halls: knock down a share of the remaining inner walls.
+	if cfg.Openness > 0 then
+		for _, c in mazeCells do
+			for _, d in { "N", "E" } do
+				local nx, nz = c.x + DX[d], c.z + DZ[d]
+				if isMaze(nx, nz) and Maze.getEdge(layout, c.x, c.z, d) == "wall" and rng() < cfg.Openness then
+					setEdge(c.x, c.z, d, "open")
+				end
+			end
+		end
+	end
+
+	-- 6. Place things.
 	local dist = Maze.distances(layout, layout.entrance)
 	local used: { [string]: boolean } = {}
 
@@ -405,18 +475,23 @@ function Maze.generate(seed: number, cfg: MazeConfig): Layout
 		end
 	end
 	layout.deadEnds = deadEnds
+	local maxDist = 0
+	for _, d in dist do
+		maxDist = math.max(maxDist, d)
+	end
 
-	-- Keys: far from the house and spread apart (greedy farthest-point sampling).
-	while #layout.keys < cfg.KeyCount do
+	-- Objective spots: far from the hub and spread apart (farthest-point sampling).
+	-- Dead ends first; open maps without many dead ends fall back to any far cell.
+	local function pickSpot(candidates: { Cell }, minDist: number): Cell?
 		local best: Cell? = nil
 		local bestScore = -math.huge
-		for _, c in deadEnds do
+		for _, c in candidates do
 			local k = Maze.key(c.x, c.z)
-			if not used[k] and (dist[k] or 0) >= 5 then
+			if not used[k] and (dist[k] or 0) >= minDist then
 				local sep = 0
-				if #layout.keys > 0 then
+				if #layout.spots > 0 then
 					sep = math.huge
-					for _, other in layout.keys do
+					for _, other in layout.spots do
 						sep = math.min(sep, manhattan(c, other))
 					end
 				end
@@ -426,18 +501,17 @@ function Maze.generate(seed: number, cfg: MazeConfig): Layout
 				end
 			end
 		end
-		if best == nil then
-			-- not enough dead ends: fall back to the farthest free maze cell
-			for _, c in mazeCells do
-				local k = Maze.key(c.x, c.z)
-				if not used[k] and (dist[k] or 0) > bestScore then
-					best, bestScore = c, dist[k] or 0
-				end
-			end
+		return best
+	end
+	while #layout.spots < cfg.SpotCount do
+		local chosen = pickSpot(deadEnds, math.min(5, math.floor(maxDist / 2)))
+			or pickSpot(mazeCells, math.min(3, math.floor(maxDist / 3)))
+			or pickSpot(mazeCells, 0)
+		if not chosen then
+			break
 		end
-		local chosen = best :: Cell
 		used[Maze.key(chosen.x, chosen.z)] = true
-		table.insert(layout.keys, chosen)
+		table.insert(layout.spots, chosen)
 	end
 
 	-- Batteries: leftover dead ends first, then random corridor cells.
@@ -461,16 +535,18 @@ function Maze.generate(seed: number, cfg: MazeConfig): Layout
 
 	-- Hiding lockers: fixed ones in the house, spread-out ones along maze corridors.
 	local lockerSides: { [string]: boolean } = {}
-	for _, l in HOUSE_LOCKERS do
-		local x, z, side = x0 + (l[1] :: number), z0 + (l[2] :: number), l[3] :: string
-		table.insert(layout.lockers, { x = x, z = z, side = side, house = true })
-		lockerSides[Maze.key(x, z) .. side] = true
+	if isHouse then
+		for _, l in HOUSE_LOCKERS do
+			local x, z, side = x0 + (l[1] :: number), z0 + (l[2] :: number), l[3] :: string
+			table.insert(layout.lockers, { x = x, z = z, side = side, house = true })
+			lockerSides[Maze.key(x, z) .. side] = true
+		end
 	end
 	local corridor = table.clone(mazeCells)
 	shuffle(corridor, rng)
 	local mazeLockers: { Cell } = {}
 	for _, c in corridor do
-		if #mazeLockers >= cfg.MazeLockerCount then
+		if #mazeLockers >= cfg.LockerCount then
 			break
 		end
 		local k = Maze.key(c.x, c.z)
@@ -500,29 +576,27 @@ function Maze.generate(seed: number, cfg: MazeConfig): Layout
 		end
 	end
 
-	-- Ceiling lamps in the maze: sparse, never two in neighbouring cells.
+	-- Lamps: sparse, spaced apart.
 	local lampOrder = table.clone(mazeCells)
 	shuffle(lampOrder, rng)
 	for _, c in lampOrder do
 		local spaced = true
 		for _, other in layout.lights do
-			if manhattan(c, other) < 3 then
+			if manhattan(c, other) < cfg.LampSpacing then
 				spaced = false
 				break
 			end
 		end
-		if spaced and rng() < 0.6 then
+		if spaced and rng() < cfg.LampChance then
 			table.insert(layout.lights, c)
 		end
 	end
 
-	-- Scrawled writing on maze walls.
-	local texts = table.clone(WRITINGS)
-	shuffle(texts, rng)
+	-- Walls to scrawl writing on (the theme decides what it says).
 	local wallOrder = table.clone(mazeCells)
 	shuffle(wallOrder, rng)
 	for _, c in wallOrder do
-		if #layout.writings >= math.min(cfg.WritingCount, #texts) then
+		if #layout.writings >= cfg.WritingCount then
 			break
 		end
 		local sides = {}
@@ -532,16 +606,11 @@ function Maze.generate(seed: number, cfg: MazeConfig): Layout
 			end
 		end
 		if #sides > 0 then
-			table.insert(layout.writings, {
-				x = c.x,
-				z = c.z,
-				side = sides[rng(1, #sides)],
-				text = texts[#layout.writings + 1],
-			})
+			table.insert(layout.writings, { x = c.x, z = c.z, side = sides[rng(1, #sides)] })
 		end
 	end
 
-	-- The monster starts as far from the house as possible.
+	-- The monster starts as far from the hub as possible.
 	local farthest = layout.entrance
 	local farDist = -1
 	for _, c in mazeCells do
@@ -552,14 +621,15 @@ function Maze.generate(seed: number, cfg: MazeConfig): Layout
 	end
 	layout.monsterSpawn = farthest
 
-	-- The exit code (never all the same digit).
+	-- An exit code with one digit per objective spot (never all the same digit).
+	local digits = math.max(cfg.SpotCount, 1)
 	repeat
-		local digits = {}
-		for i = 1, cfg.KeyCount do
-			digits[i] = tostring(rng(0, 9))
+		local code = {}
+		for i = 1, digits do
+			code[i] = tostring(rng(0, 9))
 		end
-		layout.code = table.concat(digits)
-	until not string.match(layout.code, "^(%d)%1+$")
+		layout.code = table.concat(code)
+	until digits == 1 or not string.match(layout.code, "^(%d)%1+$")
 
 	return layout
 end

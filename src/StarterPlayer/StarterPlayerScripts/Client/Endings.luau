@@ -2,8 +2,10 @@
 -- How a night ends for you: the jumpscare when it catches you, or the white-out
 -- when you make it through the exit.
 
+local Lighting = game:GetService("Lighting")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
 
 local Audio = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Audio"))
 local ClientState = require(script.Parent.ClientState)
@@ -24,7 +26,16 @@ local DEATH_LINES = {
 	"The grey takes another one.",
 }
 
+local KIND_LINES: { [string]: { string } } = {
+	Crawler = { "It was under the bed the whole time.", "You never looked down." },
+	Listener = { "It heard every step.", "You should have stayed quiet." },
+	Statue = { "You blinked.", "You looked away. Just for a second." },
+	Amalgam = { "It is all of them. Now it's you too.", "There is no morning here." },
+}
+
 local function jumpscare(monster: Model)
+	local kind = monster:GetAttribute("Kind")
+	local lines = if typeof(kind) == "string" and KIND_LINES[kind] then KIND_LINES[kind] else DEATH_LINES
 	ClientState.jumpscaring = true
 	ClientState.roundStatus = "caught"
 	local camera = workspace.CurrentCamera
@@ -52,7 +63,7 @@ local function jumpscare(monster: Model)
 		if e > 1.7 then
 			RunService:UnbindFromRenderStep("AchromaJumpscare")
 			Hud.fade(0, 0)
-			Hud.showBig("IT FOUND YOU", DEATH_LINES[math.random(1, #DEATH_LINES)])
+			Hud.showBig("IT FOUND YOU", lines[math.random(1, #lines)])
 			task.delay(3, function()
 				Hud.hideBig()
 				camera.FieldOfView = 70
@@ -65,17 +76,32 @@ local function jumpscare(monster: Model)
 	end)
 end
 
-local function escaped()
+local ENDINGS: { [string]: { title: string, sub: string } } = {
+	escaped = { title = "YOU ESCAPED", sub = "For a second, you could swear you saw color again." },
+	survived = { title = "6:00 AM", sub = "The sun comes up. It's still grey. But you're still here." },
+	collected = { title = "YOU FOUND THEM ALL", sub = "The last photograph shows a door that wasn't there before. You're already through it." },
+	final = { title = "THE COLOR IS BACK", sub = "You woke up. For real this time.\n\nACHROMA  ·  thank you for playing" },
+}
+
+local function escaped(kind: string?)
+	local ending = ENDINGS[kind or "escaped"] or ENDINGS.escaped
 	ClientState.roundStatus = "escaped"
 	ClientState.jumpscaring = true -- freezes input-driven effects for the sequence
 	Hud.setHudVisible(false)
-	Audio.play("Escape", nil, 1.2)
-	Hud.whiteout(0, 2.5)
+	Audio.play(if kind == "survived" then "ClockChime" else "Escape", nil, 1.2)
+	Hud.whiteout(0, if kind == "final" then 5 else 2.5)
+	if kind == "final" then
+		-- the color actually comes back
+		local grade = Lighting:FindFirstChild("Monochrome")
+		if grade and grade:IsA("ColorCorrectionEffect") then
+			TweenService:Create(grade, TweenInfo.new(6, Enum.EasingStyle.Sine), { Saturation = 0.45, TintColor = Color3.new(1, 1, 1), Contrast = 0.1 }):Play()
+		end
+	end
 	task.delay(2, function()
 		Hud.setBigColor(Color3.fromRGB(25, 25, 25))
-		Hud.showBig("YOU ESCAPED", "For a second, you could swear you saw color again.")
+		Hud.showBig(ending.title, ending.sub)
 	end)
-	task.delay(6.5, function()
+	task.delay(if kind == "final" then 9 else 6.5, function()
 		Hud.hideBig(true)
 		Hud.setBigColor(Color3.fromRGB(205, 205, 200))
 		Hud.whiteout(1, 1.5)
@@ -88,7 +114,9 @@ function Endings.init()
 	Remotes.Jumpscare.OnClientEvent:Connect(function(monster: Model)
 		jumpscare(monster)
 	end)
-	Remotes.Escaped.OnClientEvent:Connect(escaped)
+	Remotes.Escaped.OnClientEvent:Connect(function(kind: string?)
+		escaped(kind)
+	end)
 end
 
 return Endings

@@ -1,21 +1,9 @@
 --!strict
--- Every tuning knob in the game. Change a number, press Play.
+-- General tuning knobs. Each night's map, monster and objective live in Nights.luau.
 
 local Config = {
 	Maze = {
-		CellSize = 12, -- studs per maze cell (corridors are CellSize - WallThickness wide)
-		WallHeight = 13,
 		WallThickness = 1,
-		Width = 13, -- cells
-		Depth = 13,
-		HouseWidth = 5, -- the house blueprint is fixed at 5 x 3 cells
-		HouseDepth = 3,
-		DeadEndBraid = 0.35, -- chance to knock through a dead end (more loops = more ways to escape)
-		ExtraOpenings = 6,
-		KeyCount = 4,
-		BatteryCount = 5,
-		MazeLockerCount = 9,
-		WritingCount = 12,
 	},
 
 	Player = {
@@ -31,13 +19,14 @@ local Config = {
 		FieldOfView = 70,
 	},
 
+	-- Default monster behaviour. Every night overrides some of these (see Nights.luau).
 	Monster = {
 		WanderSpeed = 8,
 		InvestigateSpeed = 12,
 		SearchSpeed = 10,
 		ChaseSpeed = 15.5,
-		ChaseSpeedPerKey = 0.55, -- it gets faster with every key you take
-		FrenzyBonus = 2, -- extra speed once the exit is open
+		ChaseSpeedPerProgress = 0.55, -- it gets faster with every key/generator/heart/hour
+		FrenzyBonus = 2, -- extra speed while it's in a frenzy
 		SightRange = 60,
 		SightRangeFlashlight = 85, -- your light gives you away
 		SneakSightMultiplier = 0.65, -- crouch-walking makes you harder to spot
@@ -48,17 +37,33 @@ local Config = {
 		SearchTime = 10,
 		HearSprint = 72, -- path distance (studs) a sprinting player can be heard from
 		HearWalk = 26,
-		AwakenAfter = 75, -- seconds; it also wakes the moment the first key is taken
+		HearChaseRange = 0, -- if > 0, hearing someone this close starts a chase (blind hunters)
+		AwakenAfter = 75, -- seconds before it wakes on its own
+		Apparitions = true, -- shows itself at the end of corridors while dormant
 		ApparitionMin = 22,
 		ApparitionMax = 45,
 		FrenzyTime = 25,
 		HuntingInstinct = 45, -- seconds without seeing/hearing anyone before it homes in on you
+		LungeRange = 0, -- if > 0, it bursts forward when this close during a chase
+		LungeBonus = 0,
+		SenseHidden = 0, -- if > 0, it can smell players hiding within this many studs
+		Statue = false, -- only moves while nobody is looking at it
+		StatueSpeed = 30,
+		StatueSpeedPerProgress = 1.5,
+		BlinkMin = 14, -- statue nights: everyone "blinks" (lights out) every so often
+		BlinkMax = 24,
+		BlinkTime = 0.45,
 	},
 
 	Round = {
-		FirstIntermission = 3,
-		Intermission = 12,
-		ResultsTime = 7,
+		FirstIntermission = 4,
+		Intermission = 6,
+		ResultsTime = 9,
+	},
+
+	Progress = {
+		DataStoreName = "AchromaProgress_v1",
+		UnlockAllInStudio = true, -- in Studio every night is unlocked so you can test them
 	},
 }
 

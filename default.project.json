@@ -20,7 +20,8 @@
         "Battery": { "$className": "RemoteEvent" },
         "RoundResult": { "$className": "RemoteEvent" },
         "Apparition": { "$className": "RemoteEvent" },
-        "Escaped": { "$className": "RemoteEvent" }
+        "Escaped": { "$className": "RemoteEvent" },
+        "Look": { "$className": "RemoteEvent" }
       },
       "GameState": {
         "$className": "Folder"
@@ -107,6 +108,12 @@
       "$properties": {
         "AmbientReverb": "StoneCorridor",
         "RespectFilteringEnabled": true
+      },
+      "AchromaMaster": {
+        "$className": "SoundGroup",
+        "$properties": {
+          "Volume": 1
+        }
       }
     },
 

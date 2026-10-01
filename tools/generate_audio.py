@@ -651,6 +651,222 @@ def snd_music_box():
     return normalize(fade(out + hiss, 0.01, 1.5), 0.7)
 
 
+
+# ---- night 2-5 monsters, objectives, menu -----------------------------------
+
+def snd_crawler_loop():
+    dur = 4.0
+    n = samples(dur)
+    t = secs(n)
+    out = np.zeros(n)
+    pos = 0.0
+    while pos < dur:
+        cn = samples(0.01)
+        c = np.sin(2 * np.pi * rng.uniform(1500, 4200) * secs(cn)) * env_exp(cn, 0.0018, attack=0.0001)
+        place_wrapped(out, c * rng.uniform(0.3, 1.0), samples(pos))
+        pos += rng.uniform(0.012, 0.05)
+    hiss = filt(noise(n), lo=2500, hi=7000, circular=True)
+    hiss = hiss / np.max(np.abs(hiss)) * (0.5 + 0.5 * np.sin(2 * np.pi * 2 * t / dur)) ** 2 * 0.3
+    low = filt(noise(n), lo=80, hi=300, circular=True)
+    out = normalize(out) + hiss + low / np.max(np.abs(low)) * 0.25
+    return normalize(out, 0.75)
+
+
+def snd_listener_loop():
+    dur = 5.0
+    n = samples(dur)
+    t = secs(n)
+    clicks = np.zeros(n)
+    for _ in range(10):
+        at = rng.uniform(0, dur)
+        for j in range(int(rng.integers(3, 7))):
+            cn = samples(0.02)
+            c = filt(noise(cn), lo=900, hi=3000) * env_exp(cn, 0.004, attack=0.0002)
+            place_wrapped(clicks, c, samples(at + j * 0.045))
+    breath_env = np.clip(np.sin(2 * np.pi * t / dur), 0, 1) ** 1.2
+    rasp = filt(noise(n), lo=200, hi=1600, peaks=((500, 3, 1), (1100, 4, 0.7)), circular=True) * breath_env
+    am = 0.6 + 0.4 * np.sin(2 * np.pi * round(30 * dur) / dur * t)
+    out = normalize(clicks) * 0.8 + normalize(rasp * am) * 0.6
+    return normalize(out, 0.75)
+
+
+def snd_amalgam_loop():
+    dur = 6.0
+    n = samples(dur)
+    t = secs(n)
+    out = np.zeros(n)
+    for base, amt in [(38, 1.0), (61, 0.7), (93, 0.5)]:
+        wob = 5 * np.sin(2 * np.pi * int(rng.integers(1, 3)) * t / dur + rng.uniform(0, 6)) + 3 * smooth_noise(n, 5, circular=True)
+        f0 = base + wob
+        total = np.sum(f0) / SR
+        f0 = f0 + (round(total) - total) / dur
+        v = saw(osc_phase(f0))
+        fry = (0.5 + 0.5 * np.sin(2 * np.pi * round(rng.uniform(18, 30) * dur) / dur * t)) ** 3
+        v = filt(v * (0.3 + 0.7 * fry), lo=40, hi=1400, peaks=((300, 3, 1), (650, 4, 0.7)), circular=True)
+        out += normalize(v) * amt
+    return normalize(drive(normalize(out), 2.8), 0.85)
+
+
+def snd_crawler_screech():
+    s = scream_voice(1.8, 900, 2200, 700, harsh=1.0, seed_shift=0.4)
+    out = reverb(s, decay=1.0, mix=0.2, damp=7000)
+    return normalize(out, 0.95)
+
+
+def snd_listener_shriek():
+    a = scream_voice(2.4, 1400, 3200, 900, harsh=1.0, seed_shift=1.1)
+    b = scream_voice(2.4, 1000, 2600, 700, harsh=0.7, seed_shift=2.2) * 0.6
+    out = reverb(a + b, decay=2.0, mix=0.35, damp=7000)
+    return normalize(drive(normalize(out), 1.5), 0.95)
+
+
+def snd_amalgam_roar():
+    dur = 3.6
+    voices = [scream_voice(dur, p0, p1, p2, harsh=h, seed_shift=sh) for (p0, p1, p2, h, sh) in [
+        (120, 260, 90, 0.6, 0.1), (200, 420, 150, 0.8, 1.3), (380, 820, 260, 1.0, 2.7)]]
+    n = len(voices[0])
+    t = secs(n)
+    sub = np.sin(osc_phase(np.linspace(55, 32, n))) * np.exp(-t / 1.5)
+    out = voices[0] + voices[1] * 0.8 + voices[2] * 0.6 + sub * 0.8
+    out = reverb(out, decay=2.4, mix=0.3, damp=3000)
+    return normalize(drive(normalize(out), 2.2), 0.97)
+
+
+def snd_statue_grind():
+    dur = 1.6
+    n = samples(dur)
+    t = secs(n)
+    slip = 0.5 + 0.5 * np.sign(np.sin(osc_phase(18 + 10 * smooth_noise(n, 3))))
+    out = filt(noise(n) * (0.4 + 0.6 * slip), lo=60, hi=1200, peaks=((140, 3, 1.0), (380, 4, 0.7), (900, 5, 0.4)))
+    out *= np.minimum(1, t / 0.05) * np.minimum(1, (dur - t) / 0.4)
+    out = reverb(out, decay=1.2, mix=0.3, damp=2000)
+    return normalize(drive(normalize(out), 1.8), 0.9)
+
+
+def snd_clock_chime():
+    hit = metal_hit(196, [0.5, 1.0, 1.19, 1.5, 2.0, 2.51, 3.0], 4.5, 2.6, detune=0.003)
+    return normalize(reverb(hit, decay=3.0, mix=0.4, damp=4000), 0.85)
+
+
+def snd_generator_start():
+    dur = 3.2
+    n = samples(dur)
+    t = secs(n)
+    crank = np.zeros(n)
+    for at in (0.0, 0.35, 0.7):
+        place(crank, thud(0.3, 120, 60, 0.06, click=0.8) * 0.8, samples(at))
+    rate = np.clip((t - 1.0) / 1.2, 0, 1)
+    pulses = (np.sin(osc_phase(18 + 32 * rate)) > 0.6).astype(float)
+    engine = filt(pulses + noise(n) * 0.1, lo=60, hi=900, peaks=((120, 3, 1), (240, 4, 0.6))) * np.clip((t - 1.0) / 0.3, 0, 1)
+    out = (crank + normalize(engine) * 0.9) * np.minimum(1, (dur - t) / 0.2)
+    return normalize(drive(normalize(out), 1.6), 0.9)
+
+
+def snd_generator_loop():
+    dur = 2.0
+    n = samples(dur)
+    t = secs(n)
+    pulses = (np.sin(2 * np.pi * round(50 * dur) / dur * t) > 0.5).astype(float) - 0.3
+    hum = sum(np.sin(2 * np.pi * round(h * 60 * dur) / dur * t) / h for h in range(1, 6))
+    out = filt(pulses * 0.7 + hum * 0.3 + noise(n) * 0.05, lo=50, hi=1500, circular=True)
+    return normalize(out, 0.6)
+
+
+def snd_power_up():
+    dur = 2.2
+    n = samples(dur)
+    t = secs(n)
+    sweep = np.sin(osc_phase(60 + 600 * (t / dur) ** 2)) * np.minimum(1, t / 0.3)
+    buzz = np.sign(np.sin(2 * np.pi * 120 * t)) * 0.2 * np.clip((t - 0.5) / 1.2, 0, 1)
+    thunk = np.zeros(n)
+    place(thunk, thud(0.5, 90, 40, 0.15, click=1.0), samples(1.7))
+    out = (sweep * 0.6 + buzz) * np.clip((1.75 - t) * 8, 0, 1) + thunk
+    return normalize(reverb(out, decay=1.5, mix=0.3), 0.85)
+
+
+def snd_page_pickup():
+    n = samples(0.9)
+    t = secs(n)
+    rustle = filt(noise(n), lo=1500, hi=9000) * (smooth_noise(n, 25) > 0).astype(float) * np.exp(-t / 0.3)
+    whisper = snd_stinger_whisper()[: samples(1.6)] * 0.5
+    out = np.zeros(samples(2.0))
+    place(out, rustle, 0)
+    place(out, whisper, samples(0.3))
+    return normalize(out, 0.75)
+
+
+def snd_heart_pulse_loop():
+    n = samples(1.6)
+    out = np.zeros(n)
+    place(out, thud(0.5, 55, 30, 0.12, click=0.25), 0)
+    place(out, thud(0.45, 48, 28, 0.1, click=0.15) * 0.7, samples(0.28))
+    return normalize(filt(out, hi=300), 0.9)
+
+
+def snd_heart_shatter():
+    out = np.zeros(samples(3.0))
+    for _ in range(40):
+        cn = samples(rng.uniform(0.05, 0.3))
+        g = np.sin(2 * np.pi * rng.uniform(2000, 7000) * secs(cn)) * env_exp(cn, rng.uniform(0.02, 0.1))
+        place(out, g * rng.uniform(0.2, 0.6), samples(rng.uniform(0, 0.6)))
+    place(out, thud(1.2, 70, 25, 0.4, click=1.0, crack=1.0) * 1.3, 0)
+    bn = samples(0.4)
+    place(out, filt(noise(bn), lo=500) * env_exp(bn, 0.08) * 0.8, 0)
+    out = reverb(out, decay=2.5, mix=0.4, damp=6000)
+    return normalize(drive(normalize(out), 1.5), 0.95)
+
+
+def snd_alarm_beep():
+    out = np.zeros(samples(1.4))
+    for f, at in ((880, 0.0), (660, 0.35)):
+        bn = samples(0.3)
+        tt = secs(bn)
+        b = (np.sin(2 * np.pi * f * tt) + 0.3 * np.sign(np.sin(2 * np.pi * f * tt))) * np.minimum(1, tt / 0.01) * np.minimum(1, (0.3 - tt) / 0.03)
+        place(out, b, samples(at))
+    out = reverb(filt(out, lo=300, hi=4000), decay=1.8, mix=0.5, damp=3000)
+    return normalize(out, 0.7)
+
+
+def snd_drip():
+    n = samples(0.05)
+    blip = np.sin(osc_phase(np.linspace(900, 2400, n))) * env_exp(n, 0.012)
+    return normalize(reverb(blip, decay=1.5, mix=0.55, damp=5000), 0.7)
+
+
+def snd_night_intro():
+    dur = 3.5
+    n = samples(dur)
+    t = secs(n)
+    swell = filt(noise(n), lo=100, hi=3000) * (t / dur) ** 3 * 0.6
+    drone = (np.sin(2 * np.pi * 55 * t) * 0.3 + np.sin(2 * np.pi * 58.3 * t) * 0.25) * (t / dur) ** 2
+    out = (swell + drone) * np.clip((2.95 - t) * 20, 0, 1)
+    boom = np.zeros(n)
+    place(boom, thud(1.8, 60, 22, 0.6, click=1.0, crack=0.5) * 1.3, samples(2.9))
+    out = reverb(out + boom, decay=3.0, mix=0.35, damp=3000)
+    return normalize(out, 0.92)
+
+
+def snd_menu_hover():
+    n = samples(0.07)
+    t = secs(n)
+    out = np.sin(2 * np.pi * 1200 * t) * env_exp(n, 0.015) + filt(noise(n), lo=3000) * env_exp(n, 0.004) * 0.3
+    return normalize(fade(out), 0.4)
+
+
+def snd_menu_select():
+    full = np.zeros(samples(1.3))
+    place(full, thud(0.5, 110, 50, 0.08, click=0.6), 0)
+    place(full, metal_hit(330, [1.0, 2.0, 3.01], 1.2, 0.5) * 0.3, samples(0.02))
+    return normalize(reverb(full, decay=1.4, mix=0.3), 0.7)
+
+
+def snd_blink():
+    n = samples(0.4)
+    t = secs(n)
+    out = thud(0.4, 70, 40, 0.07, click=0.2) + filt(noise(n), lo=200, hi=1500) * np.exp(-t / 0.1) * 0.3
+    return normalize(out, 0.8)
+
+
 # ----------------------------------------------------------------------------
 # Atlas + output
 # ----------------------------------------------------------------------------
@@ -683,6 +899,26 @@ SFX = [
     ("StaticBurst", snd_static_burst, False),
     ("LightBuzzLoop", snd_light_buzz_loop, True),
     ("Escape", snd_escape, False),
+    ("CrawlerLoop", snd_crawler_loop, True),
+    ("ListenerLoop", snd_listener_loop, True),
+    ("AmalgamLoop", snd_amalgam_loop, True),
+    ("CrawlerScreech", snd_crawler_screech, False),
+    ("ListenerShriek", snd_listener_shriek, False),
+    ("AmalgamRoar", snd_amalgam_roar, False),
+    ("StatueGrind", snd_statue_grind, False),
+    ("ClockChime", snd_clock_chime, False),
+    ("GeneratorStart", snd_generator_start, False),
+    ("GeneratorLoop", snd_generator_loop, True),
+    ("PowerUp", snd_power_up, False),
+    ("PagePickup", snd_page_pickup, False),
+    ("HeartPulseLoop", snd_heart_pulse_loop, True),
+    ("HeartShatter", snd_heart_shatter, False),
+    ("AlarmBeep", snd_alarm_beep, False),
+    ("Drip", snd_drip, False),
+    ("NightIntro", snd_night_intro, False),
+    ("MenuHover", snd_menu_hover, False),
+    ("MenuSelect", snd_menu_select, False),
+    ("Blink", snd_blink, False),
 ]
 
 GAP = 0.35  # silence between atlas entries so slices never bleed

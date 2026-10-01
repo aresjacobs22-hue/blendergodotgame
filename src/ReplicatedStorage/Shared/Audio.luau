@@ -20,6 +20,12 @@ local function warnOnce()
 	end
 end
 
+-- Every sound goes through this group so the menu's volume setting affects them.
+function Audio.group(): SoundGroup?
+	local group = SoundService:FindFirstChild("AchromaMaster")
+	return if group and group:IsA("SoundGroup") then group else nil
+end
+
 function Audio.isConfigured(): boolean
 	return SoundIds.SFX > 0
 end
@@ -51,6 +57,7 @@ function Audio.create(name: string, parent: Instance?, volume: number?, speed: n
 	end
 	sound.Volume = volume or 0.6
 	sound.PlaybackSpeed = speed or 1
+	sound.SoundGroup = Audio.group()
 	sound.Parent = parent or SoundService
 	return sound
 end
@@ -98,6 +105,7 @@ function Audio.track(which: string, parent: Instance?, volume: number?): Sound?
 	sound.SoundId = "rbxassetid://" .. id
 	sound.Looped = true
 	sound.Volume = volume or 0.5
+	sound.SoundGroup = Audio.group()
 	sound.Parent = parent or SoundService
 	return sound
 end

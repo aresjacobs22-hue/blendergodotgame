@@ -1,7 +1,8 @@
 -- End-to-end: boots the real server Script and client LocalScript together in the
--- mocked engine and plays two full rounds as a fake player, driving the actual UI:
---   round 1: wake up -> flashlight -> sprint -> 4 keys -> keypad -> escape
---   round 2: hide/leave a locker -> get caught -> jumpscare
+-- mocked engine and plays the whole game as a fake player, through the actual UI:
+--   main menu -> night 1 (survive, hiding in a locker) -> night 2 unlocked
+--   -> keys + on-screen keypad -> generators -> photographs -> hearts (the end)
+--   -> back to night 1 to get caught by the Hollow (jumpscare).
 -- Run with:  lune run tests/e2e.spec.luau
 local roblox = require("@lune/roblox")
 local Engine = require("./mock/engine")
@@ -10,7 +11,7 @@ local Vector3 = roblox.Vector3
 local CFrame = roblox.CFrame
 local Enum = roblox.Enum
 
-local REMOTES = { "Ready", "Notify", "Jumpscare", "OpenKeypad", "SubmitCode", "LeaveHiding", "Flashlight", "Battery", "RoundResult", "Apparition", "Escaped" }
+local REMOTES = { "Ready", "Notify", "Jumpscare", "OpenKeypad", "SubmitCode", "LeaveHiding", "Flashlight", "Battery", "RoundResult", "Apparition", "Escaped", "Look" }
 
 local failures = 0
 local function check(cond: any, msg: string)
@@ -84,7 +85,7 @@ Maze.generate = function(seed, cfg)
 	Engine.layout = layout
 	return layout
 end
-local Config = require(rs.Shared.Config)
+local Nights = require(rs.Shared.Nights)
 local ClientState = require(client.ClientState)
 
 rs.Remotes.Notify.OnClientEvent:Connect(function(text)
@@ -124,13 +125,13 @@ local function moveMonster(dt: number)
 	root.AssemblyLinearVelocity = to.Unit * (step / dt)
 end
 
-local function run(seconds: number, until_: (() -> boolean)?): boolean
-	local dt = 1 / 30
+local function run(seconds: number, until_: (() -> boolean)?, dt: number?): boolean
+	local step = dt or 1 / 30
 	local t = 0
 	while t < seconds do
-		Engine.step(game, dt)
-		moveMonster(dt)
-		t += dt
+		Engine.step(game, step)
+		moveMonster(step)
+		t += step
 		if until_ and until_() then
 			return true
 		end
@@ -163,175 +164,198 @@ local function release(action: string)
 	end
 end
 
-local function findPrompt(root, objectText: string)
-	for _, d in root:GetDescendants() do
+local function prompts(objectText: string)
+	local list = {}
+	local world = workspace:FindFirstChild("World")
+	if not world then
+		return list
+	end
+	for _, d in world:GetDescendants() do
 		if d.ClassName == "ProximityPrompt" and d.ObjectText == objectText and d.Enabled then
-			return d
+			table.insert(list, d)
 		end
 	end
-	return nil
+	return list
+end
+
+local menu
+local function card(n: number)
+	return menu.Main.Nights["Night" .. n]
+end
+
+local function startNight(n: number)
+	card(n).Activated:Fire()
+	menu.Main.Details.Play.Activated:Fire()
+	return run(15, function()
+		return phase() == "Playing" and player.Character ~= nil
+	end)
+end
+
+local function finishAndReturn(expectedTitle: string)
+	local results = run(20, function()
+		return phase() == "Results" and menu.Overlay.Visible
+	end)
+	check(results, "results screen appears")
+	local title = menu.Overlay:FindFirstChildOfClass("TextLabel").Text
+	check(title == expectedTitle, "results say " .. expectedTitle .. " (got " .. tostring(title) .. ")")
+	local back = run(20, function()
+		return phase() == "Lobby" and menu.Main.Visible
+	end)
+	check(back, "back on the main menu")
+end
+
+local function objectiveText(): string
+	return player.PlayerGui.AchromaHud.Info.Objective.Text
+end
+
+local function progressText(): string
+	return player.PlayerGui.AchromaHud.Info.Progress.Text
 end
 
 ---------------------------------------------------------------------------
-print("Title screen")
+print("Main menu")
 run(1)
-local menu = player.PlayerGui:FindFirstChild("AchromaMenu")
-check(menu and menu.Title.Visible, "title screen is showing")
-check(phase() == "Waiting", "server waits for someone to wake up")
-check(player.Character == nil, "no character until you press WAKE UP")
-
-menu.Title.WakeUp.Activated:Fire()
-check(ClientState.started, "clicking WAKE UP starts the game")
-local spawned = run(10, function()
-	return player.Character ~= nil and phase() == "Playing"
-end)
-check(spawned, "round starts and you spawn after the countdown")
-check(ClientState.roundStatus == "alive", "client knows you're alive")
-local root = player.Character.HumanoidRootPart
-local layout = Engine.layout
-local house = layout.house
-check(Maze.isHouse(layout, math.floor(root.Position.X / layout.cellSize), math.floor(root.Position.Z / layout.cellSize)), "you wake up inside the house")
-check(player.PlayerGui.AchromaHud.Info.Visible, "HUD is visible")
-run(2)
-check(not menu.Overlay.Visible, "no overlay while playing")
+menu = player.PlayerGui:FindFirstChild("AchromaMenu")
+check(menu and menu.Main.Visible, "the main menu shows when you open the game")
+check(phase() == "Lobby", "server waits in the lobby")
+check(player:GetAttribute("HighestNight") == 1, "a new player has only night 1")
+local cardCount = 0
+for n = 1, 5 do
+	if card(n) then
+		cardCount += 1
+	end
+end
+check(cardCount == 5, "all 5 nights are on the menu")
+check(not card(1).Locked.Visible and card(2).Locked.Visible and card(5).Locked.Visible, "nights 2-5 start locked")
+card(3).Activated:Fire()
+check(string.find(menu.Main.Details.Play.Text, "LOCKED") ~= nil, "a locked night can't be played")
+check(menu.Main.Preview:FindFirstChild("Monster") ~= nil, "the selected night's monster is previewed")
+menu.Main.Details.Play.Activated:Fire()
+run(1)
+check(phase() == "Lobby" and not ClientState.started, "pressing play on a locked night does nothing")
 
 ---------------------------------------------------------------------------
-print("Flashlight + sprinting")
+print("Night 1: THE HOUSE (survive)")
+check(startNight(1), "night 1 starts")
+check(not menu.Main.Visible, "menu hides while playing")
+check(objectiveText() == "Survive until 6 AM.", "objective shown: " .. objectiveText())
+check(string.find(progressText(), "AM") ~= nil, "clock shown: " .. progressText())
 press("AchromaFlashlight")
-run(0.2)
-check(ClientState.flashlightOn, "F turns the flashlight on")
-check(player:GetAttribute("Flashlight") == true, "the server knows your light is on")
-local humanoid = player.Character.Humanoid
-humanoid.MoveDirection = Vector3.new(0, 0, -1)
-press("AchromaSprint")
-run(1)
-check(humanoid.WalkSpeed == Config.Player.SprintSpeed, "holding shift sprints")
-run(7)
-check(humanoid.WalkSpeed < Config.Player.SprintSpeed, "stamina runs out")
-release("AchromaSprint")
-humanoid.MoveDirection = Vector3.zero
-press("AchromaCrouch")
-run(0.2)
-check(humanoid.WalkSpeed == Config.Player.CrouchSpeed, "C crouches")
-press("AchromaCrouch")
-run(0.2)
+run(0.3)
+check(player:GetAttribute("Flashlight") == true, "flashlight works")
+-- hide in a locker and wait for morning
+local locker = prompts("Locker")[1] or prompts("Wardrobe")[1]
+check(locker ~= nil, "found a hiding spot")
+locker.Triggered:Fire(player)
+run(0.5)
+check(ClientState.hiding, "hiding")
+local morning = run(320, function()
+	return ClientState.roundStatus == "escaped"
+end, 0.1)
+check(morning, "made it to 6 AM (" .. progressText() .. ")")
+finishAndReturn("YOU SURVIVED")
+check(player:GetAttribute("HighestNight") == 2, "night 2 unlocked")
+check(not card(2).Locked.Visible and card(1).Status.Text == "CLEARED", "menu shows night 1 cleared, night 2 open")
 
 ---------------------------------------------------------------------------
-print("Keys")
-local interactive = workspace.World.Interactive
-for i = 1, Config.Maze.KeyCount do
-	local key = interactive:FindFirstChild("Key" .. i)
-	local prompt = key and key.Shaft:FindFirstChildOfClass("ProximityPrompt")
-	check(prompt ~= nil, "key " .. i .. " has a prompt")
-	if prompt then
-		prompt.Triggered:Fire(player)
-	end
-	run(0.3)
+print("Night 2: THE RED WARD (keys)")
+check(startNight(2), "night 2 starts")
+check(GameState:GetAttribute("NightName") == "THE RED WARD", "it's the ward")
+check(workspace.Monster:GetAttribute("Kind") == "Crawler", "the Crawler is here")
+for _, prompt in prompts("Key") do
+	prompt.Triggered:Fire(player)
+	run(0.2)
 end
-check(GameState:GetAttribute("KeysFound") == 4, "server counted 4 keys")
-check(GameState:GetAttribute("CodeMask") == layout.code, "the whole code is revealed")
-local hudCode = player.PlayerGui.AchromaHud.Info:GetChildren()
-local shownCode = nil
-for _, c in hudCode do
-	if c.ClassName == "TextLabel" and c.TextSize == 26 then
-		shownCode = c.Text
-	end
-end
-check(shownCode == table.concat(string.split(layout.code, ""), " "), "HUD shows the code: " .. tostring(shownCode))
-check(workspace.Monster:GetAttribute("State") ~= "Dormant", "taking a key woke the monster")
-
----------------------------------------------------------------------------
-print("Keypad + exit")
-local keypad = interactive.Keypad
+check(string.find(progressText(), "KEYS 4/4") ~= nil, "HUD: " .. progressText())
+local keypad = workspace.World:FindFirstChild("Keypad", true)
 placePlayer(keypad.Position + Vector3.new(0, 0, 4))
 keypad:FindFirstChildOfClass("ProximityPrompt").Triggered:Fire(player)
 run(0.2)
-local keypadGui = player.PlayerGui.AchromaKeypad
-check(keypadGui.Enabled, "keypad screen opens")
-local panel = keypadGui.Panel
-for i = 1, #layout.code do
-	panel["Key" .. string.sub(layout.code, i, i)].Activated:Fire()
+local panel = player.PlayerGui.AchromaKeypad.Panel
+check(player.PlayerGui.AchromaKeypad.Enabled, "keypad screen opens")
+for i = 1, #Engine.layout.code do
+	panel["Key" .. string.sub(Engine.layout.code, i, i)].Activated:Fire()
 end
 panel.KeyOK.Activated:Fire()
-run(0.5)
-check(not keypadGui.Enabled, "keypad screen closes after OK")
-check(GameState:GetAttribute("ExitOpen") == true, "the right code opens the exit")
-
----------------------------------------------------------------------------
-print("Escape")
-local zone = workspace.World.Structure.EscapeZone
+run(1)
+check(GameState:GetAttribute("ExitOpen") == true, "typing the code opens the exit")
 workspace.World.Structure.EscapeZone.Touched:Fire(player.Character.HumanoidRootPart)
-run(0.5)
-check(ClientState.roundStatus == "escaped", "touching the light escapes")
-local results = run(15, function()
-	return phase() == "Results" and menu.Overlay.Visible
-end)
-check(results, "results screen appears")
-check(menu.Overlay:FindFirstChildOfClass("TextLabel").Text == "YOU ESCAPED", "results say YOU ESCAPED")
-zone = zone
+finishAndReturn("YOU MADE IT")
+check(player:GetAttribute("HighestNight") == 3, "night 3 unlocked")
 
 ---------------------------------------------------------------------------
-print("Round 2: hide, then get caught")
-local round2 = run(30, function()
-	return phase() == "Playing" and player.Character ~= nil
-end)
-check(round2, "a new night starts and you wake up again")
-check(Engine.layout ~= layout and Engine.layout.seed ~= layout.seed, "the new night has a new maze")
-check(ClientState.roundStatus == "alive", "alive again")
-interactive = workspace.World.Interactive
-
-local lockerPrompt = findPrompt(interactive, "Locker")
-check(lockerPrompt ~= nil, "found a locker")
-if lockerPrompt then
-	lockerPrompt.Triggered:Fire(player)
-	run(0.5)
-	check(player:GetAttribute("Hiding") == true and ClientState.hiding, "hiding in the locker")
-	check(Engine.actions.AchromaLeave ~= nil, "leave action is bound while hiding")
-	run(1)
-	press("AchromaLeave")
-	run(0.5)
-	check(player:GetAttribute("Hiding") == false and not ClientState.hiding, "pressed E to get out")
+print("Night 3: THE DROWNED TUNNELS (power)")
+check(startNight(3), "night 3 starts")
+check(workspace.Monster:GetAttribute("Kind") == "Listener", "the Listener is here")
+for _, prompt in prompts("Generator") do
+	prompt.Triggered:Fire(player)
+	run(0.2)
 end
+run(2)
+check(GameState:GetAttribute("ExitOpen") == true, "the lift opens (" .. progressText() .. ")")
+workspace.World.Structure.EscapeZone.Touched:Fire(player.Character.HumanoidRootPart)
+finishAndReturn("YOU MADE IT")
+check(player:GetAttribute("HighestNight") == 4, "night 4 unlocked")
 
--- wake it, then walk right into it
-local key = interactive:FindFirstChild("Key1")
-key.Shaft:FindFirstChildOfClass("ProximityPrompt").Triggered:Fire(player)
-run(0.5)
+---------------------------------------------------------------------------
+print("Night 4: THE ATRIUM (photographs)")
+check(startNight(4), "night 4 starts")
+check(workspace.Monster:GetAttribute("Kind") == "Statue", "the Statue is here")
+local decoys = 0
+for _, d in workspace.World:GetDescendants() do
+	if d.Name == "Statue" and d.ClassName == "Model" then
+		decoys += 1
+	end
+end
+check(decoys >= 4, "there are decoy statues (" .. decoys .. ")")
+for _, prompt in prompts("Photograph") do
+	prompt.Triggered:Fire(player)
+	run(0.2)
+end
+finishAndReturn("YOU MADE IT")
+check(player:GetAttribute("HighestNight") == 5, "night 5 unlocked")
+
+---------------------------------------------------------------------------
+print("Night 5: THE VOID (hearts)")
+check(startNight(5), "night 5 starts")
+check(workspace.Monster:GetAttribute("Kind") == "Amalgam", "the Amalgam is here")
+local hearts = prompts("Heart")
+check(#hearts == 3, "3 hearts")
+for _, prompt in hearts do
+	prompt.Triggered:Fire(player)
+end
+run(1)
+check(GameState:GetAttribute("ExitOpen") == true, "the portal opens")
+workspace.World.Structure.EscapeZone.Touched:Fire(player.Character.HumanoidRootPart)
+finishAndReturn("THE COLOR IS BACK")
+check(player:GetAttribute("HighestNight") == 6, "every night beaten")
+check(card(5).Status.Text == "CLEARED", "night 5 shows as cleared")
+
+---------------------------------------------------------------------------
+print("Night 1 again: caught by the Hollow")
+check(startNight(1), "night 1 starts again")
+run(1)
 local monster = workspace.Monster
-local mroot = monster.HumanoidRootPart
-placePlayer(mroot.Position + mroot.CFrame.LookVector * 3)
+local m = monster.HumanoidRootPart
+-- walk straight into it once it's awake
+local awake = run(80, function()
+	return GameState:GetAttribute("MonsterAwake") == true
+end, 0.1)
+check(awake, "it wakes up at 1 AM")
+placePlayer(m.Position + m.CFrame.LookVector * 3)
 local caught = run(3, function()
 	return ClientState.jumpscaring
 end)
-check(caught, "it catches you and the jumpscare starts")
-check(ClientState.roundStatus == "caught", "client knows you were caught")
-local camera = workspace.CurrentCamera
-check(camera.CameraType == Enum.CameraType.Scriptable, "camera is pulled into its face")
-run(6)
-check(player.Character == nil, "your body is gone")
-check(not ClientState.jumpscaring, "jumpscare sequence finished")
-local over = run(15, function()
-	return phase() == "Results" and menu.Overlay.Visible
-end)
-check(over, "results screen after being caught")
-check(menu.Overlay:FindFirstChildOfClass("TextLabel").Text == "NOBODY ESCAPED", "results say NOBODY ESCAPED")
-local round3 = run(30, function()
-	return phase() == "Playing" and player.Character ~= nil
-end)
-check(round3, "and the night starts over")
+check(caught, "it catches you: jumpscare")
+check(workspace.CurrentCamera.CameraType == Enum.CameraType.Scriptable, "camera pulled into its face")
+finishAndReturn("NOBODY MADE IT")
 
 ---------------------------------------------------------------------------
 print("Notifications received: " .. #notifications)
-for i = 1, math.min(8, #notifications) do
+for i = 1, math.min(10, #notifications) do
 	print("  > " .. string.gsub(notifications[i], "\n", " / "))
 end
 check(#Engine.errors == 0, "no script errors (" .. #Engine.errors .. ")")
-if #Engine.log > 0 then
-	print("warnings: " .. #Engine.log)
-	for i = 1, math.min(5, #Engine.log) do
-		print("  " .. Engine.log[i])
-	end
-end
 if failures > 0 then
 	error(failures .. " check(s) failed")
 end

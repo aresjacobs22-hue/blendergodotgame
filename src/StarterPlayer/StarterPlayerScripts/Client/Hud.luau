@@ -8,6 +8,7 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
 local Audio = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Audio"))
+local Nights = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Nights"))
 
 local GameState = ReplicatedStorage:WaitForChild("GameState")
 local player = Players.LocalPlayer
@@ -21,8 +22,10 @@ local FONT = Enum.Font.SpecialElite
 
 local gui: ScreenGui
 local info: Frame
-local keyBoxes: { Frame } = {}
-local codeLabel: TextLabel
+local nightLabel: TextLabel
+local objectiveLabel: TextLabel
+local progressLabel: TextLabel
+local blinkFrame: Frame
 local staminaFrame: Frame
 local staminaFill: Frame
 local batteryFrame: Frame
@@ -127,15 +130,12 @@ function Hud.init()
 	corner(crosshair)
 
 	-- keys + code (bottom left)
-	info = new("Frame", { Name = "Info", BackgroundTransparency = 1, Position = UDim2.new(0, 28, 1, -96), Size = UDim2.fromOffset(320, 76), ZIndex = 5 }, gui)
-	label({ Text = "KEYS", Size = UDim2.fromOffset(60, 24), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = DIM, ZIndex = 5 }, info)
-	for i = 1, 4 do
-		local box: Frame = new("Frame", { Position = UDim2.fromOffset(64 + (i - 1) * 26, 4), Size = UDim2.fromOffset(16, 16), BackgroundColor3 = TEXT, BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = 5 }, info)
-		new("UIStroke", { Color = TEXT, Thickness = 1.5, Transparency = 0.3 }, box)
-		table.insert(keyBoxes, box)
-	end
-	label({ Text = "CODE", Position = UDim2.fromOffset(0, 34), Size = UDim2.fromOffset(60, 24), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = DIM, ZIndex = 5 }, info)
-	codeLabel = label({ Text = "_ _ _ _", Position = UDim2.fromOffset(64, 32), Size = UDim2.fromOffset(200, 28), TextXAlignment = Enum.TextXAlignment.Left, TextSize = 26, ZIndex = 5 }, info)
+	-- objective panel (top left): night, what to do, how far along you are
+	info = new("Frame", { Name = "Info", BackgroundTransparency = 1, Position = UDim2.fromOffset(28, 22), Size = UDim2.fromOffset(460, 96), ZIndex = 5 }, gui)
+	nightLabel = label({ Name = "Night", Text = "", Size = UDim2.fromOffset(460, 20), TextXAlignment = Enum.TextXAlignment.Left, TextSize = 16, TextColor3 = DIM, ZIndex = 5 }, info)
+	objectiveLabel = label({ Name = "Objective", Text = "", Position = UDim2.fromOffset(0, 22), Size = UDim2.fromOffset(460, 24), TextXAlignment = Enum.TextXAlignment.Left, TextSize = 20, ZIndex = 5 }, info)
+	progressLabel = label({ Name = "Progress", Text = "", Position = UDim2.fromOffset(0, 50), Size = UDim2.fromOffset(460, 34), TextXAlignment = Enum.TextXAlignment.Left, TextSize = 28, ZIndex = 5 }, info)
+	blinkFrame = new("Frame", { Name = "Blink", Size = UDim2.fromScale(1, 1), BackgroundColor3 = BLACK, BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = 8 }, gui)
 
 	-- stamina (bottom centre)
 	staminaFrame = new("Frame", { Name = "Stamina", AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -34), Size = UDim2.fromOffset(260, 4), BackgroundColor3 = Color3.fromRGB(40, 40, 40), BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = 5 }, gui)
@@ -164,20 +164,33 @@ function Hud.init()
 		label({ Text = "Audio IDs not set: see README (ReplicatedStorage.Shared.SoundIds)", Position = UDim2.fromOffset(12, 8), Size = UDim2.fromOffset(520, 20), TextXAlignment = Enum.TextXAlignment.Left, TextSize = 14, TextColor3 = Color3.fromRGB(150, 150, 150), ZIndex = 12 }, gui)
 	end
 
-	local function refreshKeys()
-		local found = (GameState:GetAttribute("KeysFound") :: number?) or 0
-		for i, box in keyBoxes do
-			box.BackgroundTransparency = if i <= found then 0.1 else 1
+	local function refreshObjective()
+		local night = GameState:GetAttribute("Night")
+		local name = GameState:GetAttribute("NightName")
+		nightLabel.Text = string.format("NIGHT %s  ·  %s", tostring(night or 1), tostring(name or ""))
+		nightLabel.TextColor3 = Nights.get(if typeof(night) == "number" then night else 1).accent
+		local objective = GameState:GetAttribute("Objective")
+		objectiveLabel.Text = if typeof(objective) == "string" then objective else ""
+		local progress = GameState:GetAttribute("Progress")
+		progressLabel.Text = if typeof(progress) == "string" then progress else ""
+	end
+	for _, attr in { "Night", "NightName", "Objective", "Progress" } do
+		GameState:GetAttributeChangedSignal(attr):Connect(refreshObjective)
+	end
+	refreshObjective()
+	GameState:GetAttributeChangedSignal("Progress"):Connect(function()
+		-- a little flash whenever progress changes
+		progressLabel.TextTransparency = 0.6
+		TweenService:Create(progressLabel, TweenInfo.new(0.6), { TextTransparency = 0 }):Play()
+	end)
+	-- statue night: everyone blinks
+	GameState:GetAttributeChangedSignal("Blink"):Connect(function()
+		if GameState:GetAttribute("Blink") == true then
+			blinkFrame.BackgroundTransparency = 0
+		else
+			TweenService:Create(blinkFrame, TweenInfo.new(0.15), { BackgroundTransparency = 1 }):Play()
 		end
-	end
-	local function refreshCode()
-		local mask = (GameState:GetAttribute("CodeMask") :: string?) or "____"
-		codeLabel.Text = table.concat(string.split(mask, ""), " ")
-	end
-	GameState:GetAttributeChangedSignal("KeysFound"):Connect(refreshKeys)
-	GameState:GetAttributeChangedSignal("CodeMask"):Connect(refreshCode)
-	refreshKeys()
-	refreshCode()
+	end)
 
 	Hud.setHudVisible(false)
 	RunService.RenderStepped:Connect(Hud._update)

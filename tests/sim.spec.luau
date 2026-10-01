@@ -1,5 +1,5 @@
--- Runs the real server scripts (world builder, interactables, monster AI) inside a
--- mocked Roblox under Lune, then plays out scenarios with a fake player:
+-- Runs the real server scripts (maps, monsters, objectives) inside a mocked Roblox
+-- under Lune, and plays out scenarios for all five nights with fake players:
 --   lune run tests/sim.spec.luau
 local roblox = require("@lune/roblox")
 local Engine = require("./mock/engine")
@@ -7,7 +7,7 @@ local Engine = require("./mock/engine")
 local Vector3 = roblox.Vector3
 local CFrame = roblox.CFrame
 
-local REMOTES = { "Ready", "Notify", "Jumpscare", "OpenKeypad", "SubmitCode", "LeaveHiding", "Flashlight", "Battery", "RoundResult", "Apparition", "Escaped" }
+local REMOTES = { "Ready", "Notify", "Jumpscare", "OpenKeypad", "SubmitCode", "LeaveHiding", "Flashlight", "Battery", "RoundResult", "Apparition", "Escaped", "Look" }
 
 local failures = 0
 local function check(cond: any, msg: string)
@@ -20,12 +20,12 @@ local function check(cond: any, msg: string)
 end
 
 ---------------------------------------------------------------------------
--- boot a fresh fake engine + load the server modules
 
 local function boot()
 	Engine.time = 0
 	Engine.delayed = {}
 	Engine.sleeping = {}
+	Engine.errors = {}
 	local shared = Engine.folderFromDir("Shared", "src/ReplicatedStorage/Shared")
 	local server = Engine.folderFromDir("Server", "src/ServerScriptService/Server")
 	local game, workspace = Engine.makeGame(server, shared, nil, REMOTES)
@@ -62,21 +62,19 @@ local function boot()
 	local require = Engine.makeLoader(globals)
 	local rs = game:GetService("ReplicatedStorage")
 	local sss = game:GetService("ServerScriptService")
-
-	-- pretend the audio is uploaded so every sound code path runs
 	local SoundIds = require(rs.Shared.SoundIds)
 	SoundIds.SFX = 111
 	SoundIds.Ambience = 222
 	SoundIds.MusicBox = 333
-
 	local mods = {
-		Config = require(rs.Shared.Config),
 		Maze = require(rs.Shared.Maze),
-		Audio = require(rs.Shared.Audio),
+		Nights = require(rs.Shared.Nights),
+		Monsters = require(rs.Shared.Monsters),
 		WorldBuilder = require(sss.Server.WorldBuilder),
 		Interactables = require(sss.Server.Interactables),
+		Exit = require(sss.Server.Exit),
 		MonsterAI = require(sss.Server.MonsterAI),
-		MonsterRig = require(sss.Server.MonsterRig),
+		Objectives = require(sss.Server.Objectives),
 	}
 	Engine.Maze = mods.Maze
 	return game, workspace, mods
@@ -87,20 +85,9 @@ local function makePlayer(game, name: string, userId: number)
 	local player = Engine.newInstance("Player", name)
 	player.DisplayName = name
 	player.UserId = userId
-	local character = Engine.newInstance("Model", name)
-	local root = Engine.newInstance("Part", "HumanoidRootPart")
-	root.Size = Vector3.new(2, 2, 1)
-	root.Parent = character
-	local head = Engine.newInstance("Part", "Head")
-	head.Size = Vector3.new(1, 1, 1)
-	head.Parent = character
-	Engine.newInstance("Humanoid", "Humanoid").Parent = character
-	character.PrimaryPart = root
-	player.Character = character
+	player.Character = Engine.makeCharacter(player)
 	player.Parent = players
-	local list = rawget(players, "_list") or {}
-	table.insert(list, player)
-	rawset(players, "_list", list)
+	table.insert(rawget(players, "_list"), player)
 	return player
 end
 
@@ -114,14 +101,14 @@ local function flat(v)
 	return Vector3.new(v.X, 0, v.Z)
 end
 
--- one simulation tick: timers, AI heartbeat, then move the monster like a Humanoid would
 local wallViolations = 0
-local function tick(game, monster, dt: number)
+local function tick(s, dt: number)
 	Engine.time += dt
 	Engine.runScheduled()
-	game:GetService("RunService").Heartbeat:Fire(dt)
+	s.game:GetService("RunService").Heartbeat:Fire(dt)
+	local monster = s.monster
 	local root = monster.rig.root
-	local humanoid = monster.rig.humanoid
+	local humanoid = monster.humanoid
 	local target = rawget(humanoid, "_moveTarget")
 	if not root.Anchored and target then
 		local to = flat(target - root.Position)
@@ -132,8 +119,7 @@ local function tick(game, monster, dt: number)
 			local C = Engine.layout.cellSize
 			local ax, az = math.floor(from.X / C), math.floor(from.Z / C)
 			local bx, bz = math.floor(nextPos.X / C), math.floor(nextPos.Z / C)
-			local inside = ax >= 0 and az >= 0 and bx >= 0 and bz >= 0
-			if inside and not Engine.canCross(ax, az, bx, bz) then
+			if ax >= 0 and az >= 0 and bx >= 0 and bz >= 0 and not Engine.canCross(ax, az, bx, bz) then
 				wallViolations += 1
 			end
 			monster.rig.model:PivotTo(CFrame.lookAt(nextPos, nextPos + to.Unit))
@@ -146,86 +132,11 @@ local function tick(game, monster, dt: number)
 	end
 end
 
-local function setup(seed: number)
-	local game, workspace, mods = boot()
-	local layout = mods.Maze.generate(seed, mods.Config.Maze)
-	Engine.layout = layout
-	local world = mods.WorldBuilder.build(layout)
-
-	local interactables
-	local function s_interactables_removePadlock()
-		interactables:removePadlock()
-	end
-	local caught: { any } = {}
-	local escaped: { any } = {}
-	local keys: { number } = {}
-	local alive: { any } = {}
-	local monster
-	interactables = mods.Interactables.new(layout, world, {
-		isAlive = function(p)
-			return table.find(alive, p) ~= nil
-		end,
-		onKey = function(_p, index)
-			table.insert(keys, index)
-			s_interactables_removePadlock()
-			monster:setAggression(#keys)
-			monster:awaken()
-		end,
-		onHide = function(p, locker)
-			monster:onPlayerHid(p, locker)
-		end,
-		onExitOpened = function()
-			monster:onExitOpened()
-		end,
-		onEscaped = function(p)
-			table.insert(escaped, p)
-			local i = table.find(alive, p)
-			if i then
-				table.remove(alive, i)
-			end
-		end,
-		onNoise = function(pos, radius)
-			monster:hearNoise(pos, radius)
-		end,
-	})
-	monster = mods.MonsterAI.new(layout, world, interactables, {
-		getPlayers = function()
-			return table.clone(alive)
-		end,
-		onCaught = function(p)
-			table.insert(caught, p)
-			local i = table.find(alive, p)
-			if i then
-				table.remove(alive, i)
-			end
-		end,
-		onAwake = function() end,
-	})
-	monster:start()
-	return {
-		game = game,
-		workspace = workspace,
-		mods = mods,
-		layout = layout,
-		world = world,
-		interactables = interactables,
-		monster = monster,
-		caught = caught,
-		escaped = escaped,
-		keys = keys,
-		alive = alive,
-	}
-end
-
-local function cellCenter(layout, c)
-	return Vector3.new((c.x + 0.5) * layout.cellSize, 0, (c.z + 0.5) * layout.cellSize)
-end
-
-local function run(s, seconds: number, until_: (() -> boolean)?)
+local function run(s, seconds: number, until_: (() -> boolean)?): (boolean, number)
 	local dt = 0.05
 	local t = 0
 	while t < seconds do
-		tick(s.game, s.monster, dt)
+		tick(s, dt)
 		t += dt
 		if until_ and until_() then
 			return true, t
@@ -234,72 +145,248 @@ local function run(s, seconds: number, until_: (() -> boolean)?)
 	return false, t
 end
 
+local function setup(nightIndex: number, seed: number, startMonster: boolean?)
+	local game, workspace, mods = boot()
+	local night = mods.Nights.get(nightIndex)
+	local layout = mods.Maze.generate(seed, night.maze)
+	Engine.layout = layout
+	local world = mods.WorldBuilder.build(layout, night)
+	local exit = mods.Exit.new(world)
+	local s: any = {
+		game = game,
+		workspace = workspace,
+		mods = mods,
+		night = night,
+		layout = layout,
+		world = world,
+		exit = exit,
+		alive = {},
+		caught = {},
+		wins = {},
+		looks = {},
+		blinks = 0,
+		progress = "",
+	}
+	local function isAlive(p)
+		return table.find(s.alive, p) ~= nil
+	end
+	local function remove(p)
+		local i = table.find(s.alive, p)
+		if i then
+			table.remove(s.alive, i)
+		end
+	end
+	s.interactables = mods.Interactables.new(layout, world, {
+		isAlive = isAlive,
+		onHide = function(p, locker)
+			s.monster:onPlayerHid(p, locker)
+		end,
+		onNoise = function(pos, radius)
+			s.monster:hearNoise(pos, radius)
+		end,
+	})
+	s.monster = mods.MonsterAI.new(layout, world, s.interactables, mods.Nights.monsterParams(night), night.monsterKind, {
+		getPlayers = function()
+			return table.clone(s.alive)
+		end,
+		onCaught = function(p)
+			table.insert(s.caught, p)
+			remove(p)
+		end,
+		onAwake = function() end,
+		getLook = function(p)
+			return s.looks[p]
+		end,
+		setBlink = function(on)
+			if on then
+				s.blinks += 1
+			end
+		end,
+	})
+	s.objective = mods.Objectives.start({
+		night = night,
+		layout = layout,
+		world = world,
+		interactables = s.interactables,
+		monster = s.monster,
+		exit = exit,
+		isAlive = isAlive,
+		notifyAll = function() end,
+		notify = function() end,
+		setProgress = function(text)
+			s.progress = text
+		end,
+		winAll = function(kind)
+			for _, p in table.clone(s.alive) do
+				table.insert(s.wins, kind)
+				remove(p)
+			end
+		end,
+	})
+	world.escapeZone.Touched:Connect(function(hit)
+		if exit.isOpen then
+			local character = hit:FindFirstAncestorOfClass("Model")
+			local player = character and game:GetService("Players"):GetPlayerFromCharacter(character)
+			if player and isAlive(player) then
+				table.insert(s.wins, "escaped")
+				remove(player)
+			end
+		end
+	end)
+	if startMonster ~= false then
+		s.monster:start()
+	end
+	return s
+end
+
+local function cellCenter(layout, c)
+	return Vector3.new((c.x + 0.5) * layout.cellSize, 0, (c.z + 0.5) * layout.cellSize)
+end
+
+local function prompts(root, objectText: string)
+	local list = {}
+	for _, d in root:GetDescendants() do
+		if d.ClassName == "ProximityPrompt" and d.ObjectText == objectText then
+			table.insert(list, d)
+		end
+	end
+	return list
+end
+
+-- Put the player two cells in front of the monster down a straight corridor, facing it.
+local function faceOff(s, player): boolean
+	local Maze = s.mods.Maze
+	local mroot = s.monster.rig.root
+	local mc = Maze.cellOf(s.layout, mroot.Position.X, mroot.Position.Z)
+	for _, d in Maze.DIRS do
+		local runCells = Maze.straightRun(s.layout, mc, d, 3)
+		if #runCells >= 2 then
+			local target = cellCenter(s.layout, runCells[2])
+			placePlayer(player, target)
+			s.monster.rig.model:PivotTo(CFrame.lookAt(mroot.Position, Vector3.new(target.X, mroot.Position.Y, target.Z)))
+			player.Character.HumanoidRootPart.CFrame = CFrame.lookAt(player.Character.HumanoidRootPart.Position, Vector3.new(mroot.Position.X, 3, mroot.Position.Z))
+			return true
+		end
+	end
+	return false
+end
+
 ---------------------------------------------------------------------------
-print("World construction")
-do
-	local s = setup(424242)
-	local parts, lights, prompts = 0, 0, 0
+print("Every night builds")
+for n = 1, 5 do
+	local s = setup(n, 4242 + n, false)
+	local parts, lights, prompts_ = 0, 0, 0
 	for _, d in s.world.model:GetDescendants() do
 		if d:IsA("BasePart") then
 			parts += 1
 		elseif d.ClassName == "PointLight" then
 			lights += 1
 		elseif d.ClassName == "ProximityPrompt" then
-			prompts += 1
+			prompts_ += 1
 		end
 	end
-	print(string.format("  %d parts, %d point lights, %d prompts", parts, lights, prompts))
-	check(parts > 500 and parts < 3000, "part count is sane")
-	check(lights >= 15 and lights <= 45, "lamp count is sane")
 	local rigParts = 0
 	for _, d in s.monster.rig.model:GetDescendants() do
 		if d:IsA("BasePart") then
 			rigParts += 1
 		end
 	end
-	check(rigParts > 30, "monster rig built (" .. rigParts .. " parts)")
-	check(#s.interactables.lockers == #s.layout.lockers, "every locker built")
-	check(#s.interactables.doors >= 3, "house doors built (" .. #s.interactables.doors .. ")")
-	check(s.monster.state == "Dormant", "monster starts dormant")
-	check(s.monster.rig.root.Position.Y < -100, "dormant monster is parked out of sight")
+	print(string.format("  %-20s %5d parts  %3d lights  %3d prompts  monster %s (%d parts)", s.night.name, parts, lights, prompts_, s.night.monsterKind, rigParts))
+	check(parts > 300 and parts < 4500, s.night.id .. ": part count is sane")
+	check(lights >= 8 and lights <= 70, s.night.id .. ": light count is sane")
+	check(rigParts >= 20, s.night.id .. ": monster built")
+	check(#s.world.spawnPoints >= 4, s.night.id .. ": spawn points")
+	check(#s.interactables.lockers == #s.layout.lockers, s.night.id .. ": lockers built")
+	check(#s.exit.leaves == 2 or s.exit.membrane ~= nil, s.night.id .. ": exit built")
+	check(#Engine.errors == 0, s.night.id .. ": no script errors")
 end
 
 ---------------------------------------------------------------------------
-print("Dormant: apparitions, then it wakes up on its own")
+print("Objectives can be completed")
 do
-	local s = setup(1001)
+	-- Night 1: survive until 6 AM
+	local s = setup(1, 11, false)
 	local p = makePlayer(s.game, "Ares", 1)
 	table.insert(s.alive, p)
-	-- stand in a maze corridor right outside the house
-	placePlayer(p, cellCenter(s.layout, s.layout.entrance))
-	local apparitions = 0
-	local wasApparition = false
-	local woke, t = run(s, 120, function()
-		local isApp = s.monster.state == "Apparition"
-		if isApp and not wasApparition then
-			apparitions += 1
-		end
-		wasApparition = isApp
-		return s.monster.awake
+	local won = run(s, s.night.surviveSeconds + 2, function()
+		return #s.wins > 0
 	end)
-	check(woke, string.format("woke up after %.0fs", t))
-	print("  apparitions seen while dormant: " .. apparitions)
-	check(s.monster.rig.root.Position.Y > 0, "awake monster is in the maze")
-	check(not s.monster.rig.root.Anchored, "awake monster can move")
+	check(won and s.wins[1] == "survived", "night 1: reaching 6 AM wins (" .. s.progress .. ")")
+
+	-- Night 2: keys -> code -> exit
+	s = setup(2, 22, false)
+	p = makePlayer(s.game, "Ares", 1)
+	table.insert(s.alive, p)
+	for _, prompt in prompts(s.world.model, "Key") do
+		prompt.Triggered:Fire(p)
+	end
+	check(string.find(s.progress, "KEYS 4/4") ~= nil, "night 2: 4 keys found (" .. s.progress .. ")")
+	local keypad = s.world.model:FindFirstChild("Keypad", true)
+	placePlayer(p, keypad.Position + Vector3.new(0, 0, 4))
+	Engine.time += 1
+	s.game:GetService("ReplicatedStorage").Remotes.SubmitCode.OnServerEvent:Fire(p, s.layout.code)
+	check(s.exit.isOpen, "night 2: the right code opens the exit")
+	s.world.escapeZone.Touched:Fire(p.Character.HumanoidRootPart)
+	check(s.wins[1] == "escaped", "night 2: escaping through the exit")
+
+	-- Night 3: generators power the lamps and the lift
+	s = setup(3, 33, false)
+	p = makePlayer(s.game, "Ares", 1)
+	table.insert(s.alive, p)
+	local function litLamps()
+		local n = 0
+		for _, lamp in s.world.lamps do
+			if lamp.light.Enabled then
+				n += 1
+			end
+		end
+		return n
+	end
+	local before = litLamps()
+	for _, prompt in prompts(s.world.model, "Generator") do
+		prompt.Triggered:Fire(p)
+	end
+	run(s, 3)
+	check(litLamps() > before + 5, string.format("night 3: generators turn the lights on (%d -> %d)", before, litLamps()))
+	check(s.exit.isOpen, "night 3: the lift opens after 3 generators")
+
+	-- Night 4: photographs
+	s = setup(4, 44, false)
+	p = makePlayer(s.game, "Ares", 1)
+	table.insert(s.alive, p)
+	local photos = prompts(s.world.model, "Photograph")
+	check(#photos == 6, "night 4: 6 photographs placed")
+	for _, prompt in photos do
+		prompt.Triggered:Fire(p)
+	end
+	check(s.wins[1] == "collected", "night 4: collecting all photographs wins")
+
+	-- Night 5: hearts -> portal
+	s = setup(5, 55, false)
+	p = makePlayer(s.game, "Ares", 1)
+	table.insert(s.alive, p)
+	local heartPrompts = prompts(s.world.model, "Heart")
+	check(#heartPrompts == 3, "night 5: 3 hearts placed")
+	heartPrompts[1].Triggered:Fire(p)
+	check(s.monster.awake and s.monster.state == "Chase", "night 5: breaking a heart sends it after you")
+	for i = 2, #heartPrompts do
+		heartPrompts[i].Triggered:Fire(p)
+	end
+	run(s, 1)
+	check(s.exit.isOpen and s.exit.membrane.Transparency > 0.9, "night 5: the portal opens after 3 hearts")
+	check(#Engine.errors == 0, "no script errors during objectives")
 end
 
 ---------------------------------------------------------------------------
-print("Hunting: a player standing still in the maze gets found")
+print("The Hollow hunts down a player standing still (night 1)")
 do
-	local total, found = 0, 0
-	for seed = 1, 6 do
-		local s = setup(seed * 7777)
+	local found = 0
+	for seed = 1, 5 do
+		local s = setup(1, seed * 7777)
 		local p = makePlayer(s.game, "Ares", 1)
 		table.insert(s.alive, p)
-		local spot = s.layout.keys[1]
-		placePlayer(p, cellCenter(s.layout, spot))
+		placePlayer(p, cellCenter(s.layout, s.layout.deadEnds[1] or s.layout.monsterSpawn))
 		s.monster:awaken()
-		total += 1
 		local ok, t = run(s, 300, function()
 			return #s.caught > 0
 		end)
@@ -308,121 +395,154 @@ do
 		end
 		print(string.format("  seed %d: %s after %.0fs", seed * 7777, if ok then "caught" else "not caught", t))
 	end
-	check(found >= 5, string.format("caught a stationary player in %d/%d mazes within 5 minutes", found, total))
-	check(wallViolations == 0, "monster never walked through a wall (" .. wallViolations .. " violations)")
+	check(found >= 4, string.format("caught %d/5 within 5 minutes", found))
+	check(wallViolations == 0, "never walked through a wall (" .. wallViolations .. ")")
 end
 
 ---------------------------------------------------------------------------
-print("Chase -> hide in a locker while it watches -> pulled out")
+print("The Crawler lunges (night 2)")
 do
-	local s = setup(31337)
+	local s = setup(2, 202)
 	local p = makePlayer(s.game, "Ares", 1)
 	table.insert(s.alive, p)
 	s.monster:awaken()
-	-- put the player 2 cells in front of the monster in a straight corridor
-	local mroot = s.monster.rig.root
-	local mc = s.mods.Maze.cellOf(s.layout, mroot.Position.X, mroot.Position.Z)
-	local placed = false
-	for _, d in s.mods.Maze.DIRS do
-		local runCells = s.mods.Maze.straightRun(s.layout, mc, d, 3)
-		if #runCells >= 2 then
-			placePlayer(p, cellCenter(s.layout, runCells[2]))
-			s.monster.rig.model:PivotTo(CFrame.lookAt(mroot.Position, flat(p.Character.HumanoidRootPart.Position) + Vector3.new(0, mroot.Position.Y, 0)))
-			placed = true
-			break
-		end
-	end
-	check(placed, "found a straight corridor for the test")
-	local chased = run(s, 3, function()
-		return s.monster.state == "Chase"
+	check(faceOff(s, p), "set up a face-off")
+	local lunged = run(s, 6, function()
+		return Engine.time < s.monster.lungeUntil
 	end)
-	check(chased, "it sees the player and starts chasing")
-	-- jump into the nearest maze locker right now
-	local locker = s.interactables.lockers[3]
-	s.interactables:hide(p, locker)
-	check(p:GetAttribute("Hiding") == true, "player is hiding")
-	check(s.monster.sawHide[p] == locker, "it saw which locker")
-	local pulled = run(s, 120, function()
-		return #s.caught > 0
-	end)
-	check(s.monster.state == "Kill" or pulled, "it pulled the player out of the locker")
-	check(p:GetAttribute("Hiding") == false, "player was dragged out")
+	check(lunged, "it lunges when it gets close")
 end
 
 ---------------------------------------------------------------------------
-print("Hide while unseen -> it gives up")
+print("The Listener is blind but hears everything (night 3)")
 do
-	local s = setup(2024)
+	local s = setup(3, 303)
+	local p = makePlayer(s.game, "Ares", 1)
+	table.insert(s.alive, p)
+	s.monster:awaken()
+	-- stand still, light on, a few cells away down its path
+	local Maze = s.mods.Maze
+	local mroot = s.monster.rig.root
+	local mc = Maze.cellOf(s.layout, mroot.Position.X, mroot.Position.Z)
+	local dist = Maze.distances(s.layout, mc)
+	local spot = s.layout.entrance
+	for z = 0, s.layout.depth - 1 do
+		for x = 0, s.layout.width - 1 do
+			local d = dist[Maze.key(x, z)] or 0
+			if d >= 4 and d <= 6 and not Maze.isHub(s.layout, x, z) then
+				spot = { x = x, z = z }
+			end
+		end
+	end
+	placePlayer(p, cellCenter(s.layout, spot))
+	p:SetAttribute("Flashlight", true)
+	local noticed = run(s, 3, function()
+		return s.monster.state == "Chase" or s.monster.state == "Investigate"
+	end)
+	check(not noticed, "it doesn't notice a silent player (even with a light on)")
+	-- now sprint on the spot
+	p.Character.HumanoidRootPart.AssemblyLinearVelocity = Vector3.new(18, 0, 0)
+	local reacted = run(s, 1, function()
+		return s.monster.state == "Chase" or s.monster.state == "Investigate"
+	end)
+	check(reacted, "it hears the player sprint")
+	local got = run(s, 25, function()
+		return #s.caught > 0
+	end)
+	check(got, "and follows the sound all the way to them")
+end
+
+---------------------------------------------------------------------------
+print("The Statue only moves when nobody is looking (night 4)")
+do
+	local s = setup(4, 404)
+	local p = makePlayer(s.game, "Ares", 1)
+	table.insert(s.alive, p)
+	run(s, 0.2)
+	s.monster:awaken()
+	local mroot = s.monster.rig.root
+	-- stand 3 cells away in the open hall
+	local Maze = s.mods.Maze
+	local mc = Maze.cellOf(s.layout, mroot.Position.X, mroot.Position.Z)
+	local spot = nil
+	for _, d in Maze.DIRS do
+		local runCells = Maze.straightRun(s.layout, mc, d, 3)
+		if #runCells >= 2 then
+			spot = runCells[#runCells]
+			break
+		end
+	end
+	check(spot ~= nil, "found a line of sight")
+	placePlayer(p, cellCenter(s.layout, spot))
+	local head = p.Character.Head
+	s.looks[p] = (s.monster.rig.head.Position - head.Position).Unit
+	for _ = 1, 10 do
+		tick(s, 0.05)
+		s.looks[p] = (s.monster.rig.head.Position - head.Position).Unit
+	end
+	s.monster.nextBlink = Engine.time + 100 -- no blinking during this check
+	local start = mroot.Position
+	for _ = 1, 60 do
+		tick(s, 0.05)
+		s.looks[p] = (s.monster.rig.head.Position - head.Position).Unit
+	end
+	check(s.monster.state == "Frozen", "it freezes while watched")
+	check((mroot.Position - start).Magnitude < 0.5, "it doesn't move while watched")
+	-- look away
+	s.looks[p] = -s.looks[p]
+	local caught = run(s, 20, function()
+		return #s.caught > 0
+	end)
+	check(caught, "the moment you look away, it gets you")
+	local blinked = s.blinks
+	local s2 = setup(4, 405)
+	local p2 = makePlayer(s2.game, "Ares", 1)
+	table.insert(s2.alive, p2)
+	placePlayer(p2, cellCenter(s2.layout, s2.layout.entrance))
+	s2.looks[p2] = Vector3.new(0, 0, 1)
+	run(s2, 40)
+	check(s2.blinks + blinked >= 1, "the lights blink every so often (" .. s2.blinks .. " blinks in 40s)")
+end
+
+---------------------------------------------------------------------------
+print("The Amalgam smells players hiding nearby (night 5)")
+do
+	local s = setup(5, 505)
+	local p = makePlayer(s.game, "Ares", 1)
+	table.insert(s.alive, p)
+	s.monster:awaken()
+	local locker = s.interactables.lockers[1]
+	-- the monster wanders right past the locker
+	s.monster.rig.model:PivotTo(CFrame.new(locker.outside.Position.X, s.monster.rig.rootHeight, locker.outside.Position.Z) * CFrame.new(0, 0, 6))
+	placePlayer(p, locker.outside.Position)
+	s.interactables:hide(p, locker)
+	check(p:GetAttribute("Hiding") == true, "player hid")
+	check(s.monster.state == "HuntLocker", "it smelled them")
+	local pulled = run(s, 20, function()
+		return #s.caught > 0
+	end)
+	check(pulled, "and dragged them out")
+end
+
+---------------------------------------------------------------------------
+print("A hidden, unseen player survives (night 1)")
+do
+	local s = setup(1, 2024)
 	local p = makePlayer(s.game, "Ares", 1)
 	table.insert(s.alive, p)
 	s.monster:awaken()
 	local locker = s.interactables.lockers[#s.interactables.lockers]
 	placePlayer(p, locker.outside.Position)
 	s.interactables:hide(p, locker)
-	local caughtWhileHiding = run(s, 150, function()
+	local bad = run(s, 150, function()
 		return #s.caught > 0 or s.monster.state == "HuntLocker"
 	end)
-	check(not caughtWhileHiding, "a hidden, unseen player survives 150s")
+	check(not bad, "survived 150s in a locker")
 	s.interactables:leave(p, false)
 	check(p:GetAttribute("Hiding") == false and not p.Character.HumanoidRootPart.Anchored, "leaving the locker frees the player")
 end
 
----------------------------------------------------------------------------
-print("Keys -> padlocks -> code -> exit -> escape")
-do
-	local s = setup(99)
-	local p = makePlayer(s.game, "Ares", 1)
-	table.insert(s.alive, p)
-	local keyModels = {}
-	for _, d in s.interactables.folder:GetChildren() do
-		if string.match(d.Name, "^Key%d$") then
-			table.insert(keyModels, d)
-		end
-	end
-	check(#keyModels == 4, "4 keys exist")
-	for _, model in keyModels do
-		local prompt = model.Shaft:FindFirstChildOfClass("ProximityPrompt")
-		prompt.Triggered:Fire(p)
-	end
-	check(#s.keys == 4, "picking up keys calls onKey 4 times")
-	check(s.interactables.padlocksLeft == 0, "all padlocks fall off")
-	check(s.monster.awake, "taking a key wakes the monster")
-
-	local remotes = s.game:GetService("ReplicatedStorage").Remotes
-	placePlayer(p, s.interactables.keypad.Position + Vector3.new(0, 0, 4))
-	remotes.SubmitCode.OnServerEvent:Fire(p, "0000" == s.layout.code and "1111" or "0000")
-	check(not s.interactables.exitOpen, "wrong code keeps the door shut")
-	check(s.monster.noise ~= nil or s.monster.state == "Investigate", "the wrong-code buzzer makes noise")
-	Engine.time += 1
-	remotes.SubmitCode.OnServerEvent:Fire(p, s.layout.code)
-	check(s.interactables.exitOpen, "right code opens the exit")
-	run(s, 1)
-	check(s.world.exitLight.Enabled, "the light outside comes on")
-	check(s.monster.state == "Chase" and os.clock ~= nil, "exit opening sends it into a frenzy chase")
-	s.world.escapeZone.Touched:Fire(p.Character.HumanoidRootPart)
-	check(#s.escaped == 1, "touching the escape zone escapes")
-end
-
----------------------------------------------------------------------------
-print("Doors")
-do
-	local s = setup(5150)
-	local door = s.interactables.doors[1]
-	local was = door.isOpen
-	s.interactables:setDoor(door, not was, false)
-	check(door.isOpen ~= was and not door.busy, "doors toggle")
-	s.interactables:setDoor(door, false, false)
-	s.interactables:slamOpenNear(door.part.Position, 8)
-	check(door.isOpen, "the monster slams doors open")
-end
-
-if #Engine.log > 0 then
-	print("warnings logged: " .. #Engine.log)
-	for i = 1, math.min(5, #Engine.log) do
-		print("  " .. Engine.log[i])
-	end
-end
-
+check(#Engine.errors == 0, "no script errors anywhere (" .. #Engine.errors .. ")")
 if failures > 0 then
 	error(failures .. " check(s) failed")
 end
