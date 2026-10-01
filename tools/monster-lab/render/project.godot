@@ -1,0 +1,11 @@
+config_version=5
+
+[application]
+config/name="MonsterRender"
+
+[rendering]
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
+lights_and_shadows/directional_shadow/size=4096
+lights_and_shadows/positional_shadow/atlas_size=4096
+textures/default_filters/anisotropic_filtering_level=4

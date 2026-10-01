@@ -11,3 +11,6 @@ __pycache__/
 # OS / editors
 .DS_Store
 .vscode/
+
+# Monster lab renders
+tools/monster-lab/out/
