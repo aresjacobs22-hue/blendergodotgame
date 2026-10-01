@@ -261,8 +261,8 @@ local function startRound(night: Nights.Night)
 
 	GameState:SetAttribute("Night", night.index)
 	GameState:SetAttribute("NightName", night.name)
-	GameState:SetAttribute("Objective", night.objectiveText)
-	GameState:SetAttribute("Progress", "")
+	GameState:SetAttribute("Done", 0)
+	GameState:SetAttribute("Goal", 0)
 	GameState:SetAttribute("CodeMask", "")
 	GameState:SetAttribute("ExitOpen", false)
 	GameState:SetAttribute("MonsterAwake", false)
@@ -270,8 +270,6 @@ local function startRound(night: Nights.Night)
 	GameState:SetAttribute("Blink", false)
 	GameState:SetAttribute("Result", "")
 	GameState:SetAttribute("Curse", curse.id)
-	GameState:SetAttribute("CurseName", curse.name)
-	GameState:SetAttribute("CurseText", curse.text)
 	GameState:SetAttribute("Blackout", false)
 	GameState:SetAttribute("Rage", false)
 
@@ -285,8 +283,9 @@ local function startRound(night: Nights.Night)
 		isAlive = isAlive,
 		notifyAll = notifyAll,
 		notify = notify,
-		setProgress = function(text: string)
-			GameState:SetAttribute("Progress", text)
+		setProgress = function(done: number, goal: number)
+			GameState:SetAttribute("Goal", goal)
+			GameState:SetAttribute("Done", done)
 		end,
 		winAll = function(kind: string)
 			for _, player in alivePlayers() do
@@ -407,7 +406,8 @@ function RoundManager.run()
 	GameState:SetAttribute("Night", 1)
 	GameState:SetAttribute("NightName", Nights.get(1).name)
 	GameState:SetAttribute("ReadyCount", 0)
-	GameState:SetAttribute("Progress", "")
+	GameState:SetAttribute("Done", 0)
+	GameState:SetAttribute("Goal", 0)
 
 	Players.PlayerAdded:Connect(Progress.load)
 	for _, player in Players:GetPlayers() do

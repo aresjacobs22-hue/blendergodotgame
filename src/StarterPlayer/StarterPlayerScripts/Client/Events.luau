@@ -1,6 +1,6 @@
 --!strict
 -- The chaos, from your side of the screen:
---   phone       you picked up; a voice tells you something (maybe the truth)
+--   phone       you picked up; a voice, and then you hear IT from where it is (usually)
 --   falseChase  the chase music kicks in and something screams behind you... nothing
 --   hunted      (curse) your heartbeat gave you away
 --   phantoms    (curse) you see it standing down the corridor. It isn't there.
@@ -47,11 +47,14 @@ local function onEvent(kind: string, data: unknown)
 	if kind == "phone" then
 		Audio.play("PhoneVoice", nil, 1.2)
 		Hud.glitch(0.4, 0.3)
-		task.delay(0.8, function()
-			if ClientState.roundStatus == "alive" then
-				Hud.message("A voice on the line: " .. tostring(data), "note")
-			end
-		end)
+		-- then a whisper from wherever it is (or wherever the voice wants you to think it is)
+		if typeof(data) == "Vector3" then
+			task.delay(2.2, function()
+				if ClientState.roundStatus == "alive" then
+					Audio.playAt("StingerWhisper", data, 2.4, 0.85, 400)
+				end
+			end)
+		end
 	elseif kind == "falseChase" then
 		Atmosphere.fakeChase(4.5)
 		local root = myRoot()
@@ -59,11 +62,6 @@ local function onEvent(kind: string, data: unknown)
 			local scream = Monsters.SCREAMS[currentNight().monsterKind] or "MonsterScream"
 			Audio.playAt(scream, root.Position - root.CFrame.LookVector * 14 + Vector3.new(0, 3, 0), 1.6, 1, 120)
 		end
-		task.delay(5, function()
-			if ClientState.roundStatus == "alive" then
-				Hud.message("...there's nothing there.")
-			end
-		end)
 	elseif kind == "hunted" then
 		for i = 0, 2 do
 			task.delay(i * 0.55, function()
@@ -71,7 +69,7 @@ local function onEvent(kind: string, data: unknown)
 				Hud.pulse(1)
 			end)
 		end
-		Hud.message("It heard your heart.", "danger")
+		Hud.glitch(0.6, 0.4)
 	end
 end
 
@@ -135,7 +133,7 @@ end
 local function setBottles()
 	local value = player:GetAttribute("Bottles")
 	local n = if typeof(value) == "number" then value else 0
-	Hud.setBottles(n, "G")
+	Hud.setBottles(n)
 	if n > 0 and not throwBound then
 		throwBound = true
 		ContextActionService:BindAction("AchromaThrow", function(_: string, state: Enum.UserInputState, _: InputObject): Enum.ContextActionResult?

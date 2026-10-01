@@ -1,7 +1,7 @@
 --!strict
--- On-screen everything: film grain, vignette, glitches, the objective panel (with the
--- night's curse), stamina, flashlight battery, bottles, the hold-your-breath meter,
--- typewriter messages, big titles, fades, flashes and the red of its rage.
+-- On-screen everything, and no words: film grain, vignette, glitches, a few faint dots
+-- for how far along you are, stamina, flashlight battery, bottles, the hold-your-breath
+-- meter, the night's title, fades, flashes and the red of its rage.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -9,7 +9,6 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
 local Audio = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Audio"))
-local Nights = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Nights"))
 
 local GameState = ReplicatedStorage:WaitForChild("GameState")
 local player = Players.LocalPlayer
@@ -17,23 +16,20 @@ local player = Players.LocalPlayer
 local Hud = {}
 
 local TEXT = Color3.fromRGB(205, 205, 200)
-local DIM = Color3.fromRGB(120, 120, 116)
 local BLACK = Color3.new(0, 0, 0)
-local FONT = Enum.Font.SpecialElite
+local DANGER = Color3.fromRGB(220, 70, 60)
+Hud.TITLE_FONT = Enum.Font.Garamond
 
 local gui: ScreenGui
-local info: Frame
-local nightLabel: TextLabel
-local objectiveLabel: TextLabel
-local progressLabel: TextLabel
+local pips: Frame
+local pipDots: { Frame } = {}
+local pipsShownAt = -math.huge
 local blinkFrame: Frame
 local staminaFrame: Frame
 local staminaFill: Frame
 local batteryFrame: Frame
 local batterySegments: { Frame } = {}
-local messages: Frame
 local bigTitle: TextLabel
-local bigSub: TextLabel
 local fadeFrame: Frame
 local flashFrame: Frame
 local whiteFrame: Frame
@@ -41,13 +37,12 @@ local grain: Frame
 local specks: { Frame } = {}
 local vignette: { Frame } = {}
 local glitchBars: { Frame } = {}
-local hint: TextLabel
 local crosshair: Frame
-local curseLabel: TextLabel
-local bottlesLabel: TextLabel
+local bottles: Frame
+local bottleMarks: { Frame } = {}
 local breathFrame: Frame
 local breathFill: Frame
-local breathLabel: TextLabel
+local breathUrgent = false
 local rageFrame: Frame
 
 local fearLevel = 0
@@ -68,19 +63,17 @@ local function new<T>(className: string, props: { [string]: any }, parent: Insta
 	return (inst :: any) :: T
 end
 
-local function label(props: { [string]: any }, parent: Instance): TextLabel
-	local defaults: { [string]: any } = {
-		BackgroundTransparency = 1,
-		Font = FONT,
-		TextColor3 = TEXT,
-		TextStrokeTransparency = 0.6,
-		TextStrokeColor3 = BLACK,
-		TextSize = 20,
-	}
-	for k, v in props do
-		defaults[k] = v
+-- "NIGHT 1" -> "N I G H T   1": the only words the game ever shows
+function Hud.spaced(text: string): string
+	local out = {}
+	for _, word in string.split(text, " ") do
+		local letters = {}
+		for i = 1, #word do
+			table.insert(letters, string.sub(word, i, i))
+		end
+		table.insert(out, table.concat(letters, " "))
 	end
-	return new("TextLabel", defaults, parent)
+	return table.concat(out, "    ")
 end
 
 local function corner(parent: Instance, radius: number?)
@@ -136,74 +129,64 @@ function Hud.init()
 	crosshair = new("Frame", { Name = "Crosshair", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(4, 4), BackgroundColor3 = TEXT, BackgroundTransparency = 0.55, BorderSizePixel = 0, ZIndex = 5 }, gui)
 	corner(crosshair)
 
-	-- keys + code (bottom left)
-	-- objective panel (top left): night, what to do, how far along you are
-	info = new("Frame", { Name = "Info", BackgroundTransparency = 1, Position = UDim2.fromOffset(28, 22), Size = UDim2.fromOffset(460, 120), ZIndex = 5 }, gui)
-	nightLabel = label({ Name = "Night", Text = "", Size = UDim2.fromOffset(460, 20), TextXAlignment = Enum.TextXAlignment.Left, TextSize = 16, TextColor3 = DIM, ZIndex = 5 }, info)
-	objectiveLabel = label({ Name = "Objective", Text = "", Position = UDim2.fromOffset(0, 22), Size = UDim2.fromOffset(460, 24), TextXAlignment = Enum.TextXAlignment.Left, TextSize = 20, ZIndex = 5 }, info)
-	progressLabel = label({ Name = "Progress", Text = "", Position = UDim2.fromOffset(0, 50), Size = UDim2.fromOffset(460, 34), TextXAlignment = Enum.TextXAlignment.Left, TextSize = 28, ZIndex = 5 }, info)
-	curseLabel = label({ Name = "Curse", Text = "", Position = UDim2.fromOffset(0, 88), Size = UDim2.fromOffset(460, 22), TextXAlignment = Enum.TextXAlignment.Left, TextSize = 17, TextColor3 = Color3.fromRGB(200, 70, 60), ZIndex = 5 }, info)
+	-- how far along you are: a row of faint dots (top centre) that light up one by one
+	pips = new("Frame", { Name = "Pips", AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 26), Size = UDim2.fromOffset(240, 8), BackgroundTransparency = 1, ZIndex = 5 }, gui)
+	new("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Center, Padding = UDim.new(0, 12), SortOrder = Enum.SortOrder.LayoutOrder }, pips)
 	blinkFrame = new("Frame", { Name = "Blink", Size = UDim2.fromScale(1, 1), BackgroundColor3 = BLACK, BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = 8 }, gui)
 
 	-- stamina (bottom centre)
 	staminaFrame = new("Frame", { Name = "Stamina", AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -34), Size = UDim2.fromOffset(260, 4), BackgroundColor3 = Color3.fromRGB(40, 40, 40), BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = 5 }, gui)
 	staminaFill = new("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = TEXT, BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = 5 }, staminaFrame)
 
-	-- flashlight battery (bottom right)
-	batteryFrame = new("Frame", { Name = "Battery", AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -28, 1, -28), Size = UDim2.fromOffset(180, 30), BackgroundTransparency = 1, ZIndex = 5 }, gui)
-	label({ Text = "LIGHT", Size = UDim2.fromOffset(64, 30), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = DIM, ZIndex = 5 }, batteryFrame)
+	-- flashlight battery (bottom right): five faint ticks
+	batteryFrame = new("Frame", { Name = "Battery", AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -30, 1, -30), Size = UDim2.fromOffset(80, 8), BackgroundTransparency = 1, ZIndex = 5 }, gui)
 	for i = 1, 5 do
-		table.insert(batterySegments, new("Frame", { Position = UDim2.fromOffset(66 + (i - 1) * 21, 9), Size = UDim2.fromOffset(16, 12), BackgroundColor3 = TEXT, BorderSizePixel = 0, ZIndex = 5 }, batteryFrame))
+		table.insert(batterySegments, new("Frame", { Position = UDim2.fromOffset((i - 1) * 16, 0), Size = UDim2.fromOffset(12, 4), BackgroundColor3 = TEXT, BorderSizePixel = 0, ZIndex = 5 }, batteryFrame))
 	end
 
-	-- bottles you're carrying (bottom right, above the battery)
-	bottlesLabel = label({ Name = "Bottles", AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -28, 1, -62), Size = UDim2.fromOffset(240, 24), TextXAlignment = Enum.TextXAlignment.Right, TextSize = 18, Text = "", ZIndex = 5 }, gui)
+	-- bottles you're carrying (above the battery): one small mark each
+	bottles = new("Frame", { Name = "Bottles", AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -30, 1, -48), Size = UDim2.fromOffset(80, 14), BackgroundTransparency = 1, ZIndex = 5 }, gui)
+	for i = 1, 3 do
+		table.insert(bottleMarks, new("Frame", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -(i - 1) * 10, 0, 0), Size = UDim2.fromOffset(4, 14), BackgroundColor3 = TEXT, BackgroundTransparency = 0.45, BorderSizePixel = 0, Visible = false, ZIndex = 5 }, bottles))
+	end
 
-	-- hold your breath (centre, only while it's right outside your hiding spot)
-	breathFrame = new("Frame", { Name = "Breath", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.68), Size = UDim2.fromOffset(320, 10), BackgroundColor3 = Color3.fromRGB(30, 30, 30), BackgroundTransparency = 0.3, BorderSizePixel = 0, Visible = false, ZIndex = 7 }, gui)
-	breathFill = new("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = TEXT, BorderSizePixel = 0, ZIndex = 7 }, breathFrame)
-	breathLabel = label({ AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 0, -6), Size = UDim2.fromOffset(500, 28), Text = "", TextSize = 22, ZIndex = 7 }, breathFrame)
+	-- hold your breath (centre, only while you're hiding): a thin line that runs out
+	breathFrame = new("Frame", { Name = "Breath", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.7), Size = UDim2.fromOffset(240, 3), BackgroundColor3 = Color3.fromRGB(30, 30, 30), BackgroundTransparency = 0.4, BorderSizePixel = 0, Visible = false, ZIndex = 7 }, gui)
+	breathFill = new("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.fromScale(0.5, 0), Size = UDim2.fromScale(1, 1), BackgroundColor3 = TEXT, BorderSizePixel = 0, ZIndex = 7 }, breathFrame)
 
 	-- the red wash while it's enraged
 	rageFrame = new("Frame", { Name = "Rage", Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.fromRGB(150, 0, 0), BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = 2 }, gui)
 
-	hint = label({ Name = "Hint", AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -60), Size = UDim2.fromOffset(500, 26), Text = "", TextColor3 = DIM, TextSize = 18, ZIndex = 6 }, gui)
-
-	messages = new("Frame", { Name = "Messages", AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.fromScale(0.5, 0.8), Size = UDim2.fromScale(0.62, 0.3), BackgroundTransparency = 1, ZIndex = 6 }, gui)
-	new("UIListLayout", { VerticalAlignment = Enum.VerticalAlignment.Bottom, HorizontalAlignment = Enum.HorizontalAlignment.Center, Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder }, messages)
-
-	bigTitle = label({ Name = "BigTitle", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.42), Size = UDim2.fromScale(0.9, 0.2), Font = Enum.Font.Creepster, TextScaled = true, Text = "", TextTransparency = 1, TextStrokeTransparency = 1, ZIndex = 11 }, gui)
-	bigSub = label({ Name = "BigSub", AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.fromScale(0.5, 0.54), Size = UDim2.fromScale(0.8, 0.12), TextWrapped = true, TextSize = 24, Text = "", TextTransparency = 1, TextStrokeTransparency = 1, TextColor3 = DIM, ZIndex = 11 }, gui)
+	bigTitle = new("TextLabel", { Name = "BigTitle", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.48), Size = UDim2.new(0.9, 0, 0, 60), BackgroundTransparency = 1, Font = Hud.TITLE_FONT, TextSize = 40, TextColor3 = TEXT, Text = "", TextTransparency = 1, ZIndex = 11 }, gui)
 
 	fadeFrame = new("Frame", { Name = "Fade", Size = UDim2.fromScale(1, 1), BackgroundColor3 = BLACK, BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = 9 }, gui)
 	whiteFrame = new("Frame", { Name = "White", Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = 10 }, gui)
 	flashFrame = new("Frame", { Name = "Flash", Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = 10 }, gui)
 
+	-- a developer-only reminder (Studio, never in the published game)
 	if RunService:IsStudio() and not Audio.isConfigured() then
-		label({ Text = "Audio IDs not set: see README (ReplicatedStorage.Shared.SoundIds)", Position = UDim2.fromOffset(12, 8), Size = UDim2.fromOffset(520, 20), TextXAlignment = Enum.TextXAlignment.Left, TextSize = 14, TextColor3 = Color3.fromRGB(150, 150, 150), ZIndex = 12 }, gui)
+		new("TextLabel", { Text = "Audio IDs not set: see README (ReplicatedStorage.Shared.SoundIds)", BackgroundTransparency = 1, Font = Enum.Font.SourceSans, Position = UDim2.fromOffset(12, 8), Size = UDim2.fromOffset(520, 20), TextXAlignment = Enum.TextXAlignment.Left, TextSize = 14, TextColor3 = Color3.fromRGB(150, 150, 150), ZIndex = 12 }, gui)
 	end
 
-	local function refreshObjective()
-		local night = GameState:GetAttribute("Night")
-		local name = GameState:GetAttribute("NightName")
-		nightLabel.Text = string.format("NIGHT %s  ·  %s", tostring(night or 1), tostring(name or ""))
-		nightLabel.TextColor3 = Nights.get(if typeof(night) == "number" then night else 1).accent
-		local objective = GameState:GetAttribute("Objective")
-		objectiveLabel.Text = if typeof(objective) == "string" then objective else ""
-		local progress = GameState:GetAttribute("Progress")
-		progressLabel.Text = if typeof(progress) == "string" then progress else ""
-		local curse = GameState:GetAttribute("CurseName")
-		curseLabel.Text = if typeof(curse) == "string" and curse ~= "" and GameState:GetAttribute("Curse") ~= "" then "CURSE  ·  " .. curse else ""
+	local function refreshPips()
+		local done = GameState:GetAttribute("Done")
+		local goal = GameState:GetAttribute("Goal")
+		local d = if typeof(done) == "number" then done else 0
+		local g = if typeof(goal) == "number" then goal else 0
+		while #pipDots < g do
+			local dot: Frame = new("Frame", { Size = UDim2.fromOffset(5, 5), BackgroundColor3 = TEXT, BorderSizePixel = 0, LayoutOrder = #pipDots + 1, ZIndex = 5 }, pips)
+			corner(dot)
+			table.insert(pipDots, dot)
+		end
+		for i, dot in pipDots do
+			dot.Visible = i <= g
+			dot:SetAttribute("Lit", i <= d)
+		end
+		pipsShownAt = os.clock()
 	end
-	for _, attr in { "Night", "NightName", "Objective", "Progress", "Curse", "CurseName" } do
-		GameState:GetAttributeChangedSignal(attr):Connect(refreshObjective)
-	end
-	refreshObjective()
-	GameState:GetAttributeChangedSignal("Progress"):Connect(function()
-		-- a little flash whenever progress changes
-		progressLabel.TextTransparency = 0.6
-		TweenService:Create(progressLabel, TweenInfo.new(0.6), { TextTransparency = 0 }):Play()
-	end)
+	GameState:GetAttributeChangedSignal("Done"):Connect(refreshPips)
+	GameState:GetAttributeChangedSignal("Goal"):Connect(refreshPips)
+	refreshPips()
 	-- statue night: everyone blinks
 	GameState:GetAttributeChangedSignal("Blink"):Connect(function()
 		if GameState:GetAttribute("Blink") == true then
@@ -256,12 +239,33 @@ function Hud._update(dt: number)
 	local showStamina = t - staminaShownAt < 1.2
 	staminaFrame.BackgroundTransparency = if showStamina then 0.4 else 1
 	staminaFill.BackgroundTransparency = if showStamina then 0.15 else 1
+
+	-- the dots stand out for a few seconds after they change, then sink back into the dark.
+	-- When they're all lit they breathe.
+	local since = t - pipsShownAt
+	local loud = math.clamp(1 - (since - 4) / 2, 0, 1)
+	local all = #pipDots > 0
+	for _, dot in pipDots do
+		if dot.Visible and dot:GetAttribute("Lit") ~= true then
+			all = false
+		end
+	end
+	for _, dot in pipDots do
+		local lit = dot:GetAttribute("Lit") == true
+		local quiet = if lit then (if all then 0.55 + 0.25 * math.sin(t * 1.6) else 0.75) else 0.93
+		local shown = if lit then 0.1 else 0.75
+		dot.BackgroundTransparency = quiet + (shown - quiet) * loud
+	end
+
+	if breathFrame.Visible then
+		breathFill.BackgroundColor3 = if breathUrgent and math.floor(t * 6) % 2 == 0 then DANGER else TEXT
+	end
 end
 
 function Hud.setHudVisible(visible: boolean)
-	info.Visible = visible
+	pips.Visible = visible
 	batteryFrame.Visible = visible
-	bottlesLabel.Visible = visible
+	bottles.Visible = visible
 	staminaFrame.Visible = visible
 	crosshair.Visible = visible
 end
@@ -276,25 +280,21 @@ end
 function Hud.setBattery(fraction: number)
 	local lit = math.ceil(math.clamp(fraction, 0, 1) * #batterySegments - 0.001)
 	for i, seg in batterySegments do
-		seg.BackgroundTransparency = if i <= lit then (if fraction < 0.2 then 0.4 + math.random() * 0.3 else 0.15) else 0.85
+		seg.BackgroundTransparency = if i <= lit then (if fraction < 0.2 then 0.55 + math.random() * 0.3 else 0.5) else 0.9
 	end
 end
 
-function Hud.setBottles(n: number, throwKey: string)
-	if n <= 0 then
-		bottlesLabel.Text = ""
-		return
+function Hud.setBottles(n: number)
+	for i, mark in bottleMarks do
+		mark.Visible = i <= n
 	end
-	bottlesLabel.Text = string.format("BOTTLES %s   [%s] throw", string.rep("● ", n), throwKey)
 end
 
 -- fraction: breath left (0..1). urgent: it's right outside and you're not holding it.
-function Hud.setBreath(visible: boolean, fraction: number, text: string, urgent: boolean)
+function Hud.setBreath(visible: boolean, fraction: number, urgent: boolean)
 	breathFrame.Visible = visible
 	breathFill.Size = UDim2.fromScale(math.clamp(fraction, 0, 1), 1)
-	breathFill.BackgroundColor3 = if fraction < 0.25 then Color3.fromRGB(220, 70, 60) else TEXT
-	breathLabel.Text = text
-	breathLabel.TextColor3 = if urgent and math.floor(os.clock() * 6) % 2 == 0 then Color3.fromRGB(240, 80, 70) else TEXT
+	breathUrgent = urgent or fraction < 0.25
 end
 
 function Hud.setRage(amount: number)
@@ -316,93 +316,17 @@ end
 
 function Hud.setHiding(on: boolean)
 	hidingDark = on
-	Hud.setHint(if on then "[E]  leave hiding spot" else "")
 end
 
-function Hud.setHint(text: string)
-	hint.Text = text
+-- The night's title in the middle of the dark ("NIGHT 3", letter-spaced). It's already
+-- there (the menu's black screen showed it while the night loaded); it fades out slowly.
+function Hud.showTitle(title: string)
+	bigTitle.Text = Hud.spaced(title)
+	bigTitle.TextTransparency = 0.05
 end
 
-function Hud.message(text: string, style: string?)
-	local isNote = style == "note"
-	local color = if style == "danger" then Color3.fromRGB(240, 240, 240) elseif style == "key" then Color3.fromRGB(225, 225, 215) else TEXT
-	local line = label({
-		Size = UDim2.new(1, 0, 0, 0),
-		AutomaticSize = Enum.AutomaticSize.Y,
-		TextWrapped = true,
-		Text = text,
-		TextSize = if style == "danger" then 26 elseif isNote then 22 else 21,
-		TextColor3 = color,
-		TextStrokeTransparency = 0.35,
-		MaxVisibleGraphemes = 0,
-		LayoutOrder = math.floor(os.clock() * 100),
-		ZIndex = 6,
-	}, messages)
-	if isNote then
-		line.BackgroundTransparency = 0.25
-		line.BackgroundColor3 = Color3.fromRGB(14, 14, 14)
-		new("UIPadding", { PaddingTop = UDim.new(0, 12), PaddingBottom = UDim.new(0, 12), PaddingLeft = UDim.new(0, 18), PaddingRight = UDim.new(0, 18) }, line)
-	end
-	local lifetime = (if isNote then 7 else 3.5) + #text * (if isNote then 0.045 else 0.03)
-	task.spawn(function()
-		local count = utf8.len(text) or #text
-		for i = 1, count do
-			if not line.Parent then
-				return
-			end
-			line.MaxVisibleGraphemes = i
-			if i % 2 == 0 then
-				task.wait()
-			end
-		end
-		line.MaxVisibleGraphemes = -1
-		task.wait(lifetime)
-		if line.Parent then
-			local tween = TweenService:Create(line, TweenInfo.new(1.2), { TextTransparency = 1, TextStrokeTransparency = 1, BackgroundTransparency = 1 })
-			tween:Play()
-			tween.Completed:Wait()
-			line:Destroy()
-		end
-	end)
-	if style == "danger" then
-		Hud.glitch(0.6, 0.4)
-	end
-	-- keep at most 4 lines
-	local lines = {}
-	for _, c in messages:GetChildren() do
-		if c:IsA("TextLabel") then
-			table.insert(lines, c)
-		end
-	end
-	table.sort(lines, function(a, b)
-		return a.LayoutOrder < b.LayoutOrder
-	end)
-	for i = 1, #lines - 4 do
-		lines[i]:Destroy()
-	end
-end
-
-function Hud.showBig(title: string, sub: string?, font: Enum.Font?)
-	bigTitle.Text = title
-	bigTitle.Font = font or Enum.Font.Creepster
-	bigSub.Text = sub or ""
-	TweenService:Create(bigTitle, TweenInfo.new(0.6), { TextTransparency = 0 }):Play()
-	TweenService:Create(bigSub, TweenInfo.new(1.2), { TextTransparency = 0 }):Play()
-end
-
-function Hud.setBigColor(color: Color3)
-	bigTitle.TextColor3 = color
-	bigSub.TextColor3 = color
-end
-
-function Hud.hideBig(instant: boolean?)
-	if instant then
-		bigTitle.TextTransparency = 1
-		bigSub.TextTransparency = 1
-	else
-		TweenService:Create(bigTitle, TweenInfo.new(0.8), { TextTransparency = 1 }):Play()
-		TweenService:Create(bigSub, TweenInfo.new(0.8), { TextTransparency = 1 }):Play()
-	end
+function Hud.hideTitle()
+	TweenService:Create(bigTitle, TweenInfo.new(1.6, Enum.EasingStyle.Sine), { TextTransparency = 1 }):Play()
 end
 
 -- 0 = fully black, 1 = clear

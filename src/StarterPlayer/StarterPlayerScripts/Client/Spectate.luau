@@ -8,7 +8,6 @@ local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 
 local ClientState = require(script.Parent.ClientState)
-local Hud = require(script.Parent.Hud)
 
 local GameState = ReplicatedStorage:WaitForChild("GameState")
 local player = Players.LocalPlayer
@@ -63,10 +62,7 @@ function Spectate.init()
 			and player.Character == nil
 			and GameState:GetAttribute("Phase") == "Playing"
 		if not shouldSpectate then
-			if active then
-				active = false
-				Hud.setHint("")
-			end
+			active = false
 			return
 		end
 
@@ -80,7 +76,6 @@ function Spectate.init()
 		local head = if character then character:FindFirstChild("Head") :: BasePart? else nil
 		if not t or not head then
 			active = false
-			Hud.setHint("")
 			return
 		end
 		active = true
@@ -93,7 +88,6 @@ function Spectate.init()
 		local goal = CFrame.lookAt(head.Position - flatLook.Unit * 5 + Vector3.new(0, 2.2, 0), head.Position + flatLook.Unit * 10)
 		smoothed = if smoothed then smoothed:Lerp(goal, math.min(1, dt * 6)) else goal
 		camera.CFrame = smoothed :: CFrame
-		Hud.setHint("SPECTATING  " .. t.DisplayName .. "     [click] next")
 	end)
 end
 

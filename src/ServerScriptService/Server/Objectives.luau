@@ -32,7 +32,7 @@ export type Ctx = {
 	isAlive: (player: Player) -> boolean,
 	notifyAll: (text: string, style: string?) -> (),
 	notify: (player: Player, text: string, style: string?) -> (),
-	setProgress: (text: string) -> (),
+	setProgress: (done: number, goal: number) -> (), -- shown as faint dots, never as text
 	winAll: (kind: string) -> (),
 }
 
@@ -61,24 +61,19 @@ local function survive(ctx: Ctx): Objective
 	local total = ctx.night.surviveSeconds or 300
 	local started = os.clock()
 	local lastHour = 0
-	local lastText = ""
 	local done = false
 	GameState:SetAttribute("Hour", 0)
-	ctx.setProgress("12:00 AM")
+	ctx.setProgress(0, 6)
 	local connection = RunService.Heartbeat:Connect(function()
 		if done then
 			return
 		end
 		local minutes = math.clamp(math.floor((os.clock() - started) / total * 360), 0, 360)
 		local hour = minutes // 60
-		local text = string.format("%d:%02d AM", if hour == 0 then 12 else hour, minutes % 60)
-		if text ~= lastText then
-			lastText = text
-			ctx.setProgress(text)
-		end
 		if hour > lastHour then
 			lastHour = hour
 			GameState:SetAttribute("Hour", hour)
+			ctx.setProgress(hour, 6)
 			if hour < 6 then
 				ctx.monster:setAggression(hour)
 				if hour == 1 then
@@ -126,10 +121,8 @@ local function keys(ctx: Ctx): Objective
 	local connections: { RBXScriptConnection } = {}
 	local metal = rgb(196, 196, 190)
 
-	local function progressText(): string
-		return string.format("KEYS %d/%d     CODE  %s", found, count, table.concat(mask, " "))
-	end
-	ctx.setProgress(progressText())
+	-- one dot per key, and one for the door
+	ctx.setProgress(0, count + 1)
 	GameState:SetAttribute("CodeMask", table.concat(mask))
 
 	-- padlocks + chain on the exit, keypad beside it
@@ -206,7 +199,7 @@ local function keys(ctx: Ctx): Objective
 		if code == layout.code then
 			exitOpen = true
 			refreshKeypad()
-			ctx.setProgress("THE EXIT IS OPEN")
+			ctx.setProgress(count + 1, count + 1)
 			openExit(ctx, "The exit is open. RUN.")
 		else
 			Audio.play("KeypadError", keypad, 1.3, 1, 100)
@@ -269,7 +262,7 @@ local function keys(ctx: Ctx): Objective
 			found += 1
 			mask[index] = string.sub(layout.code, index, index)
 			GameState:SetAttribute("CodeMask", table.concat(mask))
-			ctx.setProgress(progressText())
+			ctx.setProgress(found, count + 1)
 			if padlocksLeft > 0 then
 				local lock = padlocks[padlocksLeft]
 				padlocksLeft -= 1
@@ -311,7 +304,7 @@ local function power(ctx: Ctx): Objective
 	folder.Parent = world.model
 	local count = #layout.spots
 	local running = 0
-	ctx.setProgress(string.format("GENERATORS 0/%d", count))
+	ctx.setProgress(0, count)
 
 	-- each lamp belongs to the nearest generator
 	local maps = {}
@@ -397,7 +390,7 @@ local function power(ctx: Ctx): Objective
 				end
 				Audio.play("PowerUp", base, 1.2, 1, 140)
 			end)
-			ctx.setProgress(string.format("GENERATORS %d/%d", running, count))
+			ctx.setProgress(running, count)
 			if panelLabel then
 				panelLabel.Text = string.format("MAIN POWER\n%d/%d", running, count)
 			end
@@ -409,7 +402,6 @@ local function power(ctx: Ctx): Objective
 					panelLabel.Text = "LIFT\nONLINE"
 					panelLabel.TextColor3 = rgb(80, 255, 120)
 				end
-				ctx.setProgress("THE LIFT HAS POWER")
 				openExit(ctx, "The lift has power. GET OUT.")
 			else
 				ctx.notifyAll(string.format("%s started a generator. That was LOUD. (%d/%d)", player.DisplayName, running, count), "key")
@@ -443,7 +435,7 @@ local function collect(ctx: Ctx): Objective
 	folder.Parent = world.model
 	local count = #layout.spots
 	local taken = 0
-	ctx.setProgress(string.format("PHOTOGRAPHS 0/%d", count))
+	ctx.setProgress(0, count)
 
 	for i, cell in layout.spots do
 		local frame = Interactables.spotFrame(world, cell)
@@ -507,7 +499,7 @@ local function collect(ctx: Ctx): Objective
 			model:Destroy()
 			taken += 1
 			Audio.play("PagePickup", nil, 1)
-			ctx.setProgress(string.format("PHOTOGRAPHS %d/%d", taken, count))
+			ctx.setProgress(taken, count)
 			ctx.monster:setAggression(taken)
 			ctx.notify(player, PHOTO_LINES[math.min(taken, #PHOTO_LINES)], "note")
 			if taken >= count then
@@ -535,7 +527,7 @@ local function hearts(ctx: Ctx): Objective
 	folder.Parent = world.model
 	local count = #layout.spots
 	local broken = 0
-	ctx.setProgress(string.format("HEARTS 0/%d", count))
+	ctx.setProgress(0, count)
 	local CORE = rgb(200, 20, 110)
 
 	for i, cell in layout.spots do
@@ -588,10 +580,9 @@ local function hearts(ctx: Ctx): Objective
 			end
 			Audio.playAt("HeartShatter", where, 2, 1, 400)
 			broken += 1
-			ctx.setProgress(string.format("HEARTS %d/%d", broken, count))
+			ctx.setProgress(broken, count)
 			ctx.monster:setAggression(broken)
 			if broken >= count then
-				ctx.setProgress("THE WAY OUT IS OPEN")
 				openExit(ctx, "The last heart is still. The way out is open. RUN.")
 			else
 				ctx.notifyAll(string.format("A heart stops beating. IT KNOWS WHERE %s IS. (%d/%d)", string.upper(player.DisplayName), broken, count), "danger")

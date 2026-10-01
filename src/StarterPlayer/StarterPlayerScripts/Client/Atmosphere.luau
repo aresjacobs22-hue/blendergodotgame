@@ -492,7 +492,7 @@ function Atmosphere.init()
 			if night.monsterKind ~= "Statue" then
 				Audio.play("StingerDistantScream", nil, 1.1, 0.8)
 			end
-			Hud.message(if night.monsterKind == "Statue" then "One of the statues has moved." else "Somewhere out there, something wakes up.", "danger")
+			Hud.glitch(0.6, 0.4)
 			shakeImpulse = 0.7
 		end
 	end)

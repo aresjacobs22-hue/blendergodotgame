@@ -30,12 +30,10 @@ local battery = 100
 local on = false
 local sway: CFrame? = nil
 local dropUntil = 0
-local hinted = false
 
 local function setOn(value: boolean)
 	if value and battery <= 0 then
 		Audio.play("FlashlightClick", nil, 0.5, 0.8)
-		Hud.message("The battery is dead.")
 		return
 	end
 	if value == on then
@@ -73,7 +71,6 @@ local function update(dt: number)
 		battery = math.max(0, battery - Config.Player.BatteryDrain * dt)
 		if battery <= 0 then
 			setOn(false)
-			Hud.message("Your flashlight flickers... and dies.")
 		end
 	end
 	Hud.setBattery(battery / 100)
@@ -147,19 +144,12 @@ function Flashlight.init()
 	Remotes.Battery.OnClientEvent:Connect(function(amount: number)
 		battery = math.min(100, battery + amount)
 		Audio.play("Battery", nil, 0.8)
-		Hud.message("You found a battery.")
 	end)
 
 	player.CharacterAdded:Connect(function()
 		battery = 100
 		on = false
 		ClientState.flashlightOn = false
-		if not hinted then
-			hinted = true
-			task.delay(6, function()
-				Hud.message("Press F to use your flashlight.  Shift to run, C to crouch.")
-			end)
-		end
 	end)
 
 	local function readNight()

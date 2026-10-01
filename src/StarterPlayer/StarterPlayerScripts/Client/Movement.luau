@@ -54,7 +54,7 @@ local function update(dt: number)
 		lastSprint = now
 		if stamina <= 0 then
 			exhausted = true
-			Hud.message("You're out of breath.")
+			Audio.play("Gasp", nil, 0.7, 1.15)
 		end
 	elseif now - lastSprint > P.StaminaRegenDelay then
 		stamina = math.min(P.StaminaMax, stamina + P.StaminaRegen * dt)

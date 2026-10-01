@@ -20,6 +20,7 @@ local Keypad = require(script.Parent.Keypad)
 local Menu = require(script.Parent.Menu)
 local MonsterAnimator = require(script.Parent.MonsterAnimator)
 local Movement = require(script.Parent.Movement)
+local Prompts = require(script.Parent.Prompts)
 local Spectate = require(script.Parent.Spectate)
 
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
@@ -50,13 +51,15 @@ Hiding.init()
 Keypad.init()
 Spectate.init()
 Events.init()
+Prompts.init()
 Menu.init()
 
-Remotes.Notify.OnClientEvent:Connect(function(text: string, style: string?)
-	Hud.message(text, style)
+-- The game never puts words on screen. What the server narrates (who found a key,
+-- what the hour is) only goes to the developer console (F9).
+Remotes.Notify.OnClientEvent:Connect(function(text: string, _style: string?)
+	print("[ACHROMA] " .. text)
 end)
 
-local Nights = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Nights"))
 local Audio = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Audio"))
 local GameState = ReplicatedStorage:WaitForChild("GameState")
 
@@ -70,44 +73,17 @@ player.CharacterAdded:Connect(function(character: Model)
 	Hud.setHudVisible(true)
 	Hud.whiteout(1, 0)
 	Hud.fade(0, 0)
-	Hud.fade(1, 3)
-	Atmosphere.wakeUp()
 
-	-- the night's title card, then its opening lines
+	-- black, the night's number, black again, and then you're just... there
 	local n = GameState:GetAttribute("Night")
-	local night = Nights.get(if typeof(n) == "number" then n else 1)
-	Audio.play("NightIntro", nil, 1)
-	Hud.setBigColor(night.accent)
-	Hud.showBig(string.format("NIGHT %d", night.index), night.name .. "\n" .. night.objectiveText)
-	-- then the curse it rolled this time
-	local curseName = GameState:GetAttribute("CurseName")
-	local curseText = GameState:GetAttribute("CurseText")
-	local hasCurse = typeof(curseName) == "string" and curseName ~= "" and GameState:GetAttribute("Curse") ~= ""
-	task.delay(4.2, function()
-		Hud.hideBig()
-		task.delay(0.9, function()
-			if hasCurse and ClientState.roundStatus == "alive" then
-				Audio.play("CurseSting", nil, 1.1)
-				Hud.setBigColor(Color3.fromRGB(200, 60, 50))
-				Hud.showBig("CURSE: " .. tostring(curseName), tostring(curseText))
-			else
-				Hud.setBigColor(Color3.fromRGB(205, 205, 200))
-			end
-		end)
-		local delayLines = if hasCurse then 4.6 else 0
-		task.delay(delayLines, function()
-			if hasCurse then
-				Hud.hideBig()
-				task.delay(0.9, function()
-					Hud.setBigColor(Color3.fromRGB(205, 205, 200))
-				end)
-			end
-			for i, line in night.intro do
-				task.delay((i - 1) * 2.5, function()
-					if ClientState.roundStatus == "alive" then
-						Hud.message(line)
-					end
-				end)
+	Audio.play("NightIntro", nil, 0.8)
+	Hud.showTitle(string.format("NIGHT %d", if typeof(n) == "number" then n else 1))
+	task.delay(3.6, function()
+		Hud.hideTitle()
+		task.delay(1.4, function()
+			if ClientState.roundStatus == "alive" then
+				Hud.fade(1, 4)
+				Atmosphere.wakeUp()
 			end
 		end)
 	end)

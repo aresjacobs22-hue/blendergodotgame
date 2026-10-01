@@ -1,6 +1,6 @@
 --!strict
 -- How a night ends for you: the jumpscare when it catches you, or the white-out
--- when you make it through the exit.
+-- when you make it through the exit. No words either way.
 
 local Lighting = game:GetService("Lighting")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -18,35 +18,17 @@ local Endings = {}
 local changed = Instance.new("BindableEvent")
 Endings.Changed = changed.Event -- fires when a sequence finishes
 
-local DEATH_LINES = {
-	"It was standing behind you the whole time.",
-	"You should have stayed quiet.",
-	"It saw your light.",
-	"Nobody heard you scream.",
-	"The grey takes another one.",
-}
-
-local KIND_LINES: { [string]: { string } } = {
-	Hollow = { "It was standing behind you the whole time.", "It saw your light.", "The grey takes another one." },
-	Crawler = { "It was under the bed the whole time.", "You never looked down.", "Visiting hours are over." },
-	Listener = { "It heard every step.", "You should have stayed quiet." },
-	Statue = { "You blinked.", "You looked away. Just for a second.", "It was never a statue." },
-	Amalgam = { "It is all of them. Now it's you too.", "There is no morning here." },
-}
-
 -- how close the camera ends up to each monster's head (their faces stick out more or less)
 local FACE_DISTANCE: { [string]: number } = { Hollow = 2.8, Crawler = 2.0, Listener = 2.9, Statue = 1.7, Amalgam = 2.6 }
 
 local function jumpscare(monster: Model)
 	local kind = monster:GetAttribute("Kind")
-	local lines = if typeof(kind) == "string" and KIND_LINES[kind] then KIND_LINES[kind] else DEATH_LINES
 	ClientState.jumpscaring = true
 	ClientState.roundStatus = "caught"
 	local camera = workspace.CurrentCamera
 	local head = monster:FindFirstChild("Head") :: BasePart?
 
 	Hud.setHudVisible(false)
-	Hud.setHint("")
 	Hud.flash(1, 0.12)
 	Audio.play("Jumpscare", nil, 2.6)
 	camera.CameraType = Enum.CameraType.Scriptable
@@ -67,10 +49,9 @@ local function jumpscare(monster: Model)
 		Hud.glitch(0.9, 0.1)
 		if e > 1.7 then
 			RunService:UnbindFromRenderStep("AchromaJumpscare")
+			-- cut to black, and silence
 			Hud.fade(0, 0)
-			Hud.showBig("IT FOUND YOU", lines[math.random(1, #lines)])
 			task.delay(3, function()
-				Hud.hideBig()
 				camera.FieldOfView = 70
 				camera.CameraType = Enum.CameraType.Custom
 				ClientState.jumpscaring = false
@@ -81,15 +62,7 @@ local function jumpscare(monster: Model)
 	end)
 end
 
-local ENDINGS: { [string]: { title: string, sub: string } } = {
-	escaped = { title = "YOU ESCAPED", sub = "For a second, you could swear you saw color again." },
-	survived = { title = "6:00 AM", sub = "The sun comes up. It's still grey. But you're still here." },
-	collected = { title = "YOU FOUND THEM ALL", sub = "The last photograph shows a door that wasn't there before. You're already through it." },
-	final = { title = "THE COLOR IS BACK", sub = "You woke up. For real this time.\n\nACHROMA  ·  thank you for playing" },
-}
-
 local function escaped(kind: string?)
-	local ending = ENDINGS[kind or "escaped"] or ENDINGS.escaped
 	ClientState.roundStatus = "escaped"
 	ClientState.jumpscaring = true -- freezes input-driven effects for the sequence
 	Hud.setHudVisible(false)
@@ -102,13 +75,7 @@ local function escaped(kind: string?)
 			TweenService:Create(grade, TweenInfo.new(6, Enum.EasingStyle.Sine), { Saturation = 0.45, TintColor = Color3.new(1, 1, 1), Contrast = 0.1 }):Play()
 		end
 	end
-	task.delay(2, function()
-		Hud.setBigColor(Color3.fromRGB(25, 25, 25))
-		Hud.showBig(ending.title, ending.sub)
-	end)
 	task.delay(if kind == "final" then 9 else 6.5, function()
-		Hud.hideBig(true)
-		Hud.setBigColor(Color3.fromRGB(205, 205, 200))
 		Hud.whiteout(1, 1.5)
 		ClientState.jumpscaring = false
 		changed:Fire()

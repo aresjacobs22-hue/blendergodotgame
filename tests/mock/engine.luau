@@ -166,6 +166,10 @@ local EVENTS = {
 	Loaded = true,
 	MouseEnter = true,
 	MouseLeave = true,
+	PromptShown = true,
+	PromptHidden = true,
+	PromptButtonHoldBegan = true,
+	PromptButtonHoldEnded = true,
 }
 
 ---------------------------------------------------------------------------

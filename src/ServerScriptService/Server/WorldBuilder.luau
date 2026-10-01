@@ -1,7 +1,7 @@
 --!strict
 -- Turns a Maze layout into a themed map: floors, walls, doorways, pillars/columns,
 -- lamps, props, writing, the hub, and the exit tunnel. Interactive things (doors,
--- lockers, batteries, notes, the exit, objective items) are added afterwards.
+-- lockers, batteries, the exit, objective items) are added afterwards.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -23,7 +23,6 @@ export type World = {
 	exitLight: PointLight,
 	exitFrame: CFrame, -- the exit edge; its Back face looks into the hub
 	hiddenSpot: CFrame,
-	notes: { Build.Note },
 	lamps: { Build.Lamp },
 	random: Random,
 }
@@ -212,7 +211,6 @@ function WorldBuilder.build(layout: Layout, night: Nights.Night): World
 		exitLight = exitLight,
 		exitFrame = ctx.edgeFrame(layout.exitCell.x, layout.exitCell.z - 1, "N"),
 		hiddenSpot = CFrame.new(W * C / 2, -300, D * C / 2),
-		notes = ctx.notes,
 		lamps = ctx.lamps,
 		random = ctx.random,
 	}

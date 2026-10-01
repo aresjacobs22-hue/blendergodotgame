@@ -216,8 +216,8 @@ local function setup(nightIndex: number, seed: number, startMonster: boolean?)
 		isAlive = isAlive,
 		notifyAll = function() end,
 		notify = function() end,
-		setProgress = function(text)
-			s.progress = text
+		setProgress = function(done, goal)
+			s.progress = string.format("%d/%d", done, goal)
 		end,
 		winAll = function(kind)
 			for _, p in table.clone(s.alive) do
@@ -346,7 +346,7 @@ do
 	for _, prompt in prompts(s.world.model, "Key") do
 		prompt.Triggered:Fire(p)
 	end
-	check(string.find(s.progress, "KEYS 4/4") ~= nil, "night 2: 4 keys found (" .. s.progress .. ")")
+	check(s.progress == "4/5", "night 2: 4 keys found (" .. s.progress .. ")")
 	local keypad = s.world.model:FindFirstChild("Keypad", true)
 	placePlayer(p, keypad.Position + Vector3.new(0, 0, 4))
 	Engine.time += 1

@@ -42,18 +42,18 @@ local function monsterNear(): boolean
 	return (root.Position - me.Position).Magnitude < NEAR
 end
 
-local function giveAway(reason: string)
+local function giveAway()
 	gaveAway = true
 	holding = false
 	ClientState.holdingBreath = false
 	Audio.play("Gasp", nil, 1.3)
-	Hud.message(reason, "danger")
+	Hud.glitch(0.6, 0.4)
 	Remotes.Breath:FireServer()
 end
 
 local function update(dt: number)
 	if not ClientState.hiding then
-		Hud.setBreath(false, 1, "", false)
+		Hud.setBreath(false, 1, false)
 		return
 	end
 	local near = monsterNear()
@@ -62,7 +62,7 @@ local function update(dt: number)
 		if breath <= 0 then
 			breath = 0
 			if near and not gaveAway then
-				giveAway("You gasped for air. It heard you.")
+				giveAway()
 			elseif not near then
 				-- it already left: gasp all you like
 				holding = false
@@ -76,14 +76,13 @@ local function update(dt: number)
 	if near and not holding and not gaveAway then
 		exposed += dt
 		if exposed > GRACE then
-			giveAway("You breathed too loud. It heard you.")
+			giveAway()
 		end
 	elseif holding or not near then
 		exposed = math.max(0, exposed - dt * 2)
 	end
 	local show = (near and not gaveAway) or breath < 1
-	local text = if gaveAway then "" elseif holding then "holding your breath..." elseif near then "IT'S RIGHT THERE: HOLD [SPACE] TO HOLD YOUR BREATH" else ""
-	Hud.setBreath(show, breath, text, near and not holding)
+	Hud.setBreath(show, breath, near and not holding)
 end
 
 local function setHolding(on: boolean)
@@ -104,7 +103,6 @@ local function refresh()
 	breath, exposed, gaveAway = 1, 0, false
 	setHolding(false)
 	if hiding then
-		Hud.message("If it comes close, hold your breath.")
 		ContextActionService:BindAction("AchromaLeave", function(_: string, state: Enum.UserInputState, _: InputObject): Enum.ContextActionResult?
 			if state == Enum.UserInputState.Begin then
 				Remotes.LeaveHiding:FireServer()

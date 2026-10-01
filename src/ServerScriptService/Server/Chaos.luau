@@ -5,8 +5,9 @@
 --       hunted    it hears your heartbeat        phantoms  fake monsters (client side)
 --       silent    it makes no sound              fog       you can't see far (lighting)
 --   * random EVENTS go off every minute or so: the power fails, a phone rings near
---     you (answer it for a hint, or it brings the monster), every door slams shut,
---     a locker bangs, or you hear it charge at you when nothing's there.
+--     you (answer it and you hear where it is, mostly; ignore it and it comes to the
+--     phone), every door slams shut, a locker bangs, or you hear it charge at you when
+--     nothing's there.
 --   * the RAGE: when the way out opens (or at 5 AM) it gets furious.
 -- It also listens for players letting their breath out inside a locker.
 
@@ -47,13 +48,6 @@ local rootOf = Interactables.rootOf
 local function flat(v: Vector3): Vector3
 	return Vector3.new(v.X, 0, v.Z)
 end
-
-local PHONE_LIES = {
-	"...don't turn around...",
-	"...we can see you from here...",
-	"...it's not in the walls. It IS the walls...",
-	"...wake up. Please wake up...",
-}
 
 function Chaos.start(ctx: Ctx): Chaos
 	local layout = ctx.layout
@@ -212,29 +206,18 @@ function Chaos.start(ctx: Ctx): Chaos
 	end
 
 	-- Events --------------------------------------------------------------------------------
-	local function phoneHint(player: Player): string
-		if random:NextNumber() < 0.2 then
-			return PHONE_LIES[random:NextInteger(1, #PHONE_LIES)]
-		end
-		local proot = rootOf(player)
+	-- Where the voice on the phone makes you hear it: where it really is, except when the
+	-- voice lies (then somewhere random). Nothing while it's still asleep.
+	local function phoneHint(): Vector3?
 		local mroot = monster.rig.root
-		if not monster.awake or mroot.Position.Y < -100 or not proot then
-			return "...it's still asleep. It's dreaming about you..."
+		if not monster.awake or mroot.Position.Y < -100 then
+			return nil
 		end
-		local pc = Maze.cellOf(layout, proot.Position.X, proot.Position.Z)
-		local mc = Maze.cellOf(layout, mroot.Position.X, mroot.Position.Z)
-		local rooms = Maze.distances(layout, pc)[Maze.key(mc.x, mc.z)] or 0
-		local to = flat(mroot.Position - proot.Position)
-		local look = flat(proot.CFrame.LookVector)
-		local where = "right next to you"
-		if to.Magnitude > 2 and look.Magnitude > 0.01 then
-			local angle = math.deg(math.atan2(look.Unit:Cross(to.Unit).Y, look.Unit:Dot(to.Unit)))
-			where = if math.abs(angle) < 45 then "in front of you" elseif math.abs(angle) > 135 then "behind you" elseif angle > 0 then "to your left" else "to your right"
+		if random:NextNumber() < 0.2 then
+			local fake = wctx.cellCenter(random:NextInteger(0, layout.width - 1), random:NextInteger(0, layout.depth - 1))
+			return fake + Vector3.new(0, 4, 0)
 		end
-		if rooms <= 1 then
-			return "...it's " .. where .. ". RUN..."
-		end
-		return string.format("...it's %d rooms away... %s...", rooms, where)
+		return mroot.Position
 	end
 
 	local function phone(): boolean
@@ -299,7 +282,7 @@ function Chaos.start(ctx: Ctx): Chaos
 			end
 			hangUp()
 			Audio.play("PhonePickup", body, 1, 1, 40)
-			Remotes.Chaos:FireClient(player, "phone", phoneHint(player))
+			Remotes.Chaos:FireClient(player, "phone", phoneHint())
 		end)
 		task.delay(20, function()
 			if answered or not alive then

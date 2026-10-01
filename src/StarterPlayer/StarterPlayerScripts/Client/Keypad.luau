@@ -10,6 +10,7 @@ local Audio = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Aud
 local ClientState = require(script.Parent.ClientState)
 
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
+local GameState = ReplicatedStorage:WaitForChild("GameState")
 local player = Players.LocalPlayer
 
 local Keypad = {}
@@ -43,10 +44,21 @@ local DIGIT_KEYS: { [Enum.KeyCode]: string } = {
 	[Enum.KeyCode.KeypadNine] = "9",
 }
 
+-- Digits you've typed, and faintly behind them the ones the keys you found had on
+-- their tags (the keypad remembers, so you don't have to read anything).
 local function refresh()
+	local mask = GameState:GetAttribute("CodeMask")
+	local known = if typeof(mask) == "string" then mask else ""
 	local shown = {}
 	for i = 1, 4 do
-		shown[i] = if i <= #code then string.sub(code, i, i) else "_"
+		local hint = string.sub(known, i, i)
+		if i <= #code then
+			shown[i] = string.sub(code, i, i)
+		elseif hint ~= "" and hint ~= "_" then
+			shown[i] = '<font transparency="0.7">' .. hint .. "</font>"
+		else
+			shown[i] = '<font transparency="0.7">_</font>'
+		end
 	end
 	display.Text = table.concat(shown, " ")
 end
@@ -131,6 +143,7 @@ function Keypad.init()
 	display.Font = Enum.Font.Code
 	display.TextSize = 40
 	display.TextColor3 = Color3.fromRGB(220, 220, 220)
+	display.RichText = true
 	display.Parent = panel
 
 	local keys = { "1", "2", "3", "4", "5", "6", "7", "8", "9", "CLR", "0", "OK" }
@@ -160,12 +173,12 @@ function Keypad.init()
 	local closeButton = Instance.new("TextButton")
 	closeButton.AnchorPoint = Vector2.new(1, 0)
 	closeButton.Position = UDim2.new(1, -6, 0, -34)
-	closeButton.Size = UDim2.fromOffset(110, 28)
+	closeButton.Size = UDim2.fromOffset(28, 28)
 	closeButton.BackgroundTransparency = 1
 	closeButton.Font = Enum.Font.SpecialElite
-	closeButton.TextSize = 18
+	closeButton.TextSize = 26
 	closeButton.TextColor3 = Color3.fromRGB(170, 170, 170)
-	closeButton.Text = "[ESC] close"
+	closeButton.Text = "×"
 	closeButton.Parent = panel
 	closeButton.Activated:Connect(close)
 

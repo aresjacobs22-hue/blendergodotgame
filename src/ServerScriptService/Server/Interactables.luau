@@ -1,5 +1,5 @@
 --!strict
--- Things every map has: hinged doors, batteries, hiding lockers and readable notes.
+-- Things every map has: hinged doors, batteries and hiding lockers.
 -- (The exit lives in Exit.luau; keys, generators, photos and hearts in Objectives.)
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -56,8 +56,11 @@ export type Interactables = typeof(setmetatable(
 	Interactables
 ))
 
+-- Action/object text is never shown (the Custom style is drawn by Client/Prompts as a
+-- wordless dot); it only names the prompt for scripts and tests.
 function Interactables.prompt(parent: Instance, action: string, object: string, hold: number?, distance: number?): ProximityPrompt
 	local p = Instance.new("ProximityPrompt")
+	p.Style = Enum.ProximityPromptStyle.Custom
 	p.ActionText = action
 	p.ObjectText = object
 	p.HoldDuration = hold or 0
@@ -95,7 +98,6 @@ function Interactables.new(layout: Layout, world: World, hooks: Hooks): Interact
 	self:_buildDoors()
 	self:_buildBatteries()
 	self:_buildLockers()
-	self:_buildNotes()
 
 	table.insert(self.connections, Remotes.LeaveHiding.OnServerEvent:Connect(function(player: Player)
 		self:leave(player, false)
@@ -370,18 +372,6 @@ function Interactables.release(self: Interactables, player: Player)
 		locker.prompt.Enabled = true
 	end
 	player:SetAttribute("Hiding", false)
-end
-
--- Notes --------------------------------------------------------------------------
-
-function Interactables._buildNotes(self: Interactables)
-	for _, note in self.world.notes do
-		note.part.CanQuery = true
-		local p = prompt(note.part, "Read", "Note", 0, 7)
-		p.Triggered:Connect(function(player: Player)
-			Remotes.Notify:FireClient(player, note.text, "note")
-		end)
-	end
 end
 
 function Interactables.destroy(self: Interactables)

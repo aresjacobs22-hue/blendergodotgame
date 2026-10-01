@@ -195,8 +195,8 @@ local function houseProps(ctx: Ctx)
 		local pos = O + Vector3.new(x, y, z)
 		return CFrame.lookAt(pos, pos + facing)
 	end
-	local function note(x: number, y: number, z: number, text: string)
-		ctx.note(CFrame.new(O + Vector3.new(x, y + 0.025, z)) * CFrame.Angles(0, random:NextNumber(-0.4, 0.4), 0), text)
+	local function note(x: number, y: number, z: number)
+		ctx.note(CFrame.new(O + Vector3.new(x, y + 0.025, z)) * CFrame.Angles(0, random:NextNumber(-0.4, 0.4), 0))
 	end
 	local wood = Enum.Material.Wood
 	local darkWood = rgb(62, 50, 42)
@@ -210,7 +210,7 @@ local function houseProps(ctx: Ctx)
 	box("Blanket", Vector3.new(5.8, 0.3, 4.6), 3.7, 2.5, 31.0, fabric, rgb(70, 70, 78), 0.06)
 	box("Nightstand", Vector3.new(2.2, 2.4, 2), 8, 0, 25.6, wood, darkWood)
 	box("BrokenLamp", Vector3.new(0.6, 1.3, 0.6), 8.4, 2.4, 25.4, Enum.Material.Metal, rgb(80, 80, 80), 0.3)
-	note(7.7, 2.4, 25.9, "If you're reading this, you woke up here too.\nThe clock in the hall says midnight. It always says midnight.\nJust make it to 6 AM. Don't let it see you.")
+	note(7.7, 2.4, 25.9)
 	box("ChairSeat", Vector3.new(2.2, 0.35, 2.2), 21.4, 2.1, 33.6, wood, darkWood, math.rad(45))
 	box("ChairBack", Vector3.new(2.2, 3.2, 0.3), 22.2, 2.45, 34.4, wood, darkWood, math.rad(45))
 	for _, l in { { 20.7, 33.6 }, { 21.4, 32.9 }, { 22.1, 33.6 }, { 21.4, 34.3 } } do
@@ -266,13 +266,13 @@ local function houseProps(ctx: Ctx)
 	end
 	box("KitchenChair", Vector3.new(2, 2, 2), 46, 0, 16.2, wood, darkWood)
 	box("KitchenChair", Vector3.new(2, 2, 2), 41.6, 0, 13, wood, darkWood, math.rad(70))
-	note(46.5, 3.2, 13, "The lockers saved me twice.\nThe third time it WATCHED me get in.\nIf it's chasing you, break line of sight first.")
+	note(46.5, 3.2, 13)
 
 	-- study
 	box("Desk", Vector3.new(6, 3, 2.6), 42, 0, 34.2, wood, darkWood)
 	box("DeskChair", Vector3.new(2, 2, 2), 42, 0, 31.6, wood, darkWood)
 	box("Bookshelf", Vector3.new(2, 9, 8), 58.5, 0, 30, wood, darkWood)
-	note(41.2, 3, 34.0, "Day 14.\nIt doesn't see well in the dark, but it HEARS everything.\nWalk. Crouch. Only run when it's already running at you.\nIt likes the light. Turn yours off when it's close.")
+	note(41.2, 3, 34.0)
 	portrait(ctx, wallFrame(42, 6.5, 24.5, Vector3.new(0, 0, 1)))
 end
 
@@ -315,13 +315,11 @@ Themes.house = {
 	locker = { material = Enum.Material.Wood, color = rgb(70, 58, 50) },
 	columns = false,
 	writings = {
-		"IT SEES YOU", "DON'T RUN", "MAKE IT TO SIX", "HIDE", "IT HEARS YOUR FEET", "WHERE DID THE COLOR GO",
-		"I WOKE UP HERE TOO", "TURN OFF YOUR LIGHT", "LISTEN FOR THE CLICKING", "NOT ALONE", "DON'T LOOK BEHIND YOU",
-		"WAKE UP WAKE UP WAKE UP", "IT KNOWS THE LOCKERS", "STAY QUIET", "THE CLOCK IS WRONG", "THE HOUSE DOESN'T END",
-		"THAT ISN'T A SHEET",
+		"WAKE UP", "IIII IIII IIII", "NOT YET", "6", "IT'S STILL HERE", "SHH", "BEHIND", "GREY", "WAKE UP WAKE UP",
+		"HOW LONG", "DON'T", "HELP",
 	},
 	writingColor = rgb(28, 22, 22),
-	writingFont = Enum.Font.Creepster,
+	writingFont = Enum.Font.PermanentMarker,
 	writingGlow = false,
 	exitStyle = "double",
 	lamp = function(ctx: Ctx, cell: Cell?, position: Vector3)
@@ -466,12 +464,10 @@ Themes.ward = {
 	locker = { material = Enum.Material.Metal, color = rgb(176, 186, 192) },
 	columns = false,
 	writings = {
-		"STAY IN YOUR BED", "VISITING HOURS ARE OVER", "IT CRAWLS", "LOOK DOWN", "NURSE?", "ROOM 13 IS EMPTY NOW",
-		"THE PATIENTS LEFT", "DON'T RUN IN THE HALLS", "IT WAS ON ALL FOURS", "WE'RE NOT SICK", "IT'S UNDER THE BEDS",
-		"NO ONE IS COMING", "ITS FACE IS UPSIDE DOWN",
+		"SHH", "ROOM 13", "UNDER", "IIII IIII", "NURSE", "LOOK DOWN", "STAY", "NO", "IT CRAWLS", "WHO",
 	},
 	writingColor = rgb(110, 8, 8),
-	writingFont = Enum.Font.Creepster,
+	writingFont = Enum.Font.PermanentMarker,
 	writingGlow = false,
 	exitStyle = "double",
 	lamp = wardLamp,
@@ -592,14 +588,10 @@ Themes.ward = {
 			solid(ctx, "WaitingChair", Vector3.new(2, 0.4, 2), CFrame.new(p + Vector3.new(0, 1.7, 0)), Enum.Material.Plastic, rgb(70, 90, 110))
 			solid(ctx, "WaitingChairBack", Vector3.new(0.3, 2.2, 2), CFrame.new(p + Vector3.new(0.9, 2.8, 0)), Enum.Material.Plastic, rgb(70, 90, 110))
 		end
-		local notes = {
-			"PATIENT FILE #13\nFound on all fours under bed 4. Moves very fast, very low.\nWhen it gets close it LUNGES.\nIt loses interest fast. Break line of sight.",
-			"Night shift: the 4 ward keys are gone again. Each one has a tag with a digit.\nThe exit keypad wants all four.\nThe main doors are chained shut until then.",
-		}
 		local walls = hubWalls(ctx)
-		for i, text in notes do
+		for i = 1, 2 do
 			local w = walls[(i * 3) % #walls + 1]
-			ctx.note(ctx.sideFrame(w.cell.x, w.cell.z, w.side) * CFrame.new(0, 3.4, -1.2), text)
+			ctx.note(ctx.sideFrame(w.cell.x, w.cell.z, w.side) * CFrame.new(0, 3.4, -1.2))
 		end
 		for i, w in walls do
 			if i % 2 == 0 then
@@ -676,11 +668,10 @@ Themes.sewer = {
 	locker = { material = Enum.Material.CorrodedMetal, color = rgb(92, 80, 70) },
 	columns = false,
 	writings = {
-		"IT'S BLIND", "DON'T SPLASH", "THE NOISE BRINGS IT", "HOLD YOUR BREATH", "IT HEARD ME BREATHE", "CROUCH",
-		"PETE?", "THREE GENERATORS", "IT CLICKS WHEN IT LISTENS", "NO LIGHT DOWN HERE", "THE LIFT STILL WORKS",
+		"SHH", "PETE?", "DON'T", "IIII IIII IIII", "IT LISTENS", "HERE", "DEEPER", "NO",
 	},
 	writingColor = rgb(190, 196, 186),
-	writingFont = Enum.Font.Creepster,
+	writingFont = Enum.Font.PermanentMarker,
 	writingGlow = false,
 	exitStyle = "lift",
 	lamp = function(ctx: Ctx, cell: Cell?, position: Vector3)
@@ -813,7 +804,7 @@ Themes.sewer = {
 		screen.Name = "PowerPanel"
 		local walls = hubWalls(ctx)
 		local w = walls[1]
-		ctx.note(ctx.sideFrame(w.cell.x, w.cell.z, w.side) * CFrame.new(0, 3.4, -1.2), "Maintenance log, day ?\nPower's out in the whole system. Three backup generators, one at the end of each far tunnel.\nThe service lift won't move without all three.\nWhatever lives down here is BLIND. I watched it walk right past Pete while he held his breath.\nThen Pete sneezed.")
+		ctx.note(ctx.sideFrame(w.cell.x, w.cell.z, w.side) * CFrame.new(0, 3.4, -1.2))
 		local e = ctx.layout.exitCell
 		ctx.sign(ctx.sideFrame(e.x, e.z, "S") * CFrame.new(0, ctx.exitHeight + 1, -0.15), Vector2.new(5, 1.1), "SERVICE LIFT", rgb(255, 210, 60), rgb(25, 25, 20), true, Enum.Font.GothamBlack)
 	end,
@@ -864,11 +855,10 @@ Themes.atrium = {
 	locker = { material = Enum.Material.Wood, color = rgb(90, 66, 44) },
 	columns = true,
 	writings = {
-		"KEEP YOUR EYES OPEN", "IT MOVES WHEN YOU DON'T LOOK", "WHICH ONE IS REAL", "IT WAS NEVER A STATUE", "LOOK AT IT",
-		"THE LIGHTS WILL GO OUT", "WALK BACKWARDS", "SIX PHOTOGRAPHS", "DON'T TURN AROUND",
+		"DON'T BLINK", "WHICH ONE", "IT MOVED", "IIII IIII", "STILL", "LOOK", "NEVER STONE",
 	},
 	writingColor = rgb(60, 62, 70),
-	writingFont = Enum.Font.Creepster,
+	writingFont = Enum.Font.PermanentMarker,
 	writingGlow = false,
 	exitStyle = "grand",
 	lamp = lampPost,
@@ -920,7 +910,7 @@ Themes.atrium = {
 		solid(ctx, "TicketBooth", Vector3.new(7, 5, 4), CFrame.new(O + Vector3.new(6, 2.5, C * 1.3)), Enum.Material.Wood, rgb(80, 60, 45))
 		local walls = hubWalls(ctx)
 		local w = walls[1]
-		ctx.note(ctx.sideFrame(w.cell.x, w.cell.z, w.side) * CFrame.new(0, 3.4, -1.2), "To whoever finds this,\nThe statues were never supposed to move.\nKEEP LOOKING AT IT. It cannot move while it is seen.\nWhen the lights blink, it comes closer.\nSix photographs are scattered through the halls. Collect them and the doors will remember you.\n- the curator")
+		ctx.note(ctx.sideFrame(w.cell.x, w.cell.z, w.side) * CFrame.new(0, 3.4, -1.2))
 		local w2 = walls[math.min(3, #walls)]
 		ctx.sign(ctx.sideFrame(w2.cell.x, w2.cell.z, w2.side) * CFrame.new(0, 8, -0.1), Vector2.new(10, 3), "THE ATRIUM\nPLEASE DO NOT TOUCH THE EXHIBITS", rgb(40, 40, 46), rgb(220, 218, 210), false, Enum.Font.Fondamento)
 	end,
@@ -1033,12 +1023,10 @@ Themes.void = {
 	locker = { material = Enum.Material.Basalt, color = rgb(50, 42, 62) },
 	columns = false,
 	writings = {
-		"THIS IS WHERE THE COLOR WENT", "BREAK THE HEARTS", "IT IS ALL OF THEM", "YOU WERE NEVER AWAKE", "WAKE UP",
-		"IT CAN SMELL YOU", "THREE HEARTS ONE BODY", "RUN WHEN THE LAST ONE BREAKS", "THERE IS NO MORNING HERE",
-		"WE ARE STILL HERE", "YOU CAME BACK", "IT REMEMBERS EVERY NIGHT",
+		"WAKE UP", "YOU CAME BACK", "WE ARE STILL HERE", "IIII IIII IIII IIII", "NO MORNING", "COLOR", "ALL OF THEM",
 	},
 	writingColor = rgb(170, 110, 220),
-	writingFont = Enum.Font.Creepster,
+	writingFont = Enum.Font.PermanentMarker,
 	writingGlow = false,
 	exitStyle = "portal",
 	lamp = crystalLamp,
@@ -1113,7 +1101,7 @@ Themes.void = {
 		end
 		local walls = hubWalls(ctx)
 		local w = walls[1]
-		ctx.note(ctx.sideFrame(w.cell.x, w.cell.z, w.side) * CFrame.new(0, 3.4, -1.2), "There were others before you.\nThey broke the hearts and they ran.\nThe way out only opens when all three stop beating.\nIt KNOWS the moment one stops.\nIt can smell you through a locker door if it's close.")
+		ctx.note(ctx.sideFrame(w.cell.x, w.cell.z, w.side) * CFrame.new(0, 3.4, -1.2))
 	end,
 	extra = noop,
 	spawns = hallSpawns,

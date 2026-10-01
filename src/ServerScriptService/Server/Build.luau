@@ -12,7 +12,6 @@ local Maze = require(ReplicatedStorage.Shared.Maze)
 local Nights = require(ReplicatedStorage.Shared.Nights)
 
 export type Style = { material: Enum.Material, color: Color3, reflect: number? }
-export type Note = { part: BasePart, text: string }
 export type Lamp = { bulb: BasePart, light: Light, cell: Maze.Cell? }
 
 export type Ctx = {
@@ -30,7 +29,6 @@ export type Ctx = {
 	structure: Folder,
 	props: Folder,
 	lights: Folder,
-	notes: { Note },
 	lamps: { Lamp },
 	hubOrigin: Vector3, -- world position of the hub's south-west corner
 
@@ -43,7 +41,7 @@ export type Ctx = {
 	cellCenter: (x: number, z: number) -> Vector3,
 	wallSides: (x: number, z: number) -> { string },
 	sign: (frame: CFrame, size: Vector2, text: string, textColor: Color3, background: Color3?, glow: boolean?, font: Enum.Font?) -> Part,
-	note: (cframe: CFrame, text: string) -> Part,
+	note: (cframe: CFrame) -> Part,
 	writing: (frame: CFrame, text: string, color: Color3, font: Enum.Font, glow: boolean) -> (),
 	addLamp: (bulb: BasePart, light: Light, cell: Maze.Cell?) -> (),
 }
@@ -105,7 +103,6 @@ function Build.new(layout: Maze.Layout, night: Nights.Night, model: Model): Ctx
 	ctx.structure = structure
 	ctx.props = props
 	ctx.lights = lights
-	ctx.notes = {}
 	ctx.lamps = {}
 	ctx.hubOrigin = Vector3.new(layout.hub.x0 * C, 0, layout.hub.z0 * C)
 
@@ -202,11 +199,10 @@ function Build.new(layout: Maze.Layout, night: Nights.Night, model: Model): Ctx
 		return panel
 	end
 
-	-- A readable note (players get a "Read" prompt on it).
-	function ctx.note(cframe: CFrame, text: string): Part
+	-- A sheet of paper left behind. Whatever was written on it has faded.
+	function ctx.note(cframe: CFrame): Part
 		local p = ctx.part(props, "Note", Vector3.new(1.3, 0.05, 1.7), cframe, Enum.Material.SmoothPlastic, Color3.fromRGB(215, 210, 196), nil)
 		p.CanCollide = false
-		table.insert(ctx.notes, { part = p :: BasePart, text = text })
 		return p
 	end
 

@@ -3,6 +3,7 @@
 --   main menu -> night 1 (survive, hiding in a locker) -> night 2 unlocked
 --   -> keys + on-screen keypad -> generators -> photographs -> hearts (the end)
 --   -> back to night 1 to get caught by the Hollow (jumpscare).
+-- It also checks the game never shows words: only "NIGHT 1".."NIGHT 5", ever.
 -- Run with:  lune run tests/e2e.spec.luau
 local roblox = require("@lune/roblox")
 local Engine = require("./mock/engine")
@@ -66,6 +67,10 @@ local globals = {
 	},
 	typeof = Engine.typeof,
 	warn = function(...)
+		table.insert(Engine.log, table.concat({ ... }, " "))
+	end,
+	-- the client prints server narration to the console; keep it out of the test output
+	print = function(...)
 		table.insert(Engine.log, table.concat({ ... }, " "))
 	end,
 }
@@ -183,63 +188,108 @@ local function card(n: number)
 	return menu.Main.Nights["Night" .. n]
 end
 
+-- Every piece of text a player could see right now.
+local function shownText(): { string }
+	local out = {}
+	local function visible(g): boolean
+		local node = g
+		while node and node ~= player.PlayerGui do
+			if node.ClassName == "ScreenGui" or node.ClassName == "BillboardGui" then
+				if node.Enabled == false then
+					return false
+				end
+			elseif node.Visible == false then
+				return false
+			end
+			node = node.Parent
+		end
+		return true
+	end
+	for _, d in player.PlayerGui:GetDescendants() do
+		if (d.ClassName == "TextLabel" or d.ClassName == "TextButton") and (d.Text or "") ~= "" and (d.TextTransparency or 0) < 0.95 and visible(d) then
+			table.insert(out, d.Text)
+		end
+	end
+	return out
+end
+
+-- The only words allowed on screen: the nights' numbers ("N I G H T    3").
+local function onlyNights(where: string)
+	local bad = {}
+	for _, t in shownText() do
+		if not string.match(t, "^N I G H T%s+%d$") then
+			table.insert(bad, t)
+		end
+	end
+	check(#bad == 0, "no words on screen " .. where .. (if #bad > 0 then " (saw: " .. table.concat(bad, " | ") .. ")" else ""))
+end
+
 local function startNight(n: number)
 	card(n).Activated:Fire()
-	menu.Main.Details.Play.Activated:Fire()
 	return run(15, function()
 		return phase() == "Playing" and player.Character ~= nil
 	end)
 end
 
-local function finishAndReturn(expectedTitle: string)
+local function finishAndReturn(escaped: boolean)
 	local results = run(20, function()
-		return phase() == "Results" and menu.Overlay.Visible
+		return phase() == "Results"
 	end)
-	check(results, "results screen appears")
-	local title = menu.Overlay:FindFirstChildOfClass("TextLabel").Text
-	check(title == expectedTitle, "results say " .. expectedTitle .. " (got " .. tostring(title) .. ")")
+	check(results, "the night ends")
+	check(ClientState.roundStatus == (if escaped then "escaped" else "caught"), "you " .. (if escaped then "made it" else "were caught") .. " (" .. tostring(ClientState.roundStatus) .. ")")
+	local black = run(15, function()
+		return menu.Overlay.Visible
+	end)
+	check(black, "then just black")
+	onlyNights("after the night")
 	local back = run(20, function()
 		return phase() == "Lobby" and menu.Main.Visible
 	end)
-	check(back, "back on the main menu")
+	check(back, "back on the menu")
 end
 
-local function objectiveText(): string
-	return player.PlayerGui.AchromaHud.Info.Objective.Text
+local function progress(): string
+	return string.format("%s/%s", tostring(GameState:GetAttribute("Done")), tostring(GameState:GetAttribute("Goal")))
 end
 
-local function progressText(): string
-	return player.PlayerGui.AchromaHud.Info.Progress.Text
+local function litPips(): number
+	local n = 0
+	for _, dot in player.PlayerGui.AchromaHud.Pips:GetChildren() do
+		if dot.ClassName == "Frame" and dot.Visible and dot:GetAttribute("Lit") == true then
+			n += 1
+		end
+	end
+	return n
 end
 
 ---------------------------------------------------------------------------
 print("Main menu")
-run(1)
+run(2)
 menu = player.PlayerGui:FindFirstChild("AchromaMenu")
-check(menu and menu.Main.Visible, "the main menu shows when you open the game")
+check(menu and menu.Main.Visible, "the menu shows when you open the game")
 check(phase() == "Lobby", "server waits in the lobby")
 check(player:GetAttribute("HighestNight") == 1, "a new player has only night 1")
 local cardCount = 0
 for n = 1, 5 do
-	if card(n) then
+	if card(n) and card(n).Text == "N I G H T    " .. n then
 		cardCount += 1
 	end
 end
-check(cardCount == 5, "all 5 nights are on the menu")
-check(not card(1).Locked.Visible and card(2).Locked.Visible and card(5).Locked.Visible, "nights 2-5 start locked")
+check(cardCount == 5, "the menu is NIGHT 1 to NIGHT 5")
+onlyNights("on the menu")
+check(card(1).TextTransparency < 0.5 and card(2).TextTransparency > 0.8 and card(5).TextTransparency > 0.8, "nights 2-5 are barely visible")
 card(3).Activated:Fire()
-check(string.find(menu.Main.Details.Play.Text, "LOCKED") ~= nil, "a locked night can't be played")
-check(menu.Main.Preview:FindFirstChild("Monster") ~= nil, "the selected night's monster is previewed")
-menu.Main.Details.Play.Activated:Fire()
 run(1)
-check(phase() == "Lobby" and not ClientState.started, "pressing play on a locked night does nothing")
+check(phase() == "Lobby" and not ClientState.started, "clicking a locked night does nothing")
 
 ---------------------------------------------------------------------------
 print("Night 1: THE HOUSE (survive)")
 check(startNight(1), "night 1 starts")
 check(not menu.Main.Visible, "menu hides while playing")
-check(objectiveText() == "Survive until 6 AM.", "objective shown: " .. objectiveText())
-check(string.find(progressText(), "AM") ~= nil, "clock shown: " .. progressText())
+onlyNights("as the night starts")
+run(8)
+onlyNights("while playing")
+check(GameState:GetAttribute("Goal") == 6 and litPips() == 0, "six dark dots for the hours (" .. progress() .. ")")
 press("AchromaFlashlight")
 run(0.3)
 check(player:GetAttribute("Flashlight") == true, "flashlight works")
@@ -257,7 +307,7 @@ local morning = run(320, function()
 		return true
 	end
 	if not ClientState.hiding and not revealedAt then
-		revealedAt = progressText()
+		revealedAt = tostring(GameState:GetAttribute("Hour")) .. " AM"
 	end
 	local monster = workspace:FindFirstChild("Monster")
 	local character = player.Character
@@ -271,11 +321,13 @@ local morning = run(320, function()
 	return ClientState.roundStatus == "escaped"
 end, 0.1) and ClientState.roundStatus == "escaped"
 release("AchromaBreath")
-check(morning, "made it to 6 AM (" .. progressText() .. ")")
+check(morning, "made it to 6 AM (hour " .. tostring(GameState:GetAttribute("Hour")) .. ")")
 print("    (held breath " .. breathHeld .. " times; " .. (if revealedAt then "dragged out at " .. revealedAt else "stayed hidden") .. ")")
-finishAndReturn("YOU SURVIVED")
+finishAndReturn(true)
 check(player:GetAttribute("HighestNight") == 2, "night 2 unlocked")
-check(not card(2).Locked.Visible and card(1).Status.Text == "CLEARED", "menu shows night 1 cleared, night 2 open")
+check(card(2).TextTransparency > 0.8, "night 2 is still in the dark for a moment")
+run(6)
+check(card(2).TextTransparency < 0.5 and card(1).TextTransparency > card(2).TextTransparency, "then it surfaces; night 1 dims")
 
 ---------------------------------------------------------------------------
 print("Night 2: THE RED WARD (keys)")
@@ -286,13 +338,15 @@ for _, prompt in prompts("Key") do
 	prompt.Triggered:Fire(player)
 	run(0.2)
 end
-check(string.find(progressText(), "KEYS 4/4") ~= nil, "HUD: " .. progressText())
+check(progress() == "4/5" and litPips() == 4, "four of five dots lit (" .. progress() .. ")")
 local keypad = workspace.World:FindFirstChild("Keypad", true)
 placePlayer(keypad.Position + Vector3.new(0, 0, 4))
 keypad:FindFirstChildOfClass("ProximityPrompt").Triggered:Fire(player)
 run(0.2)
 local panel = player.PlayerGui.AchromaKeypad.Panel
 check(player.PlayerGui.AchromaKeypad.Enabled, "keypad screen opens")
+local display = panel:FindFirstChildOfClass("TextLabel").Text
+check(string.find(display, string.sub(Engine.layout.code, 1, 1), 1, true) ~= nil, "it shows the digits from the keys you found, faintly (" .. display .. ")")
 for i = 1, #Engine.layout.code do
 	panel["Key" .. string.sub(Engine.layout.code, i, i)].Activated:Fire()
 end
@@ -300,7 +354,7 @@ panel.KeyOK.Activated:Fire()
 run(1)
 check(GameState:GetAttribute("ExitOpen") == true, "typing the code opens the exit")
 workspace.World.Structure.EscapeZone.Touched:Fire(player.Character.HumanoidRootPart)
-finishAndReturn("YOU MADE IT")
+finishAndReturn(true)
 check(player:GetAttribute("HighestNight") == 3, "night 3 unlocked")
 
 ---------------------------------------------------------------------------
@@ -312,9 +366,9 @@ for _, prompt in prompts("Generator") do
 	run(0.2)
 end
 run(2)
-check(GameState:GetAttribute("ExitOpen") == true, "the lift opens (" .. progressText() .. ")")
+check(GameState:GetAttribute("ExitOpen") == true, "the lift opens (" .. progress() .. ")")
 workspace.World.Structure.EscapeZone.Touched:Fire(player.Character.HumanoidRootPart)
-finishAndReturn("YOU MADE IT")
+finishAndReturn(true)
 check(player:GetAttribute("HighestNight") == 4, "night 4 unlocked")
 
 ---------------------------------------------------------------------------
@@ -332,7 +386,7 @@ for _, prompt in prompts("Photograph") do
 	prompt.Triggered:Fire(player)
 	run(0.2)
 end
-finishAndReturn("YOU MADE IT")
+finishAndReturn(true)
 check(player:GetAttribute("HighestNight") == 5, "night 5 unlocked")
 
 ---------------------------------------------------------------------------
@@ -347,9 +401,10 @@ end
 run(1)
 check(GameState:GetAttribute("ExitOpen") == true, "the portal opens")
 workspace.World.Structure.EscapeZone.Touched:Fire(player.Character.HumanoidRootPart)
-finishAndReturn("THE COLOR IS BACK")
+finishAndReturn(true)
 check(player:GetAttribute("HighestNight") == 6, "every night beaten")
-check(card(5).Status.Text == "CLEARED", "night 5 shows as cleared")
+run(2)
+check(card(5).TextTransparency > 0.3 and card(5).TextTransparency < 0.8, "night 5 shows as cleared")
 
 ---------------------------------------------------------------------------
 print("Night 1 again: caught by the Hollow")
@@ -368,7 +423,8 @@ local caught = run(3, function()
 end)
 check(caught, "it catches you: jumpscare")
 check(workspace.CurrentCamera.CameraType == Enum.CameraType.Scriptable, "camera pulled into its face")
-finishAndReturn("NOBODY MADE IT")
+onlyNights("during the jumpscare")
+finishAndReturn(false)
 
 ---------------------------------------------------------------------------
 print("Notifications received: " .. #notifications)
