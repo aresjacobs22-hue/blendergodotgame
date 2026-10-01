@@ -10,9 +10,36 @@ local luau = require("@lune/luau")
 local roblox = require("@lune/roblox")
 
 local Vector3 = roblox.Vector3
-local CFrame = roblox.CFrame
+local LuneCFrame = roblox.CFrame
+
+-- Lune's CFrame.lookAt and CFrame.new(position, target) point the wrong way along Z.
+-- Scripts get this CFrame table instead, which behaves like Roblox's.
+local function lookAt(at, target, up)
+	local look = target - at
+	if look.Magnitude < 1e-6 then
+		return LuneCFrame.new(at)
+	end
+	look = look.Unit
+	local right = look:Cross(up or Vector3.new(0, 1, 0))
+	if right.Magnitude < 1e-4 then
+		right = look:Cross(Vector3.new(0, 0, 1))
+	end
+	right = right.Unit
+	return LuneCFrame.fromMatrix(at, right, right:Cross(look), -look)
+end
+local CFrame = setmetatable({
+	lookAt = lookAt,
+	new = function(...)
+		local a, b = ...
+		if select("#", ...) == 2 and typeof(a) == "Vector3" and typeof(b) == "Vector3" then
+			return lookAt(a, b)
+		end
+		return LuneCFrame.new(...)
+	end,
+}, { __index = LuneCFrame })
 
 local Engine = {}
+Engine.CFrame = CFrame
 
 Engine.time = 0
 Engine.delayed = {} :: { { at: number, fn: (...any) -> (), args: { any } } }
@@ -167,8 +194,9 @@ local DEFAULTS: { [string]: { [string]: any } } = {
 	Humanoid = { WalkSpeed = 16, Health = 100, MaxHealth = 100, HipHeight = 2, MoveDirection = Vector3.zero, CameraOffset = Vector3.zero },
 	Sound = { Volume = 0.5, PlaybackSpeed = 1 },
 	ProximityPrompt = { Enabled = true },
-	PointLight = { Enabled = true, Brightness = 1, Range = 8 },
-	SpotLight = { Enabled = true, Brightness = 1, Range = 16 },
+	PointLight = { Enabled = true, Brightness = 1, Range = 8, Color = roblox.Color3.new(1, 1, 1) },
+	SpotLight = { Enabled = true, Brightness = 1, Range = 16, Color = roblox.Color3.new(1, 1, 1) },
+	SurfaceLight = { Enabled = true, Brightness = 1, Range = 16, Color = roblox.Color3.new(1, 1, 1) },
 	Camera = { CFrame = CFrame.new(0, 10, 0), FieldOfView = 70 },
 	TextLabel = { TextTransparency = 0, BackgroundTransparency = 0, Text = "", LayoutOrder = 0 },
 	TextButton = { TextTransparency = 0, BackgroundTransparency = 0, Text = "", LayoutOrder = 0 },

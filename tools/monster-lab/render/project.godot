@@ -9,3 +9,5 @@ renderer/rendering_method.mobile="gl_compatibility"
 lights_and_shadows/directional_shadow/size=4096
 lights_and_shadows/positional_shadow/atlas_size=4096
 textures/default_filters/anisotropic_filtering_level=4
+limits/opengl/max_lights_per_object=64
+limits/opengl/max_renderable_lights=256

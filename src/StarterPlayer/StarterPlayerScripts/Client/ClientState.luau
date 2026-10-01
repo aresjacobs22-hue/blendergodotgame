@@ -9,6 +9,7 @@ local ClientState = {
 	monsterDistance = math.huge,
 	chased = false, -- the monster is chasing *you*
 	hiding = false,
+	holdingBreath = false, -- hiding and holding your breath while it's close
 	jumpscaring = false,
 	flashlightOn = false,
 	interference = 0, -- 0..1, makes your flashlight stutter

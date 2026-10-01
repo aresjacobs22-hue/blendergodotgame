@@ -12,14 +12,17 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local SoundService = game:GetService("SoundService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local Curses = require(ReplicatedStorage.Shared.Curses)
 local Maze = require(ReplicatedStorage.Shared.Maze)
 local Monsters = require(ReplicatedStorage.Shared.Monsters)
 local Nights = require(ReplicatedStorage.Shared.Nights)
+local Chaos = require(script.Parent.Chaos)
 local Exit = require(script.Parent.Exit)
 local Interactables = require(script.Parent.Interactables)
 local MonsterAI = require(script.Parent.MonsterAI)
 local Objectives = require(script.Parent.Objectives)
 local Progress = require(script.Parent.Progress)
+local Throwables = require(script.Parent.Throwables)
 local WorldBuilder = require(script.Parent.WorldBuilder)
 
 local Remotes = ReplicatedStorage.Remotes
@@ -33,6 +36,9 @@ type Round = {
 	monster: MonsterAI.MonsterAI,
 	exit: Exit.Exit,
 	objective: Objectives.Objective,
+	chaos: Chaos.Chaos,
+	throwables: Throwables.Throwables,
+	curse: Curses.Curse,
 	startedAt: number,
 	spawnIndex: number,
 	participants: { [Player]: boolean },
@@ -110,12 +116,16 @@ local function chosenNight(): number
 	return best
 end
 
-local function applyLighting(l: Nights.Lighting)
+local function applyLighting(l: Nights.Lighting, curse: Curses.Curse?)
 	Lighting.Ambient = l.Ambient
 	Lighting.OutdoorAmbient = Color3.new(0, 0, 0)
 	Lighting.FogColor = l.FogColor
 	Lighting.FogStart = l.FogStart
 	Lighting.FogEnd = l.FogEnd
+	if curse and curse.id == "fog" then
+		Lighting.FogStart = 0
+		Lighting.FogEnd = math.min(l.FogEnd * 0.4, 42)
+	end
 	Lighting.ExposureCompensation = l.Exposure
 	local grade = Lighting:FindFirstChild("Monochrome")
 	if grade and grade:IsA("ColorCorrectionEffect") then
@@ -142,6 +152,7 @@ local function spawnPlayer(player: Player)
 	r.participants[player] = true
 	player:SetAttribute("Hiding", false)
 	player:SetAttribute("Flashlight", false)
+	player:SetAttribute("Bottles", 0)
 	local ok = pcall(function()
 		player:LoadCharacterAsync()
 	end)
@@ -214,7 +225,8 @@ local function startRound(night: Nights.Night)
 	local seed = Random.new():NextInteger(1, 2 ^ 30)
 	local layout = Maze.generate(seed, night.maze)
 	local world = WorldBuilder.build(layout, night)
-	applyLighting(night.lighting)
+	local curse = Curses.roll(night.monsterKind, Random.new(seed + 5))
+	applyLighting(night.lighting, curse)
 	local exit = Exit.new(world)
 
 	local monster: MonsterAI.MonsterAI
@@ -255,6 +267,11 @@ local function startRound(night: Nights.Night)
 	GameState:SetAttribute("Hour", 0)
 	GameState:SetAttribute("Blink", false)
 	GameState:SetAttribute("Result", "")
+	GameState:SetAttribute("Curse", curse.id)
+	GameState:SetAttribute("CurseName", curse.name)
+	GameState:SetAttribute("CurseText", curse.text)
+	GameState:SetAttribute("Blackout", false)
+	GameState:SetAttribute("Rage", false)
 
 	local objective = Objectives.start({
 		night = night,
@@ -276,6 +293,24 @@ local function startRound(night: Nights.Night)
 		end,
 	})
 
+	local throwables = Throwables.new(layout, world, {
+		isAlive = isAlive,
+		onNoise = function(position: Vector3, radius: number)
+			monster:hearNoise(position, radius)
+		end,
+	})
+	local chaos = Chaos.start({
+		night = night,
+		layout = layout,
+		world = world,
+		interactables = interactables,
+		monster = monster,
+		curse = curse,
+		getPlayers = alivePlayers,
+		isAlive = isAlive,
+		notifyAll = notifyAll,
+	})
+
 	local r: Round = {
 		night = night,
 		layout = layout,
@@ -284,6 +319,9 @@ local function startRound(night: Nights.Night)
 		monster = monster,
 		exit = exit,
 		objective = objective,
+		chaos = chaos,
+		throwables = throwables,
+		curse = curse,
 		startedAt = os.clock(),
 		spawnIndex = 0,
 		participants = {},
@@ -340,6 +378,8 @@ local function endRound()
 		c:Disconnect()
 	end
 	r.objective.destroy()
+	r.chaos.destroy()
+	r.throwables.destroy()
 	r.monster:destroy()
 	r.interactables:destroy()
 	r.world.model:Destroy()
@@ -350,7 +390,9 @@ local function endRound()
 	for _, player in Players:GetPlayers() do
 		removeCharacter(player)
 		player:SetAttribute("Hiding", false)
+		player:SetAttribute("Bottles", 0)
 	end
+	GameState:SetAttribute("Curse", "")
 end
 
 function RoundManager.run()

@@ -1,6 +1,6 @@
 # Monster lab
 
-Design sandbox for the five monsters. Each design is Luau written against the same
+Design sandbox for the five monsters, plus a map previewer. Each design is Luau written against the same
 builder as `src/ReplicatedStorage/Shared/Monsters.luau` (parts + Motor6D joints), so a
 chosen design can be pasted into the game as-is. `render.sh` builds every design with
 real Roblox datatypes under Lune, dumps the parts, and renders them in Godot in each
@@ -18,6 +18,19 @@ LUNE=lune GODOT=/path/to/godot tools/monster-lab/render.sh ward CrawlerB
 | `dump.luau` | builds designs with Lune and writes every part to JSON |
 | `render/render.gd` | Godot renderer (night moods, Roblox material approximations) |
 | `post.py`, `sheet.py`, `sheets.py` | night color grading, contact sheets |
+| `map_dump.luau` | builds a night's real map (WorldBuilder + Themes) in the test engine and writes parts, lights and the maze to JSON |
+| `render/map_render.gd`, `maps.py` | renders each map from above, at the spawn and down a corridor (with and without the monster) |
+
+## Maps
+
+```sh
+LUNE=lune GODOT=/path/to/godot python3 tools/monster-lab/maps.py            # all 5 nights
+LUNE=lune GODOT=/path/to/godot python3 tools/monster-lab/maps.py 5 --seed 42
+```
+
+It writes `out/maps/night<N>_<view>.png`, plus `out/maps/night<N>.png` with every view on
+one sheet. The renderer's light falloff is softer than Roblox's to get close to Studio, but
+dark maps still come out a little darker than they look in game.
 
 The renders show the exact geometry. Lighting and materials are only close to what
 Roblox Studio shows.

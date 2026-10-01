@@ -5,9 +5,9 @@ local roblox = require("@lune/roblox")
 local Engine = require("./mock/engine")
 
 local Vector3 = roblox.Vector3
-local CFrame = roblox.CFrame
+local CFrame = Engine.CFrame
 
-local REMOTES = { "Ready", "Notify", "Jumpscare", "OpenKeypad", "SubmitCode", "LeaveHiding", "Flashlight", "Battery", "RoundResult", "Apparition", "Escaped", "Look" }
+local REMOTES = { "Ready", "Notify", "Jumpscare", "OpenKeypad", "SubmitCode", "LeaveHiding", "Flashlight", "Battery", "RoundResult", "Apparition", "Escaped", "Look", "Throw", "Breath", "Chaos" }
 
 local failures = 0
 local function check(cond: any, msg: string)
@@ -35,7 +35,7 @@ local function boot()
 		Instance = Engine.Instance,
 		Vector3 = roblox.Vector3,
 		Vector2 = roblox.Vector2,
-		CFrame = roblox.CFrame,
+		CFrame = Engine.CFrame,
 		Color3 = roblox.Color3,
 		UDim = roblox.UDim,
 		UDim2 = roblox.UDim2,
@@ -75,6 +75,9 @@ local function boot()
 		Exit = require(sss.Server.Exit),
 		MonsterAI = require(sss.Server.MonsterAI),
 		Objectives = require(sss.Server.Objectives),
+		Curses = require(rs.Shared.Curses),
+		Chaos = require(sss.Server.Chaos),
+		Throwables = require(sss.Server.Throwables),
 	}
 	Engine.Maze = mods.Maze
 	return game, workspace, mods
@@ -237,6 +240,29 @@ local function setup(nightIndex: number, seed: number, startMonster: boolean?)
 		s.monster:start()
 	end
 	return s
+end
+
+-- The curse + random events, wired up like RoundManager does it.
+local function startChaos(s, curseId: string)
+	s.notes = {}
+	s.chaos = s.mods.Chaos.start({
+		night = s.night,
+		layout = s.layout,
+		world = s.world,
+		interactables = s.interactables,
+		monster = s.monster,
+		curse = s.mods.Curses.get(curseId),
+		getPlayers = function()
+			return table.clone(s.alive)
+		end,
+		isAlive = function(p)
+			return table.find(s.alive, p) ~= nil
+		end,
+		notifyAll = function(text)
+			table.insert(s.notes, text)
+		end,
+	})
+	return s.chaos
 end
 
 local function cellCenter(layout, c)
@@ -540,6 +566,243 @@ do
 	check(not bad, "survived 150s in a locker")
 	s.interactables:leave(p, false)
 	check(p:GetAttribute("Hiding") == false and not p.Character.HumanoidRootPart.Anchored, "leaving the locker frees the player")
+end
+
+---------------------------------------------------------------------------
+print("Curses")
+do
+	local _, _, mods = boot()
+	for n = 1, 5 do
+		local night = mods.Nights.get(n)
+		local seen, kinds = {}, 0
+		for seed = 1, 80 do
+			local c = mods.Curses.roll(night.monsterKind, Engine.Random.new(seed * 104729 + 7))
+			if not seen[c.id] then
+				seen[c.id] = true
+				kinds += 1
+			end
+		end
+		check(kinds >= 5, string.format("night %d rolls different curses (%d kinds)", n, kinds))
+		if night.monsterKind == "Statue" then
+			check(not seen.hunted, "the Statue never gets HUNTED (it already knows where you are)")
+		end
+	end
+	local saint = mods.Monsters.build("Statue", { variant = "Saint" })
+	local mourner = mods.Monsters.build("Statue", {})
+	check(saint.model:GetAttribute("Variant") == "Saint" and mourner.model:GetAttribute("Variant") == "Mourner", "the Statue comes as the Mourner or the Saint")
+end
+
+---------------------------------------------------------------------------
+print("Shifting walls move, but never cut anything off")
+for n = 1, 5 do
+	local s = setup(n, 900 + n)
+	local Maze = s.mods.Maze
+	local p = makePlayer(s.game, "Ares", 1)
+	table.insert(s.alive, p)
+	placePlayer(p, cellCenter(s.layout, s.layout.entrance))
+	local chaos = startChaos(s, "shifting")
+	local walls = 0
+	for _, d in s.world.model.Chaos:GetChildren() do
+		if d.Name == "ShiftingWall" then
+			walls += 1
+		end
+	end
+	local before = table.clone(s.layout.edges)
+	local allReachable, everRaised = true, 0
+	for _ = 1, 12 do
+		chaos.shift()
+		local raised = 0
+		for k, v in s.layout.edges do
+			if v == "wall" and before[k] ~= "wall" then
+				raised += 1
+			end
+		end
+		everRaised = math.max(everRaised, raised)
+		local count = 0
+		for _ in Maze.distances(s.layout, s.layout.entrance) do
+			count += 1
+		end
+		allReachable = allReachable and count == s.layout.width * s.layout.depth
+	end
+	check(walls >= 6 and everRaised >= 3, string.format("night %d: %d moving walls, up to %d raised at once", n, walls, everRaised))
+	check(allReachable, string.format("night %d: every room stays reachable after 12 shifts", n))
+	-- and the monster still never walks through one while they move around it
+	local violations = wallViolations
+	s.monster:awaken()
+	placePlayer(p, cellCenter(s.layout, s.layout.deadEnds[1] or s.layout.monsterSpawn))
+	run(s, 120)
+	check(wallViolations == violations, string.format("night %d: the monster respects the moving walls (%d violations)", n, wallViolations - violations))
+	chaos.destroy()
+	check(#Engine.errors == 0, "no script errors (" .. #Engine.errors .. ")")
+end
+
+---------------------------------------------------------------------------
+print("Curses and random events")
+do
+	local s = setup(2, 4242)
+	local p = makePlayer(s.game, "Ares", 1)
+	table.insert(s.alive, p)
+	placePlayer(p, cellCenter(s.layout, s.layout.entrance))
+	local lamps, dead = 0, 0
+	startChaos(s, "blackout")
+	for _, lamp in s.world.lamps do
+		if lamp.cell then
+			lamps += 1
+			if not lamp.light.Enabled and lamp.bulb:GetAttribute("Dead") == true then
+				dead += 1
+			end
+		end
+	end
+	check(lamps > 0 and dead / lamps > 0.5 and dead < lamps, string.format("BLACKOUT kills most lamps (%d/%d)", dead, lamps))
+	s.chaos.destroy()
+
+	s = setup(1, 4243)
+	p = makePlayer(s.game, "Ares", 1)
+	table.insert(s.alive, p)
+	placePlayer(p, cellCenter(s.layout, s.layout.entrance))
+	startChaos(s, "silent")
+	check(s.monster.silent and s.monster.rig.model:GetAttribute("Silent") == true, "DEAD SILENCE mutes the monster")
+	local GameState = s.game:GetService("ReplicatedStorage").GameState
+
+	check(s.chaos.event("blackout") and GameState:GetAttribute("Blackout") == true, "power failure: the lights go out")
+	run(s, 13)
+	check(GameState:GetAttribute("Blackout") == false, "...and come back")
+
+	check(s.chaos.event("phone"), "a phone starts ringing")
+	local phone = prompts(s.world.model.Chaos, "Phone")
+	check(#phone == 1 and phone[1].Enabled, "you can answer it")
+	phone[1].Triggered:Fire(p)
+	check(not phone[1].Enabled, "answering hangs it up")
+	check(s.chaos.event("phone"), "another call")
+	phone = prompts(s.world.model.Chaos, "Phone")
+	local ringing = phone[#phone]
+	local heard = false
+	local hear = s.monster.hearNoise
+	s.monster.hearNoise = function(self, pos, radius)
+		if radius >= 200 then
+			heard = true
+		end
+		return hear(self, pos, radius)
+	end
+	run(s, 21)
+	s.monster.hearNoise = hear
+	check(not ringing.Enabled and heard, "nobody picked up, so it went to see who was calling")
+
+	local closed = 0
+	for _, door in s.interactables.doors do
+		s.interactables:setDoor(door, true, false)
+	end
+	run(s, 1)
+	check(s.chaos.event("slam"), "every door slams shut")
+	for _, door in s.interactables.doors do
+		if not door.isOpen then
+			closed += 1
+		end
+	end
+	check(#s.interactables.doors > 0 and closed == #s.interactables.doors, string.format("all %d doors are closed", closed))
+	check(s.chaos.event("falseChase"), "a fake chase plays for someone")
+
+	GameState:SetAttribute("ExitOpen", true)
+	run(s, 2)
+	check(GameState:GetAttribute("Rage") == true and s.monster.state == "Chase", "the exit opening sends it into a RAGE (" .. tostring(s.monster.state) .. ")")
+	s.chaos.destroy()
+	GameState:SetAttribute("ExitOpen", false)
+	check(GameState:GetAttribute("Rage") == false and GameState:GetAttribute("Blackout") == false, "the round ending clears it all")
+	check(#Engine.errors == 0, "no script errors (" .. #Engine.errors .. ")")
+end
+
+---------------------------------------------------------------------------
+print("Bottles: pick them up, throw them, the monster goes to look")
+do
+	local s = setup(3, 3131)
+	local p = makePlayer(s.game, "Ares", 1)
+	table.insert(s.alive, p)
+	local throwables = s.mods.Throwables.new(s.layout, s.world, {
+		isAlive = function(pl)
+			return table.find(s.alive, pl) ~= nil
+		end,
+		onNoise = function(pos, radius)
+			s.monster:hearNoise(pos, radius)
+		end,
+	})
+	local bottles = prompts(s.world.model.Bottles, "Bottle")
+	check(#bottles >= 6 and #bottles <= 12, #bottles .. " bottles lying around")
+	for i = 1, 4 do
+		bottles[i].Triggered:Fire(p)
+	end
+	check(p:GetAttribute("Bottles") == 3, "you can carry 3 (" .. tostring(p:GetAttribute("Bottles")) .. ")")
+	check(bottles[4].Parent ~= nil, "the 4th stays on the floor")
+	s.monster:awaken()
+	-- stand at the end of a long corridor with the monster partway down it, and throw past it
+	local from, run_
+	for z = 0, s.layout.depth - 1 do
+		for x = 0, s.layout.width - 1 do
+			for _, d in s.mods.Maze.DIRS do
+				local cells = s.mods.Maze.straightRun(s.layout, { x = x, z = z }, d, 3)
+				if not from and #cells == 3 then
+					from, run_ = { x = x, z = z }, cells
+				end
+			end
+		end
+	end
+	check(from ~= nil, "found a long corridor")
+	local start = cellCenter(s.layout, from)
+	local look = (cellCenter(s.layout, run_[3]) - start).Unit
+	placePlayer(p, start)
+	p.Character.HumanoidRootPart.CFrame = CFrame.lookAt(Vector3.new(start.X, 3, start.Z), Vector3.new(start.X, 3, start.Z) + look)
+	local mid = cellCenter(s.layout, run_[2])
+	s.monster.rig.model:PivotTo(CFrame.new(mid.X, s.monster.rig.rootHeight, mid.Z))
+	local remotes = s.game:GetService("ReplicatedStorage").Remotes
+	remotes.Throw.OnServerEvent:Fire(p, look)
+	check(p:GetAttribute("Bottles") == 2, "throwing uses one up")
+	local went = run(s, 3, function()
+		return s.monster.state == "Investigate"
+	end)
+	local shards = 0
+	for _, d in s.world.model.Bottles:GetChildren() do
+		if d.Name == "Shard" then
+			shards += 1
+		end
+	end
+	check(shards > 0, "it smashes")
+	check(went, "the monster goes to look (" .. tostring(s.monster.state) .. ")")
+	remotes.Throw.OnServerEvent:Fire(p, Vector3.new(0, 0, 50))
+	check(p:GetAttribute("Bottles") == 2, "bogus throws are ignored")
+	p:SetAttribute("Hiding", true)
+	remotes.Throw.OnServerEvent:Fire(p, Vector3.new(0, 0, 1))
+	check(p:GetAttribute("Bottles") == 2, "no throwing from inside a locker")
+	p:SetAttribute("Hiding", false)
+	throwables.destroy()
+	check(#Engine.errors == 0, "no script errors (" .. #Engine.errors .. ")")
+end
+
+---------------------------------------------------------------------------
+print("Holding your breath")
+do
+	local s = setup(1, 777)
+	local p = makePlayer(s.game, "Ares", 1)
+	table.insert(s.alive, p)
+	startChaos(s, "fog")
+	local remotes = s.game:GetService("ReplicatedStorage").Remotes
+	s.monster:awaken()
+	local locker = s.interactables.lockers[1]
+	placePlayer(p, locker.outside.Position)
+	s.interactables:hide(p, locker)
+	-- far away: letting your breath out does nothing
+	s.monster.rig.model:PivotTo(CFrame.new(locker.outside.Position.X + 200, s.monster.rig.rootHeight, locker.outside.Position.Z))
+	remotes.Breath.OnServerEvent:Fire(p)
+	check(s.monster.state ~= "HuntLocker", "gasping with nothing around is fine")
+	run(s, 5)
+	-- right outside the door: it hears you
+	s.monster.rig.model:PivotTo(CFrame.new(locker.outside.Position.X, s.monster.rig.rootHeight, locker.outside.Position.Z) * CFrame.new(0, 0, 7))
+	remotes.Breath.OnServerEvent:Fire(p)
+	check(s.monster.state == "HuntLocker", "gasp while it's right outside and it hears you")
+	local pulled = run(s, 20, function()
+		return #s.caught > 0
+	end)
+	check(pulled, "and it drags you out")
+	s.chaos.destroy()
+	check(#Engine.errors == 0, "no script errors (" .. #Engine.errors .. ")")
 end
 
 check(#Engine.errors == 0, "no script errors anywhere (" .. #Engine.errors .. ")")

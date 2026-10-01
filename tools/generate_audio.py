@@ -4,7 +4,7 @@ Synthesizes every sound in ACHROMA from scratch (no samples, no downloads).
 
 Outputs (all mono Ogg Vorbis, ready to upload to Roblox):
   assets/audio/ACHROMA_SFX.ogg        one "audio atlas" holding every sound effect
-  assets/audio/ACHROMA_AMBIENCE.ogg   60 s seamless ambient drone loop
+  assets/audio/ACHROMA_AMBIENCE.ogg   a second atlas: each night's ambience loop and chase music
   assets/audio/ACHROMA_MUSICBOX.ogg   wind-down music box for the menu / intermission
 and the Luau table describing where each effect lives inside the atlas:
   src/ReplicatedStorage/Shared/SoundAtlas.luau
@@ -867,6 +867,579 @@ def snd_blink():
     return normalize(out, 0.8)
 
 
+# ---- events, curses, throwables, hiding ------------------------------------
+
+def snd_glass_shatter():
+    dur = 1.6
+    n = samples(dur)
+    out = np.zeros(n)
+    burst = filt(noise(n), lo=2500, hi=12000) * env_exp(n, 0.05, attack=0.0005)
+    place(out, burst * 0.9, 0)
+    for _ in range(26):
+        f = rng.uniform(2200, 7500)
+        h = metal_hit(f, [1.0, 1.47, 2.09, 2.83], rng.uniform(0.15, 0.5), rng.uniform(0.03, 0.12), detune=0.01)
+        place(out, h * rng.uniform(0.15, 0.5), samples(rng.uniform(0.0, 0.9) ** 2))
+    out = reverb(out, decay=1.1, mix=0.25, damp=9000)
+    return normalize(out, 0.9)
+
+
+def snd_bottle_whoosh():
+    dur = 0.55
+    n = samples(dur)
+    t = secs(n)
+    x = filt(noise(n), lo=400, hi=4000)
+    sweep = svf(x, np.linspace(600, 2600, n), q=3.0)
+    env = np.sin(np.linspace(0, np.pi, n)) ** 2
+    return normalize(sweep * env, 0.6)
+
+
+def snd_phone_ring_loop():
+    # an old bell phone: a burst of rapid strikes, then a pause (loops)
+    dur = 3.2
+    n = samples(dur)
+    out = np.zeros(n)
+    pos = 0.0
+    while pos < 1.3:
+        h = metal_hit(1180, [1.0, 1.71, 2.42, 3.38], 0.12, 0.05, detune=0.003)
+        h2 = metal_hit(1395, [1.0, 1.66, 2.51], 0.12, 0.05, detune=0.003)
+        place(out, h * 0.8, samples(pos))
+        place(out, h2 * 0.7, samples(pos + 0.02))
+        pos += 1.0 / 22.0
+    out = filt(out, lo=500, hi=7000)
+    out = reverb(out, decay=0.8, mix=0.25, damp=6000, tail=False)
+    return normalize(out, 0.8)
+
+
+def snd_phone_pickup():
+    out = np.zeros(samples(0.5))
+    place(out, thud(0.25, 400, 180, 0.03, click=1.0), 0)
+    place(out, metal_hit(900, [1.0, 2.3], 0.2, 0.04) * 0.3, samples(0.05))
+    place(out, filt(noise(samples(0.2)), lo=800, hi=3000) * env_exp(samples(0.2), 0.05) * 0.3, samples(0.12))
+    return normalize(out, 0.7)
+
+
+def formant_voice(dur, pitch, vowels, rate=6.0, rough=0.3):
+    n = samples(dur)
+    t = secs(n)
+    f0 = pitch * (1 + 0.06 * smooth_noise(n, 3) + 0.02 * np.sin(2 * np.pi * 5.5 * t))
+    src = saw(osc_phase(f0)) * (1 - rough) + noise(n) * rough
+    seg = max(1, int(dur * rate))
+    f1 = np.interp(t, np.linspace(0, dur, seg), [vowels[i % len(vowels)][0] for i in range(seg)])
+    f2 = np.interp(t, np.linspace(0, dur, seg), [vowels[i % len(vowels)][1] for i in range(seg)])
+    out = svf(src, f1, q=5) + svf(src, f2, q=7) * 0.7
+    amp = np.clip((smooth_noise(n, rate * 1.4) + 0.6), 0, 1.4)
+    return out * amp
+
+
+def snd_phone_voice():
+    vowels = [(700, 1150), (350, 2000), (450, 900), (600, 1700), (300, 2300), (500, 1000)]
+    v = formant_voice(3.4, 92, [vowels[i] for i in rng.integers(0, len(vowels), 24)], rate=7, rough=0.35)
+    n = len(v)
+    t = secs(n)
+    v = filt(v, lo=320, hi=3200)
+    v = drive(normalize(v), 3.0)
+    crackle = (rng.random(n) < 0.003).astype(float) * rng.uniform(-1, 1, n) * 0.8
+    hiss = filt(noise(n), lo=1500, hi=4000) * 0.06
+    out = v * 0.8 + crackle + hiss
+    out *= np.minimum(1, t / 0.05) * np.minimum(1, (len(t) / SR - t) / 0.3)
+    return normalize(out, 0.75)
+
+
+def snd_power_down():
+    dur = 2.6
+    n = samples(dur)
+    t = secs(n)
+    f = 120 * np.exp(-t / 0.9) + 25
+    hum = np.zeros(n)
+    for h in range(1, 7):
+        hum += np.sin(osc_phase(f * h)) / h
+    hum *= np.exp(-t / 1.1)
+    out = np.zeros(n)
+    place(out, thud(0.5, 90, 40, 0.1, click=1.0, crack=0.5), 0)
+    out += hum * 0.8
+    out = reverb(out, decay=1.8, mix=0.35, damp=3000, tail=False)
+    return normalize(out, 0.85)
+
+
+def snd_wall_shift():
+    dur = 3.4
+    n = samples(dur)
+    t = secs(n)
+    rumble = filt(noise(n), hi=160, order=4) * 3
+    grind = filt(noise(n) * (0.5 + 0.5 * (smooth_noise(n, 9) > 0)), peaks=((210, 8, 1.0), (470, 10, 0.7), (980, 12, 0.4)))
+    env = np.minimum(1, t / 0.4) * np.minimum(1, (dur - 0.4 - t) / 0.3).clip(0, 1)
+    out = (rumble + grind * 0.8) * env
+    place(out, thud(0.6, 70, 32, 0.16, click=1.0, crack=0.6) * 1.2, samples(dur - 0.5))
+    out = reverb(out, decay=2.0, mix=0.3, damp=2500, tail=False)
+    return normalize(drive(normalize(out), 1.4), 0.9)
+
+
+def snd_doors_slam():
+    out = np.zeros(samples(3.0))
+    pos = 0.0
+    for i in range(6):
+        place(out, snd_door_slam() * rng.uniform(0.5, 1.0) * (1 if i == 0 else 0.8), samples(pos))
+        pos += rng.uniform(0.08, 0.35)
+    return normalize(out, 0.95)
+
+
+def snd_gasp():
+    dur = 0.9
+    n = samples(dur)
+    t = secs(n)
+    ins = svf(noise(n), np.linspace(1700, 2600, n), q=1.8) * np.exp(-((t - 0.18) / 0.12) ** 2)
+    voice = formant_voice(0.5, 210, [(800, 1300), (600, 1100)], rate=3, rough=0.6)
+    out = ins * 1.2
+    place(out, voice * np.linspace(1, 0, len(voice)) * 0.5, samples(0.08))
+    out = filt(out, lo=200, hi=6000)
+    return normalize(out, 0.8)
+
+
+def snd_breath_hold():
+    dur = 0.8
+    n = samples(dur)
+    t = secs(n)
+    ins = svf(noise(n), np.linspace(1300, 2400, n), q=1.6) * np.sin(np.linspace(0, np.pi, n)) ** 1.2
+    return normalize(filt(ins, lo=300, hi=5000) * np.minimum(1, (dur - t) / 0.05), 0.55)
+
+
+def snd_curse_sting():
+    dur = 4.5
+    n = samples(dur)
+    t = secs(n)
+    boom = thud(2.5, 60, 24, 0.7, click=0.6, crack=0.4)
+    cluster = np.zeros(n)
+    for f in (110.0, 116.5, 155.6, 164.8, 233.1):
+        cluster += saw(osc_phase(np.full(n, f) * (1 + 0.003 * np.sin(2 * np.pi * 0.7 * t))))
+    cluster = filt(cluster, hi=1800) * np.minimum(1, t / 0.05) * np.exp(-t / 1.8)
+    swell_n = samples(1.2)
+    swell = filt(noise(swell_n), lo=3000, hi=10000) * np.linspace(0, 1, swell_n) ** 3
+    out = np.zeros(n)
+    place(out, swell * 0.4, 0)
+    place(out, boom * 1.2, samples(1.2))
+    place(out, cluster * 0.35, samples(1.2))
+    out = reverb(out, decay=3.0, mix=0.45, damp=4000, tail=False)
+    return normalize(out, 0.9)
+
+
+def snd_event_sting():
+    dur = 2.6
+    n = samples(dur)
+    t = secs(n)
+    out = np.zeros(n)
+    place(out, thud(1.2, 70, 30, 0.35, click=0.8, crack=0.5), 0)
+    screech = np.zeros(n)
+    for f in (1840, 2071, 2603):
+        screech += np.sin(osc_phase(f * (1 - 0.15 * t / dur) * (1 + 0.02 * np.sin(2 * np.pi * 9 * t))))
+    out += screech * np.exp(-t / 0.8) * 0.18
+    out = reverb(out, decay=2.4, mix=0.45, damp=5000, tail=False)
+    return normalize(out, 0.85)
+
+
+def snd_floor_creak():
+    out = creak(1.4, 25, 110, res=((190, 14), (430, 18), (900, 20), (1700, 16)))
+    return normalize(reverb(out, decay=1.4, mix=0.35, damp=2500), 0.75)
+
+
+def snd_clock_tick():
+    out = np.zeros(samples(2.0))
+    for i in range(4):
+        cn = samples(0.05)
+        tick = metal_hit(2600 if i % 2 == 0 else 2100, [1.0, 2.7], 0.05, 0.008) + filt(noise(cn), lo=2000) * env_exp(cn, 0.004) * 0.5
+        place(out, tick, samples(i * 0.5))
+    return normalize(reverb(out, decay=1.2, mix=0.3, damp=6000), 0.6)
+
+
+def snd_gurney():
+    dur = 2.6
+    n = samples(dur)
+    out = np.zeros(n)
+    pos = 0.0
+    while pos < dur - 0.3:
+        sq_n = samples(0.14)
+        tt = secs(sq_n)
+        sq = np.sin(osc_phase(np.linspace(1500, 2100, sq_n) * (1 + 0.04 * np.sin(2 * np.pi * 40 * tt)))) * np.sin(np.linspace(0, np.pi, sq_n))
+        place(out, sq * 0.5, samples(pos))
+        pos += 0.32
+    out += filt(noise(n), lo=200, hi=1200) * 0.05
+    for _ in range(10):
+        place(out, metal_hit(rng.uniform(600, 1500), [1.0, 2.6], 0.1, 0.02) * 0.2, samples(rng.uniform(0, dur - 0.2)))
+    return normalize(reverb(out, decay=1.6, mix=0.4, damp=5000), 0.7)
+
+
+def snd_monitor_flatline():
+    dur = 3.0
+    n = samples(dur)
+    t = secs(n)
+    out = np.zeros(n)
+    for at in (0.0, 0.75):
+        bn = samples(0.12)
+        place(out, np.sin(2 * np.pi * 980 * secs(bn)) * np.sin(np.linspace(0, np.pi, bn)) ** 0.2, samples(at))
+    tone = np.sin(2 * np.pi * 980 * t) * (t > 1.5) * np.minimum(1, (dur - t) / 0.2)
+    out += tone * 0.8
+    return normalize(reverb(out, decay=1.0, mix=0.3, damp=6000), 0.55)
+
+
+def snd_intercom():
+    dur = 3.4
+    n = samples(dur)
+    t = secs(n)
+    out = np.zeros(n)
+    for at, f in ((0.0, 784.0), (0.45, 622.3)):
+        cn = samples(1.2)
+        ct = secs(cn)
+        chime = (np.sin(2 * np.pi * f * ct) + 0.3 * np.sin(2 * np.pi * f * 2.01 * ct)) * np.exp(-ct / 0.5)
+        place(out, chime * 0.6, samples(at))
+    voice = formant_voice(1.6, 120, [(650, 1100), (400, 1900), (500, 1000)], rate=6, rough=0.3)
+    voice = drive(normalize(filt(voice, lo=400, hi=3000)), 2.5) * 0.5
+    place(out, voice, samples(1.5))
+    out += filt(noise(n), lo=1000, hi=4000) * 0.04
+    return normalize(reverb(out, decay=2.6, mix=0.55, damp=3500), 0.65)
+
+
+def snd_pipe_groan():
+    dur = 3.2
+    n = samples(dur)
+    t = secs(n)
+    f = 58 + 9 * smooth_noise(n, 1.5)
+    body = np.sin(osc_phase(f) + 3.0 * np.sin(osc_phase(f * 2.71)))
+    body = filt(body, lo=40, hi=900, peaks=((180, 6, 1.0), (390, 8, 0.7)))
+    env = np.sin(np.linspace(0, np.pi, n)) ** 1.5
+    out = reverb(body * env, decay=2.8, mix=0.5, damp=1800)
+    return normalize(out, 0.75)
+
+
+def snd_splash():
+    dur = 1.2
+    n = samples(dur)
+    out = filt(noise(n), lo=300, hi=3500) * env_exp(n, 0.12)
+    for _ in range(8):
+        bn = samples(0.08)
+        bt = secs(bn)
+        bub = np.sin(osc_phase(np.linspace(rng.uniform(500, 900), rng.uniform(1200, 2000), bn))) * np.sin(np.linspace(0, np.pi, bn))
+        place(out, bub * 0.3, samples(rng.uniform(0.05, 0.8)))
+    return normalize(reverb(out, decay=1.6, mix=0.45, damp=4000), 0.75)
+
+
+def snd_marble_steps():
+    out = np.zeros(samples(2.6))
+    pos = 0.0
+    for i in range(6):
+        cn = samples(0.15)
+        step = filt(noise(cn), lo=900, hi=5000) * env_exp(cn, 0.012) + thud(0.15, 220, 150, 0.02, click=0.6) * 0.4
+        place(out, step * (0.5 + 0.1 * i), samples(pos))
+        pos += 0.42
+    out = reverb(out, decay=3.8, mix=0.65, damp=4000, predelay=0.05)
+    return normalize(out, 0.7)
+
+
+def choir(chord, dur, vowel=(700, 1150, 2600), vib=5.0):
+    n = samples(dur)
+    t = secs(n)
+    out = np.zeros(n)
+    for m in chord:
+        f = 440.0 * 2 ** ((m - 69) / 12.0)
+        for det in (-0.004, 0.0, 0.005):
+            out += saw(osc_phase(f * (1 + det) * (1 + 0.006 * np.sin(2 * np.pi * vib * t + rng.uniform(0, 6.28)))))
+    out = filt(out, lo=120, peaks=((vowel[0], 5, 1.0), (vowel[1], 6, 0.6), (vowel[2], 7, 0.3), (5000, 1, 0.05)))
+    return out
+
+
+def snd_choir_hum():
+    dur = 5.0
+    out = choir([57, 60, 64, 65], dur, vowel=(400, 900, 2300), vib=4.5)
+    n = len(out)
+    out *= np.sin(np.linspace(0, np.pi, n)) ** 1.5
+    return normalize(reverb(out, decay=3.5, mix=0.55, damp=5000), 0.6)
+
+
+def snd_reverse_whisper():
+    w = snd_stinger_whisper()[::-1].copy()
+    return normalize(reverb(w, decay=2.0, mix=0.5, damp=5000), 0.65)
+
+
+def snd_deep_boom():
+    out = thud(3.0, 55, 22, 0.9, click=0.4, crack=0.3)
+    out = reverb(out, decay=4.0, mix=0.5, damp=900)
+    return normalize(out, 0.9)
+
+
+def snd_locker_bang():
+    out = np.zeros(samples(1.8))
+    for i in range(3):
+        place(out, metal_hit(240, [1.0, 2.76, 5.4, 8.93], 0.5, 0.12) * 0.9, samples(i * 0.38))
+        place(out, thud(0.3, 110, 60, 0.05, click=1.0) * 0.6, samples(i * 0.38))
+    return normalize(reverb(out, decay=1.2, mix=0.3, damp=4000), 0.9)
+
+
+def snd_rage_sting():
+    dur = 3.5
+    a = scream_voice(dur * 0.8, 260, 640, 180, harsh=1.0, seed_shift=0.4)
+    out = np.zeros(samples(dur))
+    place(out, thud(1.5, 60, 26, 0.5, click=1.0, crack=1.0), 0)
+    place(out, a * 0.8, samples(0.15))
+    out = reverb(out, decay=2.5, mix=0.4, damp=4000, tail=False)
+    return normalize(drive(normalize(out), 2.0), 0.95)
+
+
+# ---- per-night ambience and chase music (the ambience atlas) ----------------
+
+def mtof(m):
+    return 440.0 * 2 ** ((m - 69) / 12.0)
+
+
+def tone(kind, m, dur, decay=None, cutoff=2400.0, detune=0.004):
+    n = samples(dur)
+    t = secs(n)
+    f = mtof(m)
+    if kind == "saw":
+        x = saw(osc_phase(np.full(n, f))) + saw(osc_phase(np.full(n, f * (1 + detune))))
+    elif kind == "square":
+        x = np.sign(np.sin(2 * np.pi * f * t)) * 0.6
+    elif kind == "piano":
+        x = (np.sin(2 * np.pi * f * t) + 0.5 * np.sin(2 * np.pi * f * 2.003 * t) * np.exp(-t / 0.4)
+             + 0.25 * np.sin(2 * np.pi * f * 3.01 * t) * np.exp(-t / 0.2))
+    else:
+        x = np.sin(2 * np.pi * f * t)
+    env = np.minimum(1, t / 0.004)
+    if decay:
+        env = env * np.exp(-t / decay)
+    env = env * np.minimum(1, (dur - t) / 0.01).clip(0, 1)
+    out = x * env
+    if kind in ("saw", "square"):
+        out = filt(out, hi=cutoff)
+    return out
+
+
+def kick(pitch=1.0):
+    return thud(0.4, 130 * pitch, 42 * pitch, 0.1, click=0.6)
+
+
+def snare(tone_hz=190):
+    n = samples(0.28)
+    out = filt(noise(n), lo=900, hi=7000) * env_exp(n, 0.07)
+    place(out, thud(0.2, tone_hz * 1.3, tone_hz, 0.04, click=0.2) * 0.5, 0)
+    return out
+
+
+def hat(length=0.05):
+    n = samples(length)
+    return filt(noise(n), lo=6500) * env_exp(n, length * 0.3)
+
+
+def sequence(bpm, bars, events):
+    """events: list of (beat, sound array, gain). Returns a seamless loop."""
+    beat = 60.0 / bpm
+    L = samples(bars * 4 * beat)
+    out = np.zeros(L)
+    for b, x, g in events:
+        place_wrapped(out, x * g, int(samples(b * beat)) % L)
+    return out
+
+
+def chase_house():
+    bpm, bars = 120, 8
+    ev = []
+    for b in range(bars * 4):
+        ev.append((b, kick(0.9), 0.9 if b % 2 == 0 else 0.5))
+        ev.append((b + 0.5, hat(0.03), 0.25))
+        ev.append((b, tone("piano", 33 if (b // 4) % 2 == 0 else 34, 0.5, decay=0.3), 0.6))
+        ev.append((b + 0.5, tone("piano", 45, 0.4, decay=0.2), 0.35))
+    for bar in range(bars):
+        ev.append((bar * 4, tone("saw", 57, 4 * 0.5 + 0.2, cutoff=900), 0.18))
+        ev.append((bar * 4, tone("saw", 58, 4 * 0.5 + 0.2, cutoff=900), 0.16))
+    motif = [76, 74, 72, 71, 69, 68]
+    for i, m in enumerate(motif):
+        ev.append((16 + i * 0.75, tone("piano", m, 1.0, decay=0.6) * 0.5, 0.35))
+    out = sequence(bpm, bars, ev)
+    return normalize(reverb(out, decay=1.2, mix=0.2, damp=6000, tail=False), 0.85)
+
+
+def chase_ward():
+    bpm, bars = 140, 8
+    ev = []
+    for b in range(bars * 4):
+        ev.append((b, kick(), 1.0))
+        if b % 2 == 1:
+            ev.append((b, snare(), 0.7))
+        for q in (0, 0.25, 0.5, 0.75):
+            ev.append((b + q, tone("saw", 29, 0.12, decay=0.08, cutoff=700), 0.45))
+        ev.append((b + 0.5, hat(), 0.3))
+    for bar in range(bars):
+        for i in range(4):
+            m = 77 if i % 2 == 0 else 71
+            ev.append((bar * 4 + i, tone("square", m, 0.35, decay=0.25, cutoff=3500), 0.18))
+        if bar % 2 == 1:
+            ev.append((bar * 4 + 3.5, metal_hit(1300, [1.0, 2.4, 3.9], 0.8, 0.3), 0.25))
+    out = sequence(bpm, bars, ev)
+    return normalize(drive(normalize(out), 1.6), 0.85)
+
+
+def chase_sewer():
+    bpm, bars = 96, 6
+    ev = []
+    for b in range(bars * 4):
+        ev.append((b, thud(0.6, 95, 38, 0.18, click=0.8), 0.9 if b % 2 == 0 else 0.6))
+        ev.append((b + 0.75, thud(0.4, 140, 70, 0.08, click=0.4), 0.35))
+    for bar in range(bars):
+        ev.append((bar * 4, tone("saw", 26 if bar % 3 != 2 else 27, 4 * 60 / bpm, cutoff=500, detune=0.008), 0.5))
+        ev.append((bar * 4 + 2, tone("saw", 38, 1.2, decay=0.8, cutoff=900), 0.25))
+        for _ in range(2):
+            ev.append((bar * 4 + rng.uniform(0, 4), tone("sine", int(rng.integers(84, 96)), 0.25, decay=0.06), 0.15))
+    out = sequence(bpm, bars, ev)
+    return normalize(reverb(out, decay=2.0, mix=0.3, damp=3000, tail=False), 0.85)
+
+
+def chase_atrium():
+    bpm, bars = 108, 7
+    beat = 60.0 / bpm
+    ev = []
+    for b in range(bars * 4):
+        ev.append((b, thud(0.8, 90, 50, 0.25, click=0.5), 0.8 if b % 4 == 0 else 0.45))
+    chords = [[48, 51, 55, 60], [49, 52, 56, 61], [48, 51, 55, 59], [47, 50, 55, 58]]
+    for bar in range(bars):
+        c = chords[bar % len(chords)]
+        ev.append((bar * 4, choir(c, beat * 3.5, vowel=(700, 1150, 2600)) * 0.25, 1.0))
+        trem_n = samples(beat * 4)
+        tt = secs(trem_n)
+        strings = tone("saw", c[-1] + 12, beat * 4, cutoff=3000) * (0.5 + 0.5 * np.sign(np.sin(2 * np.pi * (bpm / 60 * 4) * tt)))
+        ev.append((bar * 4, strings, 0.12))
+    out = sequence(bpm, bars, ev)
+    return normalize(reverb(out, decay=2.6, mix=0.35, damp=5000, tail=False), 0.85)
+
+
+def chase_void():
+    bpm, bars = 150, 10
+    ev = []
+    for b in range(bars * 4):
+        ev.append((b, kick(0.8), 1.0))
+        if b % 2 == 1:
+            n = samples(0.3)
+            ev.append((b, drive(filt(noise(n), lo=400, hi=5000) * env_exp(n, 0.09), 4), 0.6))
+        for q in (0, 0.25, 0.5, 0.75):
+            m = 27 if (b * 4 + int(q * 4)) % 8 != 6 else 39
+            ev.append((b + q, drive(tone("saw", m, 0.13, decay=0.09, cutoff=900), 3), 0.35))
+    for bar in range(0, bars, 2):
+        sw_n = samples(60 / bpm * 4)
+        ev.append((bar * 4 + 4, filt(noise(sw_n), lo=1500, hi=9000) * np.linspace(0, 1, sw_n) ** 3, 0.25))
+    out = sequence(bpm, bars, ev)
+    return normalize(drive(normalize(out), 1.5), 0.85)
+
+
+def ambience_loop(dur, layers, events):
+    n = samples(dur)
+    out = np.zeros(n)
+    for x in layers:
+        out += x
+    for at, ev in events:
+        place_wrapped(out, ev, samples(at))
+    return normalize(filt(out, lo=25, circular=True), 0.8)
+
+
+def amb_lfo(n, dur, cycles):
+    t = secs(n)
+    return np.sin(2 * np.pi * cycles * t / dur + rng.uniform(0, 6.28))
+
+
+def amb_house():
+    D = 40.0
+    n = samples(D)
+    room = filt(noise(n), hi=180, order=3, circular=True)
+    room = room / np.max(np.abs(room)) * 0.25
+    wind = filt(noise(n), lo=200, hi=900, circular=True)
+    wind = wind / np.max(np.abs(wind)) * (0.5 + 0.5 * amb_lfo(n, D, 3)) ** 2 * 0.3
+    ticks = np.zeros(n)
+    for i in range(int(D)):
+        place_wrapped(ticks, metal_hit(2400, [1.0, 2.7], 0.05, 0.008) * 0.05, samples(i + 0.0))
+    events = [(5, reverb(creak(2.2, 15, 60), decay=2, mix=0.5, damp=1800) * 0.25),
+              (17, filt(snd_stinger_bang(), hi=700) * 0.18),
+              (26, snd_floor_creak() * 0.3),
+              (34, filt(snd_stinger_footsteps(), hi=900) * 0.12)]
+    return ambience_loop(D, [room, wind, ticks], events)
+
+
+def amb_ward():
+    D = 40.0
+    n = samples(D)
+    t = secs(n)
+    hum = np.zeros(n)
+    for h in range(1, 9):
+        hum += np.sin(2 * np.pi * 60 * h * t) / h ** 1.3
+    hum *= 0.08 * (0.8 + 0.2 * amb_lfo(n, D, 7))
+    vent = filt(noise(n), lo=150, hi=1800, circular=True)
+    vent = vent / np.max(np.abs(vent)) * 0.18
+    events = []
+    for k in range(6):
+        beep = tone("square", 81, 0.25, decay=0.2, cutoff=3000) * 0.08
+        events.append((k * 6.5 + 1, reverb(beep, decay=2.0, mix=0.6, damp=2500)))
+    events.append((12, snd_monitor_flatline() * 0.12))
+    events.append((24, snd_gurney() * 0.18))
+    events.append((33, snd_intercom() * 0.2))
+    return ambience_loop(D, [hum, vent], events)
+
+
+def amb_sewer():
+    D = 40.0
+    n = samples(D)
+    flow = filt(noise(n), lo=250, hi=1300, circular=True)
+    flow = flow / np.max(np.abs(flow)) * (0.6 + 0.4 * smooth_noise(n, 2, circular=True)) * 0.3
+    rumble = filt(noise(n), hi=90, order=4, circular=True)
+    rumble = rumble / np.max(np.abs(rumble)) * 0.35
+    events = []
+    for _ in range(26):
+        plink_n = samples(0.15)
+        f = rng.uniform(900, 2200)
+        plink = np.sin(osc_phase(np.linspace(f, f * 1.6, plink_n))) * env_exp(plink_n, 0.03)
+        events.append((rng.uniform(0, D), reverb(plink, decay=1.8, mix=0.6, damp=4000) * rng.uniform(0.05, 0.15)))
+    events.append((9, snd_pipe_groan() * 0.25))
+    events.append((28, snd_pipe_groan() * 0.2))
+    events.append((20, snd_splash() * 0.12))
+    return ambience_loop(D, [flow, rumble], events)
+
+
+def amb_atrium():
+    D = 40.0
+    n = samples(D)
+    air = filt(noise(n), lo=80, hi=500, circular=True)
+    air = air / np.max(np.abs(air)) * (0.5 + 0.5 * amb_lfo(n, D, 2)) * 0.22
+    whistle = np.sin(2 * np.pi * round(880 * D) / D * secs(n)) * np.clip(amb_lfo(n, D, 1), 0, 1) ** 4 * 0.02
+    events = [(4, snd_marble_steps() * 0.2), (19, snd_choir_hum() * 0.22), (31, snd_marble_steps() * 0.15),
+              (26, filt(snd_statue_grind(), hi=1500) * 0.1)]
+    return ambience_loop(D, [air, whistle], events)
+
+
+def amb_void():
+    D = 40.0
+    n = samples(D)
+    t = secs(n)
+    drone = np.zeros(n)
+    for f0, a in ((30.0, 0.5), (30.6, 0.4), (45.0, 0.2), (60.25, 0.08)):
+        drone += a * np.sin(2 * np.pi * round(f0 * D) / D * t + rng.uniform(0, 6))
+    drone *= 0.7
+    events = []
+    k = 0.0
+    while k < D:
+        events.append((k, filt(snd_heartbeat(), hi=160) * 0.25))
+        k += 2.6
+    events += [(6, snd_reverse_whisper() * 0.18), (21, snd_reverse_whisper() * 0.14), (14, snd_deep_boom() * 0.25),
+               (30, reverb(scream_voice(1.6, 300, 500, 200, harsh=0.3), decay=3, mix=0.85, damp=900) * 0.08)]
+    return ambience_loop(D, [drone], events)
+
+
+AMBIENCE = [
+    ("Ambience_house", amb_house, True),
+    ("Ambience_ward", amb_ward, True),
+    ("Ambience_sewer", amb_sewer, True),
+    ("Ambience_atrium", amb_atrium, True),
+    ("Ambience_void", amb_void, True),
+    ("Chase_house", chase_house, True),
+    ("Chase_ward", chase_ward, True),
+    ("Chase_sewer", chase_sewer, True),
+    ("Chase_atrium", chase_atrium, True),
+    ("Chase_void", chase_void, True),
+]
+
+
 # ----------------------------------------------------------------------------
 # Atlas + output
 # ----------------------------------------------------------------------------
@@ -919,6 +1492,31 @@ SFX = [
     ("MenuHover", snd_menu_hover, False),
     ("MenuSelect", snd_menu_select, False),
     ("Blink", snd_blink, False),
+    ("GlassShatter", snd_glass_shatter, False),
+    ("BottleWhoosh", snd_bottle_whoosh, False),
+    ("PhoneRingLoop", snd_phone_ring_loop, True),
+    ("PhonePickup", snd_phone_pickup, False),
+    ("PhoneVoice", snd_phone_voice, False),
+    ("PowerDown", snd_power_down, False),
+    ("WallShift", snd_wall_shift, False),
+    ("DoorsSlam", snd_doors_slam, False),
+    ("Gasp", snd_gasp, False),
+    ("BreathHold", snd_breath_hold, False),
+    ("CurseSting", snd_curse_sting, False),
+    ("EventSting", snd_event_sting, False),
+    ("FloorCreak", snd_floor_creak, False),
+    ("ClockTick", snd_clock_tick, False),
+    ("Gurney", snd_gurney, False),
+    ("MonitorFlatline", snd_monitor_flatline, False),
+    ("Intercom", snd_intercom, False),
+    ("PipeGroan", snd_pipe_groan, False),
+    ("Splash", snd_splash, False),
+    ("MarbleSteps", snd_marble_steps, False),
+    ("ChoirHum", snd_choir_hum, False),
+    ("ReverseWhisper", snd_reverse_whisper, False),
+    ("DeepBoom", snd_deep_boom, False),
+    ("LockerBang", snd_locker_bang, False),
+    ("RageSting", snd_rage_sting, False),
 ]
 
 GAP = 0.35  # silence between atlas entries so slices never bleed
@@ -944,13 +1542,11 @@ def encode_ogg(x, out_path):
     os.remove(tmp)
 
 
-def main():
-    os.makedirs(AUDIO_DIR, exist_ok=True)
-
+def build_atlas(entries, out_name):
     regions = []
     chunks = [np.zeros(samples(GAP))]
     cursor = GAP
-    for name, gen, looped in SFX:
+    for name, gen, looped in entries:
         x = gen()
         if not looped:
             x = fade(x, 0.0005, 0.03)
@@ -961,25 +1557,34 @@ def main():
         cursor += dur + GAP
         print(f"  {name:22s} {dur:6.2f}s  @ {regions[-1][1]:7.3f}s")
     atlas = np.concatenate(chunks)
-    encode_ogg(atlas, os.path.join(AUDIO_DIR, "ACHROMA_SFX.ogg"))
-    print(f"atlas: {len(atlas) / SR:.1f}s")
+    encode_ogg(atlas, os.path.join(AUDIO_DIR, out_name))
+    print(f"{out_name}: {len(atlas) / SR:.1f}s")
+    return regions
 
-    encode_ogg(snd_ambient_drone(), os.path.join(AUDIO_DIR, "ACHROMA_AMBIENCE.ogg"))
-    print("ambience done")
-    encode_ogg(snd_music_box(), os.path.join(AUDIO_DIR, "ACHROMA_MUSICBOX.ogg"))
-    print("music box done")
+
+def main():
+    os.makedirs(AUDIO_DIR, exist_ok=True)
+    only = sys.argv[1:]
+    sfx = build_atlas(SFX, "ACHROMA_SFX.ogg")
+    amb = build_atlas(AMBIENCE, "ACHROMA_AMBIENCE.ogg")
+    if "--no-musicbox" not in only:
+        encode_ogg(snd_music_box(), os.path.join(AUDIO_DIR, "ACHROMA_MUSICBOX.ogg"))
+        print("music box done")
 
     lines = [
         "--!strict",
         "-- AUTO-GENERATED by tools/generate_audio.py. Do not edit by hand.",
-        "-- Where every effect lives inside assets/audio/ACHROMA_SFX.ogg (seconds).",
+        "-- Where every sound lives inside the uploaded files (seconds):",
+        "--   file SFX       assets/audio/ACHROMA_SFX.ogg       every sound effect",
+        "--   file Ambience  assets/audio/ACHROMA_AMBIENCE.ogg  each night's background and chase music",
         "",
-        "export type Region = { start: number, duration: number, looped: boolean }",
+        "export type Region = { start: number, duration: number, looped: boolean, file: string }",
         "",
         "local SoundAtlas: { [string]: Region } = {",
     ]
-    for name, start, dur, looped in regions:
-        lines.append(f"\t{name} = {{ start = {start:.4f}, duration = {dur:.4f}, looped = {'true' if looped else 'false'} }},")
+    for file, regions in (("SFX", sfx), ("Ambience", amb)):
+        for name, start, dur, looped in regions:
+            lines.append(f"\t{name} = {{ start = {start:.4f}, duration = {dur:.4f}, looped = {'true' if looped else 'false'}, file = \"{file}\" }},")
     lines += ["}", "", "return SoundAtlas", ""]
     with open(ATLAS_LUAU, "w") as f:
         f.write("\n".join(lines))

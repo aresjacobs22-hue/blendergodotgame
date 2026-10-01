@@ -1,8 +1,9 @@
 --!strict
--- The dread: fear level, heartbeat, camera shake, blur, the ambient drone, random
--- sounds behind you, lamps that flicker (and die when *it* walks under them), and
--- each map's own touches: spinning alarm lights, dripping water, floating rocks,
--- eyes in the walls, beating hearts, the hour bell.
+-- The dread: fear level, heartbeat, camera shake, blur, each night's own background
+-- sound and chase music, random sounds behind you, lamps that flicker (and die when
+-- *it* walks under them, or when the power fails, or turn red when it's enraged), and
+-- each map's own touches: spinning alarm lights, dripping water, glowing algae,
+-- floating rocks, eyes in the walls, beating hearts, the hour bell.
 
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
@@ -24,6 +25,7 @@ local Atmosphere = {}
 type Lamp = {
 	part: BasePart,
 	light: Light?,
+	lightColor: Color3,
 	base: number,
 	litColor: Color3,
 	dropUntil: number,
@@ -47,11 +49,14 @@ local STINGERS: { { any } } = {
 }
 
 local NIGHT_STINGERS: { [string]: { { any } } } = {
-	ward = { { "AlarmBeep", 4, 20, 40, 0.8 }, { "StingerFootsteps", 2, 8, 16, 0.8 } },
-	sewer = { { "Drip", 4, 4, 12, 0.8 }, { "StingerScrape", 3, 14, 30, 0.9 } },
-	atrium = { { "StatueGrind", 2, 30, 60, 0.7 }, { "StingerWhisper", 2, 4, 8, 0.4 } },
-	void = { { "StingerWhisper", 4, 3, 8, 0.6 }, { "HeartPulseLoop", 2, 20, 40, 0.6 }, { "AmalgamRoar", 1, 60, 90, 0.5 } },
+	house = { { "FloorCreak", 4, 6, 18, 0.9 }, { "ClockTick", 2, 10, 20, 0.6 }, { "StingerKnock", 2, 10, 24, 0.9 } },
+	ward = { { "AlarmBeep", 3, 20, 40, 0.8 }, { "Gurney", 3, 14, 30, 0.8 }, { "MonitorFlatline", 2, 12, 26, 0.6 }, { "Intercom", 2, 20, 40, 0.8 }, { "StingerFootsteps", 2, 8, 16, 0.8 } },
+	sewer = { { "Drip", 4, 4, 12, 0.8 }, { "PipeGroan", 3, 14, 30, 0.9 }, { "Splash", 3, 10, 24, 0.8 }, { "StingerScrape", 2, 14, 30, 0.9 } },
+	atrium = { { "StatueGrind", 2, 30, 60, 0.7 }, { "MarbleSteps", 3, 14, 34, 0.8 }, { "ChoirHum", 2, 20, 40, 0.7 }, { "StingerWhisper", 2, 4, 8, 0.4 } },
+	void = { { "ReverseWhisper", 4, 3, 8, 0.6 }, { "DeepBoom", 2, 30, 60, 0.8 }, { "HeartPulseLoop", 2, 20, 40, 0.6 }, { "AmalgamRoar", 1, 60, 90, 0.5 } },
 }
+
+local RAGE_RED = Color3.fromRGB(255, 30, 20)
 
 local lamps: { [BasePart]: Lamp } = {}
 local beacons: { [BasePart]: boolean } = {}
@@ -59,9 +64,16 @@ local floaters: { [BasePart]: Floater } = {}
 local wallEyes: { [BasePart]: number } = {}
 local hearts: { [BasePart]: Vector3 } = {}
 local drips: { [BasePart]: boolean } = {}
+local algae: { [BasePart]: { light: PointLight?, base: number, phase: number } } = {}
+local spinners: { [BasePart]: CFrame } = {}
 local blur: BlurEffect
 local grade: ColorCorrectionEffect
 local ambience: Sound? = nil
+local ambienceFor = ""
+local chase: Sound? = nil
+local chaseFor = ""
+local fakeChaseUntil = 0
+local rage = 0
 local heartbeatAt = 0
 local nextStinger = 0
 local nextDrip = 0
@@ -85,6 +97,7 @@ local function addLamp(inst: Instance)
 	local lamp: Lamp = {
 		part = inst,
 		light = light,
+		lightColor = if light then light.Color else Color3.new(1, 1, 1),
 		base = if typeof(base) == "number" then base elseif light then light.Brightness else 1,
 		litColor = if typeof(onColor) == "Color3" then onColor else inst.Color,
 		dropUntil = 0,
@@ -145,12 +158,14 @@ local function updateLamps(monsterPos: Vector3?)
 				end
 			end
 		end
-		if GameState:GetAttribute("Blink") == true then
+		if GameState:GetAttribute("Blink") == true or GameState:GetAttribute("Blackout") == true then
 			b = 0
 		end
 		light.Brightness = b
+		light.Color = if rage > 0 then lamp.lightColor:Lerp(RAGE_RED, rage * 0.75) else lamp.lightColor
 		local dark = b < lamp.base * 0.3
-		part.Color = if dark then lamp.litColor:Lerp(Color3.new(0, 0, 0), 0.75) else lamp.litColor
+		local lit = if rage > 0 then lamp.litColor:Lerp(RAGE_RED, rage * 0.75) else lamp.litColor
+		part.Color = if dark then lit:Lerp(Color3.new(0, 0, 0), 0.75) else lit
 		if lamp.buzz then
 			lamp.buzz.Volume = if dark then 0 else 0.22
 		end
@@ -182,6 +197,22 @@ local function updateProps(dt: number, myRoot: BasePart?)
 				part.Transparency = 1 -- blink
 				wallEyes[part] = t + 0.15
 			end
+		end
+	end
+	for part, a in algae do
+		if part.Parent then
+			if a.light then
+				a.light.Brightness = a.base * (0.75 + 0.25 * math.sin(t * 0.7 + a.phase))
+			end
+		else
+			algae[part] = nil
+		end
+	end
+	for part, base in spinners do
+		if part.Parent then
+			part.CFrame = base * CFrame.Angles(0, t * 0.35, 0)
+		else
+			spinners[part] = nil
 		end
 	end
 	local beat = math.abs(math.sin(t * 2.2)) ^ 6
@@ -304,10 +335,43 @@ local function update(dt: number)
 		Hud.pulse(fear)
 	end
 
+	-- each night has its own background sound and its own chase music
+	local night = currentNight()
+	if night.id ~= ambienceFor then
+		ambienceFor = night.id
+		if ambience then
+			ambience:Destroy()
+		end
+		ambience = Audio.create("Ambience_" .. night.id, nil, 0)
+		if ambience then
+			ambience:Play()
+		end
+	end
 	if ambience then
-		local target = if playing then 0.75 else 0
+		local target = if playing then 0.8 else 0
 		ambience.Volume += (target - ambience.Volume) * math.min(1, dt * 0.8)
-		ambience.PlaybackSpeed = currentNight().ambiencePitch
+	end
+	if night.id ~= chaseFor then
+		chaseFor = night.id
+		if chase then
+			chase:Destroy()
+		end
+		chase = Audio.create("Chase_" .. night.id, nil, 0)
+		if chase then
+			chase:Play()
+		end
+	end
+	local raging = GameState:GetAttribute("Rage") == true and playing
+	rage += ((if raging then 1 else 0) - rage) * math.min(1, dt * 1.5)
+	Hud.setRage(rage * (0.6 + 0.4 * math.abs(math.sin(t * 2.4))))
+	if chase then
+		local target = 0
+		if playing and (chased or t < fakeChaseUntil) then
+			target = if night.monsterKind == "Statue" then 0.5 else 0.95
+		elseif raging then
+			target = 0.45
+		end
+		chase.Volume += (target - chase.Volume) * math.min(1, dt * (if target > chase.Volume then 4 else 0.7))
 	end
 
 	if playing and myRoot and t >= nextStinger then
@@ -333,6 +397,13 @@ function Atmosphere.wakeUp()
 	nextStinger = os.clock() + 20
 end
 
+-- A chase that isn't real (a chaos event): the music kicks in and something screams.
+function Atmosphere.fakeChase(seconds: number)
+	fakeChaseUntil = os.clock() + seconds
+	shakeImpulse = 1
+	Hud.glitch(0.9, 0.6)
+end
+
 local function watchTag(tag: string, add: (BasePart) -> ())
 	for _, inst in CollectionService:GetTagged(tag) do
 		if inst:IsA("BasePart") then
@@ -355,11 +426,6 @@ function Atmosphere.init()
 	grade.Name = "Fear"
 	grade.Parent = camera
 
-	ambience = Audio.track("Ambience", nil, 0)
-	if ambience then
-		ambience:Play()
-	end
-
 	watchTag("FlickerLight", addLamp)
 	watchTag("Beacon", function(p: BasePart)
 		beacons[p] = true
@@ -375,6 +441,33 @@ function Atmosphere.init()
 	end)
 	watchTag("Drip", function(p: BasePart)
 		drips[p] = true
+	end)
+	watchTag("Algae", function(p: BasePart)
+		local light = p:FindFirstChildWhichIsA("PointLight")
+		algae[p] = { light = light, base = if light then light.Brightness else 0, phase = math.random() * 6 }
+	end)
+	watchTag("Spin", function(p: BasePart)
+		spinners[p] = p.CFrame
+	end)
+
+	-- the power failing (a chaos event)
+	GameState:GetAttributeChangedSignal("Blackout"):Connect(function()
+		if ClientState.roundStatus ~= "alive" then
+			return
+		end
+		if GameState:GetAttribute("Blackout") == true then
+			Audio.play("PowerDown", nil, 1.1)
+			Hud.glitch(0.6, 0.5)
+		else
+			Audio.play("PowerUp", nil, 0.9)
+		end
+	end)
+	GameState:GetAttributeChangedSignal("Rage"):Connect(function()
+		if GameState:GetAttribute("Rage") == true and ClientState.roundStatus == "alive" then
+			shakeImpulse = 1
+			Hud.flash(0.35, 0.6)
+			Hud.glitch(1, 0.8)
+		end
 	end)
 
 	Remotes.Apparition.OnClientEvent:Connect(function(position: Vector3)

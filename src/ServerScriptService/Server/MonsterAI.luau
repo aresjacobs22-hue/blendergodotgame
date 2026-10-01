@@ -79,6 +79,7 @@ export type MonsterAI = typeof(setmetatable(
 		frozen: boolean,
 		lastGrind: number,
 		thinkAccum: number,
+		silent: boolean,
 		connection: RBXScriptConnection?,
 		destroyed: boolean,
 		random: Random,
@@ -157,6 +158,7 @@ function MonsterAI.new(layout: Layout, world: WorldBuilder.World, interactables:
 		frozen = false,
 		lastGrind = 0,
 		thinkAccum = 0,
+		silent = false,
 		connection = nil,
 		destroyed = false,
 		random = random,
@@ -244,6 +246,35 @@ function MonsterAI.frenzy(self: MonsterAI, seconds: number, target: Player?)
 		self:_startChase(chosen)
 	end
 	self:_updateSpeed()
+end
+
+-- Curse "Dead Silence": no growl, no scream, no grinding. Just there.
+function MonsterAI.setSilent(self: MonsterAI, on: boolean)
+	self.silent = on
+	self.rig.model:SetAttribute("Silent", on)
+	if self.rig.growl then
+		self.rig.growl.Volume = if on then 0 else 1.2
+	end
+end
+
+-- A hidden player gave themselves away (they let their breath out while it was close).
+function MonsterAI.revealHider(self: MonsterAI, player: Player, locker: Locker)
+	if not self.awake or self.state == "Kill" or self.p.Statue then
+		return
+	end
+	self.sawHide[player] = locker
+	self.huntLocker = locker
+	self:_setState("HuntLocker")
+	self.rig.model:SetAttribute("TargetUserId", player.UserId)
+	self:_setPathTo(locker.outside.Position)
+end
+
+-- The maze changed under it (shifting walls): re-plan whatever route it was walking.
+function MonsterAI.mapChanged(self: MonsterAI)
+	local goal = self.pathGoal
+	if #self.path > 0 and goal then
+		self:_setPathTo(goal)
+	end
 end
 
 function MonsterAI.onExitOpened(self: MonsterAI)
@@ -365,7 +396,7 @@ function MonsterAI._updateSpeed(self: MonsterAI)
 	end
 	self.humanoid.WalkSpeed = speed
 	local growl = self.rig.growl
-	if growl then
+	if growl and not self.silent then
 		local chasing = s == "Chase" or s == "HuntLocker"
 		growl.PlaybackSpeed = if chasing then 1.12 else 0.92
 		growl.Volume = if chasing then 1.9 else 1.2
@@ -598,7 +629,7 @@ function MonsterAI._startChase(self: MonsterAI, player: Player)
 	self.rig.model:SetAttribute("TargetUserId", player.UserId)
 	self.path = {}
 	local scream = Monsters.SCREAMS[self.rig.kind]
-	if scream and not wasChasing and os.clock() - self.lastScream > 10 then
+	if scream and not self.silent and not wasChasing and os.clock() - self.lastScream > 10 then
 		self.lastScream = os.clock()
 		Audio.play(scream, self.rig.head, 2.2, self.random:NextNumber(0.92, 1.05), 170)
 	end
@@ -916,7 +947,7 @@ function MonsterAI._thinkStatue(self: MonsterAI, now: number)
 		return
 	end
 	-- stone grinding when it moves close to someone
-	if bestDist < 45 and now - self.lastGrind > 1.6 then
+	if bestDist < 45 and now - self.lastGrind > 1.6 and not self.silent then
 		self.lastGrind = now
 		Audio.play("StatueGrind", root, 1.4, self.random:NextNumber(0.85, 1.1), 70)
 	end

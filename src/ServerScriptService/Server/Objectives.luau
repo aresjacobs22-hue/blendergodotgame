@@ -387,7 +387,7 @@ local function power(ctx: Ctx): Objective
 			-- lights come back in this part of the tunnels
 			task.delay(1.6, function()
 				for _, lamp in zones[i] do
-					if lamp.bulb.Parent then
+					if lamp.bulb.Parent and lamp.bulb:GetAttribute("Dead") ~= true then
 						lamp.light.Enabled = true
 						local on = lamp.bulb:GetAttribute("OnColor")
 						if typeof(on) == "Color3" then

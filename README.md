@@ -6,11 +6,36 @@ is saved.
 
 | Night | Map | Monster | Objective |
 |---|---|---|---|
-| 1 | **The House**: a black-and-white house inside a concrete maze | **The Hollow**: tall, with arms that drag on the floor. It sees your light and hears you run | Survive from 12 AM until **6 AM** |
-| 2 | **The Red Ward**: a hospital lit only by red emergency lights and spinning alarms | **The Crawler**: pale, on eight legs, with an upside-down face. Fast, and it **lunges** | Find **4 keys** (each tag shows one digit), unlock the exit, type the code |
-| 3 | **The Drowned Tunnels**: flooded brick tunnels, pitch black, no power | **The Listener**: no eyes. It hears every step | Start **3 generators** (loud!) to turn the lights back on, then ride the lift out |
-| 4 | **The Atrium**: a marble hall so big you can see across it, full of statues | **The Statue**: it only moves when **nobody is looking**. Some statues are just statues | Collect **6 photographs** |
-| 5 | **The Void**: black glass, glowing purple veins, floating rocks, eyes in the walls | **The Amalgam**: three heads, six arms, and it can smell you through a locker door | Destroy **3 hearts** (it knows each time), then run for the portal |
+| 1 | **The House**: a black-and-white house inside a concrete maze, with a dining room laid for nobody, a nursery and a bathroom with a full tub | **The Hollow**: starved and black, with a deer skull for a head and arms that drag on the floor. It sees your light and hears you run | Survive from 12 AM until **6 AM** |
+| 2 | **The Red Ward**: a hospital in red emergency light, with an operating theatre, a morgue and plastic strip curtains | **The Crawler**: a patient bent over backwards on all fours, four arms too many. Fast, and it **lunges** | Find **4 keys** (each tag shows one digit), unlock the exit, type the code |
+| 3 | **The Drowned Tunnels**: flooded brick tunnels with a dead pump station and a pillared cistern. Pitch black, no power | **The Listener**: blind. Its head **splits open** when it hears you | Start **3 generators** (loud!) to turn the lights back on, then ride the lift out |
+| 4 | **The Atrium**: a marble hall full of statues, reflecting pools and moonlight through the skylights | **The Statue**: the **Mourner** or the **Saint** (a different one each time). It only moves when **nobody is looking**. Some statues are just statues | Collect **6 photographs** |
+| 5 | **The Void**: black glass in near darkness, crystal lamps, and rooms that remember the earlier nights | **The Amalgam**: three heads, six arms, a glowing heart in its ribs. It can smell you through a locker door | Destroy **3 hearts** (it knows each time), then run for the portal |
+
+**Every night is different**:
+
+- **A curse**: every time you start a night it rolls one, and the title card tells you which.
+  | Curse | What happens |
+  |---|---|
+  | **Blackout** | most of the lamps are dead |
+  | **Shifting Walls** | walls rise out of the floor and sink back. The map changes while you play (it never traps you) |
+  | **Hunted** | every so often it hears your heartbeat and comes straight for you |
+  | **Phantoms** | you see it standing down the corridor. It isn't there |
+  | **Dead Silence** | it makes no sound at all: no footsteps, no growl, no scream |
+  | **Thick Fog** | you can't see more than a few steps |
+- **Random events** about once a minute: the **power fails**; a **phone rings** near you
+  (answer it and a voice tells you where the monster is, though sometimes it lies; ignore
+  it and the monster goes to answer it); **every door slams shut**; a **locker bangs** by
+  itself; or you hear it **charge at you** when nothing's there.
+- **The rage**: when the way out opens (or at 5 AM on night 1) it gets **furious**. The
+  lights turn red and it knows where you are for a while.
+- **Bottles** lie around the map. Pick up to 3, throw one (**G**) and the monster goes to
+  where it smashed. The Listener can't resist.
+- **Hold your breath** in a locker (**SPACE**) when it's right outside the door. Run out of
+  breath, or forget, and it hears you.
+- **Every night sounds different**: its own ambience loop and its own chase music, plus
+  map-specific noises (gurneys and intercoms in the ward, dripping pipes in the tunnels,
+  a choir in the atrium, heartbeats in the void).
 
 Also in the game:
 
@@ -44,7 +69,7 @@ Roblox doesn't allow sounds inside a place file, so you upload them once:
 
 1. Upload the 3 files in **`assets/audio/`**:
    - `ACHROMA_SFX.ogg` (every sound effect, packed into one file)
-   - `ACHROMA_AMBIENCE.ogg` (the background drone)
+   - `ACHROMA_AMBIENCE.ogg` (each night's ambience and chase music, packed into one file)
    - `ACHROMA_MUSICBOX.ogg` (the menu music box)
 
    Either use **Studio → Asset Manager → Bulk Import** (the Asset Manager is under the
@@ -64,8 +89,9 @@ Roblox doesn't allow sounds inside a place file, so you upload them once:
    }
    ```
 
-> **Already uploaded the sounds from the first version?** All three files have changed
-> (there are 20 new sounds), so upload them again and paste the new IDs.
+> **Already uploaded the sounds before?** All three files have changed (new sounds for the
+> curses, events and bottles, and the ambience file now holds 10 tracks instead of one), so
+> upload all three again and paste the new IDs. The old IDs will play the wrong slices.
 >
 > If you publish the game under a **group**, upload the audio to that group too, or Roblox
 > won't let the game play it.
@@ -88,6 +114,8 @@ Roblox doesn't allow sounds inside a place file, so you upload them once:
 | Flashlight | F | Y | LIGHT button |
 | Interact / hide | E (hold for some things) | X | tap the prompt |
 | Leave a hiding spot | E | X | LEAVE button |
+| Hold your breath (in a locker) | Space (hold) | R2 (hold) | HOLD BREATH button |
+| Throw a bottle | G | D-pad up | THROW button |
 
 ## Change the game
 
@@ -96,15 +124,20 @@ Roblox doesn't allow sounds inside a place file, so you upload them once:
 | `src/ReplicatedStorage/Shared/Nights.luau` | **each night**: map size, objective, monster tuning, lighting/colors, intro lines |
 | `src/ReplicatedStorage/Shared/Config.luau` | player speed, stamina, battery, default monster behavior, round timers |
 | `src/ReplicatedStorage/Shared/Monsters.luau` | the five monster bodies |
+| `src/ReplicatedStorage/Shared/Curses.luau` | the curse list (names and descriptions) |
 | `src/ReplicatedStorage/Shared/SoundIds.luau` | your uploaded audio IDs |
 | `src/ReplicatedStorage/Shared/Maze.luau` | the maze generator (hubs, rooms, open halls, item placement) |
 | `src/ServerScriptService/Server/Themes.luau` | **each map's look**: materials, lamps, props, wall writing |
+| `src/ServerScriptService/Server/Dressing.luau` | furniture and the special rooms (dining room, morgue, cistern, ...) |
+| `src/ServerScriptService/Server/Chaos.luau` | what each curse does, the random events, the rage, breath-holding |
+| `src/ServerScriptService/Server/Throwables.luau` | the bottles |
 | `src/ServerScriptService/Server/Objectives.luau` | survive / keys / generators / photographs / hearts |
 | `src/ServerScriptService/Server/MonsterAI.luau` | the monsters' brains (sight, hearing, lunges, statue rules, ...) |
 | `src/ServerScriptService/Server/RoundManager.luau` | menu → countdown → night → results loop |
 | `src/ServerScriptService/Server/Progress.luau` | saving which nights you've unlocked |
 | `src/StarterPlayer/StarterPlayerScripts/Client/` | everything on screen: menu, HUD, flashlight, fear effects, monster animation, jumpscares |
 | `tools/generate_audio.py` | synthesizes every sound (`python3 tools/generate_audio.py`, needs numpy + ffmpeg) |
+| `tools/monster-lab/` | renders the monsters and the maps to PNGs with Godot, for checking designs without opening Studio |
 
 ## For developers (Rojo)
 
@@ -126,9 +159,13 @@ rojo build default.project.json -o build/ACHROMA.rbxlx  # rebuild the place file
   all 5 objectives. It checks each monster's special behavior: the Hollow hunts down a
   player who stands still, the Crawler lunges, the Listener ignores a silent player but
   follows a sprinting one, the Statue freezes while watched and moves when you look away,
-  and the Amalgam smells players hiding nearby.
+  and the Amalgam smells players hiding nearby. It also covers the chaos: every night rolls
+  varied curses, shifting walls never cut off part of the map (and the monster never walks
+  through them), each random event works, opening the exit triggers the rage, a thrown
+  bottle draws the monster, and gasping in a locker gives you away only when it's close.
 - `tests/e2e.spec.luau`: the real server and client together. A fake player plays the whole
-  game through the menu: survives night 1 in a locker, unlocks and beats nights 2-5 (keys
+  game through the menu: survives night 1 in a locker (holding its breath whenever the
+  monster comes past), unlocks and beats nights 2-5 (keys
   and the keypad screen, generators, photographs, hearts), then gets caught on night 1 for
   the jumpscare.
 

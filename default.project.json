@@ -21,7 +21,10 @@
         "RoundResult": { "$className": "RemoteEvent" },
         "Apparition": { "$className": "RemoteEvent" },
         "Escaped": { "$className": "RemoteEvent" },
-        "Look": { "$className": "RemoteEvent" }
+        "Look": { "$className": "RemoteEvent" },
+        "Throw": { "$className": "RemoteEvent" },
+        "Breath": { "$className": "RemoteEvent" },
+        "Chaos": { "$className": "RemoteEvent" }
       },
       "GameState": {
         "$className": "Folder"

@@ -9,7 +9,7 @@
 
 local SoundIds = {
 	SFX = 0, -- ACHROMA_SFX.ogg       (every sound effect, packed into one file)
-	Ambience = 0, -- ACHROMA_AMBIENCE.ogg  (60 second background drone)
+	Ambience = 0, -- ACHROMA_AMBIENCE.ogg  (each night's background sound and chase music)
 	MusicBox = 0, -- ACHROMA_MUSICBOX.ogg  (title screen music box)
 }
 

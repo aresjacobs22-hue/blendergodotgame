@@ -1,6 +1,7 @@
 --!strict
--- On-screen everything: film grain, vignette, glitches, keys/code readout, stamina,
--- flashlight battery, typewriter messages, big titles, fades and flashes.
+-- On-screen everything: film grain, vignette, glitches, the objective panel (with the
+-- night's curse), stamina, flashlight battery, bottles, the hold-your-breath meter,
+-- typewriter messages, big titles, fades, flashes and the red of its rage.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -42,6 +43,12 @@ local vignette: { Frame } = {}
 local glitchBars: { Frame } = {}
 local hint: TextLabel
 local crosshair: Frame
+local curseLabel: TextLabel
+local bottlesLabel: TextLabel
+local breathFrame: Frame
+local breathFill: Frame
+local breathLabel: TextLabel
+local rageFrame: Frame
 
 local fearLevel = 0
 local glitchAmount = 0
@@ -131,10 +138,11 @@ function Hud.init()
 
 	-- keys + code (bottom left)
 	-- objective panel (top left): night, what to do, how far along you are
-	info = new("Frame", { Name = "Info", BackgroundTransparency = 1, Position = UDim2.fromOffset(28, 22), Size = UDim2.fromOffset(460, 96), ZIndex = 5 }, gui)
+	info = new("Frame", { Name = "Info", BackgroundTransparency = 1, Position = UDim2.fromOffset(28, 22), Size = UDim2.fromOffset(460, 120), ZIndex = 5 }, gui)
 	nightLabel = label({ Name = "Night", Text = "", Size = UDim2.fromOffset(460, 20), TextXAlignment = Enum.TextXAlignment.Left, TextSize = 16, TextColor3 = DIM, ZIndex = 5 }, info)
 	objectiveLabel = label({ Name = "Objective", Text = "", Position = UDim2.fromOffset(0, 22), Size = UDim2.fromOffset(460, 24), TextXAlignment = Enum.TextXAlignment.Left, TextSize = 20, ZIndex = 5 }, info)
 	progressLabel = label({ Name = "Progress", Text = "", Position = UDim2.fromOffset(0, 50), Size = UDim2.fromOffset(460, 34), TextXAlignment = Enum.TextXAlignment.Left, TextSize = 28, ZIndex = 5 }, info)
+	curseLabel = label({ Name = "Curse", Text = "", Position = UDim2.fromOffset(0, 88), Size = UDim2.fromOffset(460, 22), TextXAlignment = Enum.TextXAlignment.Left, TextSize = 17, TextColor3 = Color3.fromRGB(200, 70, 60), ZIndex = 5 }, info)
 	blinkFrame = new("Frame", { Name = "Blink", Size = UDim2.fromScale(1, 1), BackgroundColor3 = BLACK, BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = 8 }, gui)
 
 	-- stamina (bottom centre)
@@ -147,6 +155,17 @@ function Hud.init()
 	for i = 1, 5 do
 		table.insert(batterySegments, new("Frame", { Position = UDim2.fromOffset(66 + (i - 1) * 21, 9), Size = UDim2.fromOffset(16, 12), BackgroundColor3 = TEXT, BorderSizePixel = 0, ZIndex = 5 }, batteryFrame))
 	end
+
+	-- bottles you're carrying (bottom right, above the battery)
+	bottlesLabel = label({ Name = "Bottles", AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -28, 1, -62), Size = UDim2.fromOffset(240, 24), TextXAlignment = Enum.TextXAlignment.Right, TextSize = 18, Text = "", ZIndex = 5 }, gui)
+
+	-- hold your breath (centre, only while it's right outside your hiding spot)
+	breathFrame = new("Frame", { Name = "Breath", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.68), Size = UDim2.fromOffset(320, 10), BackgroundColor3 = Color3.fromRGB(30, 30, 30), BackgroundTransparency = 0.3, BorderSizePixel = 0, Visible = false, ZIndex = 7 }, gui)
+	breathFill = new("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = TEXT, BorderSizePixel = 0, ZIndex = 7 }, breathFrame)
+	breathLabel = label({ AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 0, -6), Size = UDim2.fromOffset(500, 28), Text = "", TextSize = 22, ZIndex = 7 }, breathFrame)
+
+	-- the red wash while it's enraged
+	rageFrame = new("Frame", { Name = "Rage", Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.fromRGB(150, 0, 0), BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = 2 }, gui)
 
 	hint = label({ Name = "Hint", AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -60), Size = UDim2.fromOffset(500, 26), Text = "", TextColor3 = DIM, TextSize = 18, ZIndex = 6 }, gui)
 
@@ -173,8 +192,10 @@ function Hud.init()
 		objectiveLabel.Text = if typeof(objective) == "string" then objective else ""
 		local progress = GameState:GetAttribute("Progress")
 		progressLabel.Text = if typeof(progress) == "string" then progress else ""
+		local curse = GameState:GetAttribute("CurseName")
+		curseLabel.Text = if typeof(curse) == "string" and curse ~= "" and GameState:GetAttribute("Curse") ~= "" then "CURSE  ·  " .. curse else ""
 	end
-	for _, attr in { "Night", "NightName", "Objective", "Progress" } do
+	for _, attr in { "Night", "NightName", "Objective", "Progress", "Curse", "CurseName" } do
 		GameState:GetAttributeChangedSignal(attr):Connect(refreshObjective)
 	end
 	refreshObjective()
@@ -240,6 +261,7 @@ end
 function Hud.setHudVisible(visible: boolean)
 	info.Visible = visible
 	batteryFrame.Visible = visible
+	bottlesLabel.Visible = visible
 	staminaFrame.Visible = visible
 	crosshair.Visible = visible
 end
@@ -256,6 +278,27 @@ function Hud.setBattery(fraction: number)
 	for i, seg in batterySegments do
 		seg.BackgroundTransparency = if i <= lit then (if fraction < 0.2 then 0.4 + math.random() * 0.3 else 0.15) else 0.85
 	end
+end
+
+function Hud.setBottles(n: number, throwKey: string)
+	if n <= 0 then
+		bottlesLabel.Text = ""
+		return
+	end
+	bottlesLabel.Text = string.format("BOTTLES %s   [%s] throw", string.rep("● ", n), throwKey)
+end
+
+-- fraction: breath left (0..1). urgent: it's right outside and you're not holding it.
+function Hud.setBreath(visible: boolean, fraction: number, text: string, urgent: boolean)
+	breathFrame.Visible = visible
+	breathFill.Size = UDim2.fromScale(math.clamp(fraction, 0, 1), 1)
+	breathFill.BackgroundColor3 = if fraction < 0.25 then Color3.fromRGB(220, 70, 60) else TEXT
+	breathLabel.Text = text
+	breathLabel.TextColor3 = if urgent and math.floor(os.clock() * 6) % 2 == 0 then Color3.fromRGB(240, 80, 70) else TEXT
+end
+
+function Hud.setRage(amount: number)
+	rageFrame.BackgroundTransparency = 1 - math.clamp(amount, 0, 1) * 0.16
 end
 
 function Hud.setFear(f: number)

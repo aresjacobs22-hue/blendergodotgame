@@ -96,7 +96,7 @@ end
 
 local function footstep(rig: Rig, s: number, speed: number, volume: number, pitch: number)
 	local sign = if s >= 0 then 1 else -1
-	if sign ~= rig.lastStepSign and speed > 2 then
+	if sign ~= rig.lastStepSign and speed > 2 and rig.model:GetAttribute("Silent") ~= true then
 		Audio.playAt("MonsterStep", rig.root.Position - Vector3.new(0, 4, 0), math.clamp(speed / 11, 0.4, 1.5) * volume, pitch + math.random() * 0.2, 110)
 	end
 	rig.lastStepSign = sign
@@ -157,7 +157,7 @@ local function animateCrawler(rig: Rig, dt: number, speed: number, state: string
 			set(rig, name .. "Knee", CFrame.Angles(0, 0, side * lift * 0.25 * stride))
 		end
 	end
-	if math.sin(g) * rig.lastStepSign < 0 and speed > 2 then
+	if math.sin(g) * rig.lastStepSign < 0 and speed > 2 and rig.model:GetAttribute("Silent") ~= true then
 		Audio.playAt("MonsterClicks", rig.root.Position, 0.6, 1.4 + math.random() * 0.3, 70)
 	end
 	rig.lastStepSign = if math.sin(g) >= 0 then 1 else -1
@@ -279,7 +279,7 @@ local function animate(rig: Rig, dt: number)
 	local t = os.clock()
 	if t >= rig.nextClick then
 		rig.nextClick = t + 4 + math.random() * 7
-		if (rig.kind == "Hollow" or rig.kind == "Listener") and (state == "Wander" or state == "Search" or state == "Investigate" or state == "Apparition") then
+		if rig.model:GetAttribute("Silent") ~= true and (rig.kind == "Hollow" or rig.kind == "Listener") and (state == "Wander" or state == "Search" or state == "Investigate" or state == "Apparition") then
 			local head = rig.model:FindFirstChild("Head")
 			if head then
 				Audio.play("MonsterClicks", head, 1.1, 0.9 + math.random() * 0.2, 80)

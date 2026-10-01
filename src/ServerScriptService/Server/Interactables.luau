@@ -189,6 +189,18 @@ function Interactables.slamOpenNear(self: Interactables, position: Vector3, radi
 	end
 end
 
+-- Every open door in the place slams shut at once (a chaos event).
+function Interactables.slamAll(self: Interactables): number
+	local count = 0
+	for _, door in self.doors do
+		if door.isOpen and not door.busy then
+			self:setDoor(door, false, true)
+			count += 1
+		end
+	end
+	return count
+end
+
 -- Spot helpers -----------------------------------------------------------------
 
 -- The wall at the back of a cell (opposite its way in), for placing things.

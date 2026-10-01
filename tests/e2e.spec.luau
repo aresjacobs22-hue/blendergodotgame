@@ -8,10 +8,10 @@ local roblox = require("@lune/roblox")
 local Engine = require("./mock/engine")
 
 local Vector3 = roblox.Vector3
-local CFrame = roblox.CFrame
+local CFrame = Engine.CFrame
 local Enum = roblox.Enum
 
-local REMOTES = { "Ready", "Notify", "Jumpscare", "OpenKeypad", "SubmitCode", "LeaveHiding", "Flashlight", "Battery", "RoundResult", "Apparition", "Escaped", "Look" }
+local REMOTES = { "Ready", "Notify", "Jumpscare", "OpenKeypad", "SubmitCode", "LeaveHiding", "Flashlight", "Battery", "RoundResult", "Apparition", "Escaped", "Look", "Throw", "Breath", "Chaos" }
 
 local failures = 0
 local function check(cond: any, msg: string)
@@ -45,7 +45,7 @@ local globals = {
 	Instance = Engine.Instance,
 	Vector3 = roblox.Vector3,
 	Vector2 = roblox.Vector2,
-	CFrame = roblox.CFrame,
+	CFrame = Engine.CFrame,
 	Color3 = roblox.Color3,
 	UDim = roblox.UDim,
 	UDim2 = roblox.UDim2,
@@ -249,10 +249,30 @@ check(locker ~= nil, "found a hiding spot")
 locker.Triggered:Fire(player)
 run(0.5)
 check(ClientState.hiding, "hiding")
+-- hold your breath whenever it comes close to the locker
+local breathHeld = 0
+local revealedAt = nil
 local morning = run(320, function()
+	if ClientState.roundStatus ~= "alive" then
+		return true
+	end
+	if not ClientState.hiding and not revealedAt then
+		revealedAt = progressText()
+	end
+	local monster = workspace:FindFirstChild("Monster")
+	local character = player.Character
+	local near = monster ~= nil and character ~= nil and (monster.HumanoidRootPart.Position - character.HumanoidRootPart.Position).Magnitude < 10
+	if near and not ClientState.holdingBreath and ClientState.hiding then
+		press("AchromaBreath")
+		breathHeld += 1
+	elseif not near and ClientState.holdingBreath then
+		release("AchromaBreath")
+	end
 	return ClientState.roundStatus == "escaped"
-end, 0.1)
+end, 0.1) and ClientState.roundStatus == "escaped"
+release("AchromaBreath")
 check(morning, "made it to 6 AM (" .. progressText() .. ")")
+print("    (held breath " .. breathHeld .. " times; " .. (if revealedAt then "dragged out at " .. revealedAt else "stayed hidden") .. ")")
 finishAndReturn("YOU SURVIVED")
 check(player:GetAttribute("HighestNight") == 2, "night 2 unlocked")
 check(not card(2).Locked.Visible and card(1).Status.Text == "CLEARED", "menu shows night 1 cleared, night 2 open")

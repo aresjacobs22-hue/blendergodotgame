@@ -95,7 +95,7 @@ local function update(dt: number)
 	-- heavy breathing when winded or terrified
 	if breath then
 		local need = math.max(0.65 - stamina / P.StaminaMax, ClientState.fear - 0.45, 0)
-		local targetVolume = if frozen and ClientState.hiding then need * 0.6 else need * 1.6
+		local targetVolume = if ClientState.holdingBreath then 0 elseif frozen and ClientState.hiding then need * 0.6 else need * 1.6
 		breath.Volume += (targetVolume - breath.Volume) * math.min(1, dt * 2)
 		breath.PlaybackSpeed = 1 + need * 0.3
 	end

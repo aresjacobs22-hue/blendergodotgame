@@ -42,6 +42,9 @@ local GENERAL_TIPS = {
 	"If it watched you climb into a locker, the locker won't save you.",
 	"Loops in the maze can save your life. Dead ends won't.",
 	"When the lights start flickering, it's close.",
+	"Throw a bottle (G) and it goes to look. Blind things fall for it every time.",
+	"In a locker, hold your breath (SPACE) while it's right outside the door.",
+	"A phone is ringing: answer it and a voice tells you where it is. Ignore it and IT answers.",
 }
 
 local gui: ScreenGui
@@ -377,17 +380,19 @@ function Menu.init()
 	banner = text(main, { Text = "", TextSize = 18, TextColor3 = TEXT, Position = UDim2.new(0.05, 0, 0.7, 0), Size = UDim2.new(0.9, 0, 0, 24), TextXAlignment = Enum.TextXAlignment.Center })
 
 	-- How to play
-	howTo = make("Frame", { Name = "HowTo", Visible = false, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(720, 520), BackgroundColor3 = Color3.fromRGB(10, 10, 10), ZIndex = 10 }, gui)
+	howTo = make("Frame", { Name = "HowTo", Visible = false, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(760, 600), BackgroundColor3 = Color3.fromRGB(10, 10, 10), ZIndex = 10 }, gui)
 	make("UIStroke", { Color = DIM, Thickness = 1.5 }, howTo)
 	text(howTo, { Text = "HOW TO PLAY", Font = Enum.Font.Creepster, TextSize = 46, Position = UDim2.fromOffset(30, 20), Size = UDim2.new(1, -60, 0, 50), ZIndex = 11 })
 	text(howTo, {
 		ZIndex = 11,
-		TextSize = 19,
+		TextSize = 17,
 		Position = UDim2.fromOffset(30, 84),
 		Size = UDim2.new(1, -60, 1, -150),
 		Text = "Every night has its own place, its own monster and its own way out. Beat a night to unlock the next.\n\n"
-			.. "WASD  move         SHIFT  run         C  crouch (silent)\n"
-			.. "F  flashlight        E  interact / hide / leave a hiding spot\n\n"
+			.. "WASD  move         SHIFT  run         C  crouch (silent)         G  throw a bottle\n"
+			.. "F  flashlight        E  interact / hide / leave         SPACE  hold your breath (in a locker)\n\n"
+			.. "Every night rolls a CURSE (dead lights, moving walls, fog, phantoms...) and things go wrong while you play: "
+			.. "the power fails, doors slam, phones ring. When the way out opens, it gets FURIOUS.\n\n"
 			.. "· " .. table.concat(GENERAL_TIPS, "\n· "),
 	})
 	local closeHelp = button(howTo, "CLOSE", { Position = UDim2.new(1, -170, 1, -60), Size = UDim2.fromOffset(140, 40), ZIndex = 11 })

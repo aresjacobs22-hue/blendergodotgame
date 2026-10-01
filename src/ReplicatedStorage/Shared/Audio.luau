@@ -1,7 +1,8 @@
 --!strict
--- Plays slices of the sound atlas (one uploaded file holding every effect) using
--- Sound.PlaybackRegion, plus the two full-length tracks. Works on server and client:
--- sounds the server plays are heard by everyone, sounds a client plays are local.
+-- Plays slices of the two sound atlases (ACHROMA_SFX: every effect; ACHROMA_AMBIENCE:
+-- each night's background loop and chase music) using Sound.PlaybackRegion, plus the
+-- menu's music box. Works on server and client: sounds the server plays are heard by
+-- everyone, sounds a client plays are local.
 
 local Debris = game:GetService("Debris")
 local SoundService = game:GetService("SoundService")
@@ -46,9 +47,14 @@ function Audio.create(name: string, parent: Instance?, volume: number?, speed: n
 		warnOnce()
 		return nil
 	end
+	local id = if region.file == "Ambience" then SoundIds.Ambience else SoundIds.SFX
+	if id <= 0 then
+		warnOnce()
+		return nil
+	end
 	local sound = Instance.new("Sound")
 	sound.Name = name
-	sound.SoundId = "rbxassetid://" .. SoundIds.SFX
+	sound.SoundId = "rbxassetid://" .. id
 	sound.PlaybackRegionsEnabled = true
 	sound.PlaybackRegion = NumberRange.new(region.start, region.start + region.duration)
 	if region.looped then
@@ -93,9 +99,9 @@ function Audio.playAt(name: string, position: Vector3, volume: number?, speed: n
 	return sound
 end
 
--- Full-length looping tracks: "Ambience" or "MusicBox".
+-- The menu's music box (a full-length looping track).
 function Audio.track(which: string, parent: Instance?, volume: number?): Sound?
-	local id = if which == "Ambience" then SoundIds.Ambience else SoundIds.MusicBox
+	local id = if which == "MusicBox" then SoundIds.MusicBox else 0
 	if id <= 0 then
 		warnOnce()
 		return nil

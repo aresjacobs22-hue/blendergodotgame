@@ -12,6 +12,7 @@ local StarterGui = game:GetService("StarterGui")
 local Atmosphere = require(script.Parent.Atmosphere)
 local ClientState = require(script.Parent.ClientState)
 local Endings = require(script.Parent.Endings)
+local Events = require(script.Parent.Events)
 local Flashlight = require(script.Parent.Flashlight)
 local Hiding = require(script.Parent.Hiding)
 local Hud = require(script.Parent.Hud)
@@ -48,6 +49,7 @@ Endings.init()
 Hiding.init()
 Keypad.init()
 Spectate.init()
+Events.init()
 Menu.init()
 
 Remotes.Notify.OnClientEvent:Connect(function(text: string, style: string?)
@@ -77,18 +79,37 @@ player.CharacterAdded:Connect(function(character: Model)
 	Audio.play("NightIntro", nil, 1)
 	Hud.setBigColor(night.accent)
 	Hud.showBig(string.format("NIGHT %d", night.index), night.name .. "\n" .. night.objectiveText)
+	-- then the curse it rolled this time
+	local curseName = GameState:GetAttribute("CurseName")
+	local curseText = GameState:GetAttribute("CurseText")
+	local hasCurse = typeof(curseName) == "string" and curseName ~= "" and GameState:GetAttribute("Curse") ~= ""
 	task.delay(4.2, function()
 		Hud.hideBig()
 		task.delay(0.9, function()
-			Hud.setBigColor(Color3.fromRGB(205, 205, 200))
+			if hasCurse and ClientState.roundStatus == "alive" then
+				Audio.play("CurseSting", nil, 1.1)
+				Hud.setBigColor(Color3.fromRGB(200, 60, 50))
+				Hud.showBig("CURSE: " .. tostring(curseName), tostring(curseText))
+			else
+				Hud.setBigColor(Color3.fromRGB(205, 205, 200))
+			end
 		end)
-		for i, line in night.intro do
-			task.delay((i - 1) * 2.5, function()
-				if ClientState.roundStatus == "alive" then
-					Hud.message(line)
-				end
-			end)
-		end
+		local delayLines = if hasCurse then 4.6 else 0
+		task.delay(delayLines, function()
+			if hasCurse then
+				Hud.hideBig()
+				task.delay(0.9, function()
+					Hud.setBigColor(Color3.fromRGB(205, 205, 200))
+				end)
+			end
+			for i, line in night.intro do
+				task.delay((i - 1) * 2.5, function()
+					if ClientState.roundStatus == "alive" then
+						Hud.message(line)
+					end
+				end)
+			end
+		end)
 	end)
 end)
 
