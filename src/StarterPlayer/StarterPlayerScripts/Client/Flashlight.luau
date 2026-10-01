@@ -10,15 +10,18 @@ local RunService = game:GetService("RunService")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Audio = require(Shared:WaitForChild("Audio"))
 local Config = require(Shared:WaitForChild("Config"))
+local Nights = require(Shared:WaitForChild("Nights"))
 local ClientState = require(script.Parent.ClientState)
 local Hud = require(script.Parent.Hud)
 
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
+local GameState = ReplicatedStorage:WaitForChild("GameState")
 local player = Players.LocalPlayer
 
 local Flashlight = {}
 
-local BRIGHTNESS = 2.6
+-- this night's beam (the pitch-black maps get a stronger one)
+local settings: Nights.FlashlightSettings = Nights.DEFAULT_FLASHLIGHT
 
 local holder: Part
 local beam: SpotLight
@@ -84,11 +87,15 @@ local function update(dt: number)
 	if instability > 0 and math.random() < instability * 0.12 then
 		dropUntil = now + 0.03 + math.random() * 0.14
 	end
-	local brightness = if now < dropUntil then BRIGHTNESS * 0.06 else BRIGHTNESS
+	local strong = settings.brightness > Nights.DEFAULT_FLASHLIGHT.brightness
+	local brightness = if now < dropUntil then settings.brightness * 0.06 else settings.brightness
 	beam.Enabled = on
 	spill.Enabled = on
 	beam.Brightness = brightness
-	spill.Brightness = brightness * 0.22
+	beam.Range = settings.range
+	beam.Angle = settings.angle
+	spill.Brightness = brightness * (if strong then 0.3 else 0.22)
+	spill.Range = if strong then 24 else 16
 
 	-- the server puts a copy of your light on your head for other players; hide ours
 	local character = player.Character
@@ -114,7 +121,7 @@ function Flashlight.init()
 	beam.Face = Enum.NormalId.Front
 	beam.Angle = 46
 	beam.Range = 48
-	beam.Brightness = BRIGHTNESS
+	beam.Brightness = settings.brightness
 	beam.Shadows = true
 	beam.Color = Color3.fromRGB(255, 248, 235)
 	beam.Enabled = false
@@ -124,7 +131,7 @@ function Flashlight.init()
 	spill.Face = Enum.NormalId.Front
 	spill.Angle = 110
 	spill.Range = 16
-	spill.Brightness = BRIGHTNESS * 0.22
+	spill.Brightness = settings.brightness * 0.22
 	spill.Shadows = false
 	spill.Enabled = false
 	spill.Parent = holder
@@ -154,6 +161,13 @@ function Flashlight.init()
 			end)
 		end
 	end)
+
+	local function readNight()
+		local n = GameState:GetAttribute("Night")
+		settings = Nights.flashlight(Nights.get(if typeof(n) == "number" then n else 1))
+	end
+	GameState:GetAttributeChangedSignal("Night"):Connect(readNight)
+	readNight()
 
 	RunService:BindToRenderStep("AchromaFlashlight", Enum.RenderPriority.Camera.Value + 1, update)
 end

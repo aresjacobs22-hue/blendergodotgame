@@ -300,19 +300,22 @@ func _render(data: Dictionary, view: Dictionary) -> void:
 	cam.current = true
 
 	if view.get("flashlight", false):
+		# the night's flashlight (Roblox SpotLight.Angle is the full cone; Godot's is half)
+		var F: Dictionary = data.get("flashlight", {"brightness": 2.6, "range": 48.0, "angle": 46.0})
+		var strong: bool = float(F["brightness"]) > 2.6
 		var fl := SpotLight3D.new()
 		fl.light_color = Color(1.0, 0.97, 0.9)
-		fl.light_energy = 2.6 * 2.4
-		fl.spot_range = 48.0
-		fl.spot_angle = 23.0
+		fl.light_energy = float(F["brightness"]) * 2.4
+		fl.spot_range = float(F["range"])
+		fl.spot_angle = float(F["angle"]) / 2.0
 		fl.spot_attenuation = 0.45
 		fl.shadow_enabled = true
 		cam.add_child(fl)
 		fl.position = Vector3(0.4, -0.35, 0)
 		var spill := SpotLight3D.new()
 		spill.light_color = Color(1.0, 0.97, 0.9)
-		spill.light_energy = 2.6 * 0.22 * 2.4
-		spill.spot_range = 16.0
+		spill.light_energy = float(F["brightness"]) * (0.3 if strong else 0.22) * 2.4
+		spill.spot_range = 24.0 if strong else 16.0
 		spill.spot_angle = 55.0
 		cam.add_child(spill)
 	if overview:

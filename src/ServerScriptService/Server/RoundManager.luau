@@ -123,7 +123,9 @@ local function applyLighting(l: Nights.Lighting, curse: Curses.Curse?)
 	Lighting.FogStart = l.FogStart
 	Lighting.FogEnd = l.FogEnd
 	if curse and curse.id == "fog" then
-		Lighting.FogStart = 0
+		-- real fog: pale, close, but not pitch black (or the dark nights are unplayable)
+		Lighting.FogColor = l.FogColor:Lerp(Color3.fromRGB(78, 78, 82), 0.35)
+		Lighting.FogStart = 4
 		Lighting.FogEnd = math.min(l.FogEnd * 0.4, 42)
 	end
 	Lighting.ExposureCompensation = l.Exposure
@@ -446,12 +448,14 @@ function RoundManager.run()
 				light = Instance.new("SpotLight")
 				light.Name = "SharedFlashlight"
 				light.Face = Enum.NormalId.Front
-				light.Angle = 50
-				light.Range = 40
-				light.Brightness = 2
 				light.Shadows = true
 				light.Parent = head
 			end
+			local r = round
+			local beam = Nights.flashlight(if r then r.night else Nights.get(1))
+			light.Angle = beam.angle + 4
+			light.Range = beam.range * 0.85
+			light.Brightness = beam.brightness * 0.8
 			light.Enabled = on
 		end
 	end)

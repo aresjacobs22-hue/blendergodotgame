@@ -42,6 +42,13 @@ export type Lighting = {
 	Reverb: string,
 }
 
+-- Your flashlight on this night (dark maps get a stronger one).
+export type FlashlightSettings = {
+	brightness: number,
+	range: number, -- studs
+	angle: number, -- degrees
+}
+
 export type Night = {
 	index: number,
 	id: string,
@@ -60,6 +67,7 @@ export type Night = {
 	monster: { [string]: any }, -- overrides for Config.Monster
 	maze: MazeParams,
 	lighting: Lighting,
+	flashlight: FlashlightSettings?, -- defaults to NightsModule.DEFAULT_FLASHLIGHT
 	intro: { string },
 	tips: { string },
 }
@@ -257,19 +265,20 @@ local Nights: { Night } = {
 			WritingCount = 10,
 		},
 		lighting = {
-			Ambient = rgb(2, 5, 4),
+			Ambient = rgb(10, 16, 14),
 			FogColor = rgb(4, 14, 11),
-			FogStart = 0,
-			FogEnd = 60,
+			FogStart = 30,
+			FogEnd = 125,
 			Saturation = -0.45,
-			Contrast = 0.25,
-			Brightness = -0.02,
-			Tint = rgb(185, 255, 225),
+			Contrast = 0.15,
+			Brightness = 0.02,
+			Tint = rgb(205, 255, 235),
 			Bloom = 0.8,
-			Exposure = 0.1,
+			Exposure = 0.35,
 			LampColor = rgb(170, 255, 200),
 			Reverb = "SewerPipe",
 		},
+		flashlight = { brightness = 5, range = 72, angle = 54 },
 		intro = { "Water up to your ankles. No power.", "Start the generators. Find the lift." },
 		tips = {
 			"It's blind. Your flashlight is safe. Your footsteps aren't.",
@@ -394,19 +403,20 @@ local Nights: { Night } = {
 			WritingCount = 12,
 		},
 		lighting = {
-			Ambient = rgb(5, 2, 9),
+			Ambient = rgb(11, 8, 17),
 			FogColor = rgb(3, 1, 6),
-			FogStart = 0,
-			FogEnd = 85,
+			FogStart = 30,
+			FogEnd = 130,
 			Saturation = -0.2,
-			Contrast = 0.32,
-			Brightness = -0.01,
-			Tint = rgb(220, 190, 255),
+			Contrast = 0.18,
+			Brightness = 0.02,
+			Tint = rgb(235, 215, 255),
 			Bloom = 0.5,
-			Exposure = 0,
+			Exposure = 0.3,
 			LampColor = rgb(150, 70, 220),
 			Reverb = "Cave",
 		},
+		flashlight = { brightness = 5, range = 72, angle = 54 },
 		intro = { "This is where the color went.", "Break the three hearts." },
 		tips = {
 			"Breaking a heart tells it exactly where you are.",
@@ -419,9 +429,14 @@ local Nights: { Night } = {
 local NightsModule = {}
 NightsModule.list = Nights
 NightsModule.count = #Nights
+NightsModule.DEFAULT_FLASHLIGHT = { brightness = 2.6, range = 48, angle = 46 } :: FlashlightSettings
 
 function NightsModule.get(index: number): Night
 	return Nights[math.clamp(math.floor(index), 1, #Nights)]
+end
+
+function NightsModule.flashlight(night: Night): FlashlightSettings
+	return night.flashlight or NightsModule.DEFAULT_FLASHLIGHT
 end
 
 -- Config.Monster defaults with this night's overrides on top.

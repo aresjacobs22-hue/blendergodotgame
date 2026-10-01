@@ -10,7 +10,7 @@ local Engine = require("../../tests/mock/engine")
 local CFrame = Engine.CFrame
 local Vector3 = roblox.Vector3
 
-local REMOTES = { "Ready", "Notify", "Jumpscare", "OpenKeypad", "SubmitCode", "LeaveHiding", "Flashlight", "Battery", "RoundResult", "Apparition", "Escaped", "Look", "Throw", "Phone", "Event" }
+local REMOTES = { "Ready", "Notify", "Jumpscare", "OpenKeypad", "SubmitCode", "LeaveHiding", "Flashlight", "Battery", "RoundResult", "Apparition", "Escaped", "Look", "Throw", "Breath", "Chaos" }
 
 local nightIndex = tonumber(process.args[1]) or 1
 local seed = tonumber(process.args[2]) or 1234
@@ -223,5 +223,6 @@ fs.writeFile(outPath, serde.encode("json", {
 		bloom = l.Bloom,
 		exposure = l.Exposure,
 	},
+	flashlight = Nights.flashlight(night),
 }))
 print(string.format("night %d seed %d: %d parts, %d lights, %d texts", nightIndex, seed, #parts, #lights, #texts))

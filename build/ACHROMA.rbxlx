@@ -2105,6 +2105,13 @@ export type Lighting = {
 	Reverb: string,
 }
 
+-- Your flashlight on this night (dark maps get a stronger one).
+export type FlashlightSettings = {
+	brightness: number,
+	range: number, -- studs
+	angle: number, -- degrees
+}
+
 export type Night = {
 	index: number,
 	id: string,
@@ -2123,6 +2130,7 @@ export type Night = {
 	monster: { [string]: any }, -- overrides for Config.Monster
 	maze: MazeParams,
 	lighting: Lighting,
+	flashlight: FlashlightSettings?, -- defaults to NightsModule.DEFAULT_FLASHLIGHT
 	intro: { string },
 	tips: { string },
 }
@@ -2320,19 +2328,20 @@ local Nights: { Night } = {
 			WritingCount = 10,
 		},
 		lighting = {
-			Ambient = rgb(2, 5, 4),
+			Ambient = rgb(10, 16, 14),
 			FogColor = rgb(4, 14, 11),
-			FogStart = 0,
-			FogEnd = 60,
+			FogStart = 30,
+			FogEnd = 125,
 			Saturation = -0.45,
-			Contrast = 0.25,
-			Brightness = -0.02,
-			Tint = rgb(185, 255, 225),
+			Contrast = 0.15,
+			Brightness = 0.02,
+			Tint = rgb(205, 255, 235),
 			Bloom = 0.8,
-			Exposure = 0.1,
+			Exposure = 0.35,
 			LampColor = rgb(170, 255, 200),
 			Reverb = "SewerPipe",
 		},
+		flashlight = { brightness = 5, range = 72, angle = 54 },
 		intro = { "Water up to your ankles. No power.", "Start the generators. Find the lift." },
 		tips = {
 			"It's blind. Your flashlight is safe. Your footsteps aren't.",
@@ -2457,19 +2466,20 @@ local Nights: { Night } = {
 			WritingCount = 12,
 		},
 		lighting = {
-			Ambient = rgb(5, 2, 9),
+			Ambient = rgb(11, 8, 17),
 			FogColor = rgb(3, 1, 6),
-			FogStart = 0,
-			FogEnd = 85,
+			FogStart = 30,
+			FogEnd = 130,
 			Saturation = -0.2,
-			Contrast = 0.32,
-			Brightness = -0.01,
-			Tint = rgb(220, 190, 255),
+			Contrast = 0.18,
+			Brightness = 0.02,
+			Tint = rgb(235, 215, 255),
 			Bloom = 0.5,
-			Exposure = 0,
+			Exposure = 0.3,
 			LampColor = rgb(150, 70, 220),
 			Reverb = "Cave",
 		},
+		flashlight = { brightness = 5, range = 72, angle = 54 },
 		intro = { "This is where the color went.", "Break the three hearts." },
 		tips = {
 			"Breaking a heart tells it exactly where you are.",
@@ -2482,9 +2492,14 @@ local Nights: { Night } = {
 local NightsModule = {}
 NightsModule.list = Nights
 NightsModule.count = #Nights
+NightsModule.DEFAULT_FLASHLIGHT = { brightness = 2.6, range = 48, angle = 46 } :: FlashlightSettings
 
 function NightsModule.get(index: number): Night
 	return Nights[math.clamp(math.floor(index), 1, #Nights)]
+end
+
+function NightsModule.flashlight(night: Night): FlashlightSettings
+	return night.flashlight or NightsModule.DEFAULT_FLASHLIGHT
 end
 
 -- Config.Monster defaults with this night's overrides on top.
@@ -6460,7 +6475,9 @@ local function applyLighting(l: Nights.Lighting, curse: Curses.Curse?)
 	Lighting.FogStart = l.FogStart
 	Lighting.FogEnd = l.FogEnd
 	if curse and curse.id == "fog" then
-		Lighting.FogStart = 0
+		-- real fog: pale, close, but not pitch black (or the dark nights are unplayable)
+		Lighting.FogColor = l.FogColor:Lerp(Color3.fromRGB(78, 78, 82), 0.35)
+		Lighting.FogStart = 4
 		Lighting.FogEnd = math.min(l.FogEnd * 0.4, 42)
 	end
 	Lighting.ExposureCompensation = l.Exposure
@@ -6783,12 +6800,14 @@ function RoundManager.run()
 				light = Instance.new("SpotLight")
 				light.Name = "SharedFlashlight"
 				light.Face = Enum.NormalId.Front
-				light.Angle = 50
-				light.Range = 40
-				light.Brightness = 2
 				light.Shadows = true
 				light.Parent = head
 			end
+			local r = round
+			local beam = Nights.flashlight(if r then r.night else Nights.get(1))
+			light.Angle = beam.angle + 4
+			light.Range = beam.range * 0.85
+			light.Brightness = beam.brightness * 0.8
 			light.Enabled = on
 		end
 	end)
@@ -7862,17 +7881,17 @@ local function crystalLamp(ctx: Ctx, cell: Cell?, position: Vector3)
 end
 
 Themes.void = {
-	wall = { material = Enum.Material.Basalt, color = rgb(38, 32, 48) },
-	hubWall = { material = Enum.Material.Basalt, color = rgb(44, 36, 56) },
-	floor = { material = Enum.Material.Glass, color = rgb(12, 10, 16), reflect = 0.3 },
+	wall = { material = Enum.Material.Basalt, color = rgb(68, 60, 84) },
+	hubWall = { material = Enum.Material.Basalt, color = rgb(76, 66, 94) },
+	floor = { material = Enum.Material.Glass, color = rgb(30, 26, 40), reflect = 0.3 },
 	hubFloor = function(_room: string): Style
-		return { material = Enum.Material.Glass, color = rgb(14, 10, 20), reflect = 0.4 }
+		return { material = Enum.Material.Glass, color = rgb(34, 28, 46), reflect = 0.4 }
 	end,
 	ceiling = { material = Enum.Material.SmoothPlastic, color = rgb(0, 0, 0) },
 	hubCeiling = { material = Enum.Material.SmoothPlastic, color = rgb(0, 0, 0) },
-	trim = { material = Enum.Material.Basalt, color = rgb(24, 18, 32) },
-	tunnel = { material = Enum.Material.Basalt, color = rgb(26, 20, 34) },
-	locker = { material = Enum.Material.Basalt, color = rgb(24, 18, 32) },
+	trim = { material = Enum.Material.Basalt, color = rgb(44, 36, 56) },
+	tunnel = { material = Enum.Material.Basalt, color = rgb(48, 40, 60) },
+	locker = { material = Enum.Material.Basalt, color = rgb(50, 42, 62) },
 	columns = false,
 	writings = {
 		"THIS IS WHERE THE COLOR WENT", "BREAK THE HEARTS", "IT IS ALL OF THEM", "YOU WERE NEVER AWAKE", "WAKE UP",
@@ -9285,15 +9304,18 @@ local RunService = game:GetService("RunService")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Audio = require(Shared:WaitForChild("Audio"))
 local Config = require(Shared:WaitForChild("Config"))
+local Nights = require(Shared:WaitForChild("Nights"))
 local ClientState = require(script.Parent.ClientState)
 local Hud = require(script.Parent.Hud)
 
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
+local GameState = ReplicatedStorage:WaitForChild("GameState")
 local player = Players.LocalPlayer
 
 local Flashlight = {}
 
-local BRIGHTNESS = 2.6
+-- this night's beam (the pitch-black maps get a stronger one)
+local settings: Nights.FlashlightSettings = Nights.DEFAULT_FLASHLIGHT
 
 local holder: Part
 local beam: SpotLight
@@ -9359,11 +9381,15 @@ local function update(dt: number)
 	if instability > 0 and math.random() < instability * 0.12 then
 		dropUntil = now + 0.03 + math.random() * 0.14
 	end
-	local brightness = if now < dropUntil then BRIGHTNESS * 0.06 else BRIGHTNESS
+	local strong = settings.brightness > Nights.DEFAULT_FLASHLIGHT.brightness
+	local brightness = if now < dropUntil then settings.brightness * 0.06 else settings.brightness
 	beam.Enabled = on
 	spill.Enabled = on
 	beam.Brightness = brightness
-	spill.Brightness = brightness * 0.22
+	beam.Range = settings.range
+	beam.Angle = settings.angle
+	spill.Brightness = brightness * (if strong then 0.3 else 0.22)
+	spill.Range = if strong then 24 else 16
 
 	-- the server puts a copy of your light on your head for other players; hide ours
 	local character = player.Character
@@ -9389,7 +9415,7 @@ function Flashlight.init()
 	beam.Face = Enum.NormalId.Front
 	beam.Angle = 46
 	beam.Range = 48
-	beam.Brightness = BRIGHTNESS
+	beam.Brightness = settings.brightness
 	beam.Shadows = true
 	beam.Color = Color3.fromRGB(255, 248, 235)
 	beam.Enabled = false
@@ -9399,7 +9425,7 @@ function Flashlight.init()
 	spill.Face = Enum.NormalId.Front
 	spill.Angle = 110
 	spill.Range = 16
-	spill.Brightness = BRIGHTNESS * 0.22
+	spill.Brightness = settings.brightness * 0.22
 	spill.Shadows = false
 	spill.Enabled = false
 	spill.Parent = holder
@@ -9429,6 +9455,13 @@ function Flashlight.init()
 			end)
 		end
 	end)
+
+	local function readNight()
+		local n = GameState:GetAttribute("Night")
+		settings = Nights.flashlight(Nights.get(if typeof(n) == "number" then n else 1))
+	end
+	GameState:GetAttributeChangedSignal("Night"):Connect(readNight)
+	readNight()
 
 	RunService:BindToRenderStep("AchromaFlashlight", Enum.RenderPriority.Camera.Value + 1, update)
 end
@@ -10766,7 +10799,7 @@ function Menu.init()
 	make("UIStroke", { Color = DIM, Thickness = 1.5 }, settings)
 	text(settings, { Text = "SETTINGS", Font = Enum.Font.Creepster, TextSize = 44, Position = UDim2.fromOffset(30, 16), Size = UDim2.new(1, -60, 0, 50), ZIndex = 11 })
 	settingRow(settings, 90, "Brightness", function(step: number)
-		brightness = math.clamp(brightness + step * 0.03, -0.09, 0.21)
+		brightness = math.clamp(brightness + step * 0.03, -0.09, 0.3)
 	end)
 	settingRow(settings, 140, "Volume", function(step: number)
 		volume = math.clamp(volume + step * 0.1, 0, 1.5)

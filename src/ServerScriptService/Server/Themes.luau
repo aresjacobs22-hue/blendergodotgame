@@ -1020,17 +1020,17 @@ local function crystalLamp(ctx: Ctx, cell: Cell?, position: Vector3)
 end
 
 Themes.void = {
-	wall = { material = Enum.Material.Basalt, color = rgb(38, 32, 48) },
-	hubWall = { material = Enum.Material.Basalt, color = rgb(44, 36, 56) },
-	floor = { material = Enum.Material.Glass, color = rgb(12, 10, 16), reflect = 0.3 },
+	wall = { material = Enum.Material.Basalt, color = rgb(68, 60, 84) },
+	hubWall = { material = Enum.Material.Basalt, color = rgb(76, 66, 94) },
+	floor = { material = Enum.Material.Glass, color = rgb(30, 26, 40), reflect = 0.3 },
 	hubFloor = function(_room: string): Style
-		return { material = Enum.Material.Glass, color = rgb(14, 10, 20), reflect = 0.4 }
+		return { material = Enum.Material.Glass, color = rgb(34, 28, 46), reflect = 0.4 }
 	end,
 	ceiling = { material = Enum.Material.SmoothPlastic, color = rgb(0, 0, 0) },
 	hubCeiling = { material = Enum.Material.SmoothPlastic, color = rgb(0, 0, 0) },
-	trim = { material = Enum.Material.Basalt, color = rgb(24, 18, 32) },
-	tunnel = { material = Enum.Material.Basalt, color = rgb(26, 20, 34) },
-	locker = { material = Enum.Material.Basalt, color = rgb(24, 18, 32) },
+	trim = { material = Enum.Material.Basalt, color = rgb(44, 36, 56) },
+	tunnel = { material = Enum.Material.Basalt, color = rgb(48, 40, 60) },
+	locker = { material = Enum.Material.Basalt, color = rgb(50, 42, 62) },
 	columns = false,
 	writings = {
 		"THIS IS WHERE THE COLOR WENT", "BREAK THE HEARTS", "IT IS ALL OF THEM", "YOU WERE NEVER AWAKE", "WAKE UP",
