@@ -27,11 +27,15 @@ local DEATH_LINES = {
 }
 
 local KIND_LINES: { [string]: { string } } = {
-	Crawler = { "It was under the bed the whole time.", "You never looked down." },
+	Hollow = { "It was standing behind you the whole time.", "It saw your light.", "The grey takes another one." },
+	Crawler = { "It was under the bed the whole time.", "You never looked down.", "Visiting hours are over." },
 	Listener = { "It heard every step.", "You should have stayed quiet." },
-	Statue = { "You blinked.", "You looked away. Just for a second." },
+	Statue = { "You blinked.", "You looked away. Just for a second.", "It was never a statue." },
 	Amalgam = { "It is all of them. Now it's you too.", "There is no morning here." },
 }
+
+-- how close the camera ends up to each monster's head (their faces stick out more or less)
+local FACE_DISTANCE: { [string]: number } = { Hollow = 2.8, Crawler = 2.0, Listener = 2.9, Statue = 1.7, Amalgam = 2.6 }
 
 local function jumpscare(monster: Model)
 	local kind = monster:GetAttribute("Kind")
@@ -53,7 +57,8 @@ local function jumpscare(monster: Model)
 		if head and head.Parent then
 			local hp = head.Position
 			local face = head.CFrame.LookVector
-			local dist = 4.4 - math.min(1, e / 0.15) * 2.9 -- it lunges into your face
+			local near = if typeof(kind) == "string" and FACE_DISTANCE[kind] then FACE_DISTANCE[kind] else 1.6
+			local dist = near + 3 - math.min(1, e / 0.15) * 3 -- it lunges into your face
 			local shake = math.max(0.15, 1 - e / 1.6)
 			camera.CFrame = CFrame.lookAt(hp + face * dist - Vector3.new(0, 0.3, 0), hp)
 				* CFrame.Angles((math.random() - 0.5) * 0.12 * shake, (math.random() - 0.5) * 0.12 * shake, (math.random() - 0.5) * 0.35 * shake)

@@ -26,6 +26,7 @@ local env = {
 		return m
 	end,
 	math = math,
+	Vector2 = roblox.Vector2,
 	table = table,
 	string = string,
 	typeof = typeof,
@@ -45,8 +46,8 @@ end
 
 for i = 3, #args do
 	local spec = args[i]
-	local kind, pose, decoy = string.match(spec, "^([^@!]+)@?(%d*)(!?)$")
-	local rig = Monsters.build(kind, { preview = true, decoy = decoy == "!" })
+	local kind, variant, pose, decoy = string.match(spec, "^([^@!#]+)#?(%a*)@?(%d*)(!?)$")
+	local rig = Monsters.build(kind, { preview = true, decoy = decoy == "!", variant = if variant ~= "" then variant else nil })
 	if pose ~= "" and Monsters.applyStatuePose then
 		Monsters.applyStatuePose(rig, tonumber(pose), nil)
 		Monsters.solve(rig)
@@ -107,7 +108,7 @@ for i = 3, #args do
 			})
 		end
 	end
-	local name = kind .. (if pose ~= "" then "@" .. pose else "") .. decoy
+	local name = kind .. (if variant ~= "" then "#" .. variant else "") .. (if pose ~= "" then "@" .. pose else "") .. decoy
 	fs.writeFile(outDir .. "/" .. name .. ".json", serde.encode("json", { kind = kind, parts = parts, lights = lights, rootHeight = rig.rootHeight }))
 	print(string.format("%-14s %3d parts  lowest y %.2f", name, #parts, minY))
 end

@@ -98,7 +98,7 @@ local function headOf(player: Player): BasePart?
 end
 
 function MonsterAI.new(layout: Layout, world: WorldBuilder.World, interactables: Interactables.Interactables, params: { [string]: any }, kind: string, hooks: Hooks): MonsterAI
-	local rig = Monsters.build(kind)
+	local rig = Monsters.build(kind, { variant = params.Variant })
 	rig.model.Parent = workspace
 
 	local sightParams = RaycastParams.new()

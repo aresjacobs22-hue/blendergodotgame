@@ -13,6 +13,7 @@ local SoundService = game:GetService("SoundService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Maze = require(ReplicatedStorage.Shared.Maze)
+local Monsters = require(ReplicatedStorage.Shared.Monsters)
 local Nights = require(ReplicatedStorage.Shared.Nights)
 local Exit = require(script.Parent.Exit)
 local Interactables = require(script.Parent.Interactables)
@@ -226,7 +227,11 @@ local function startRound(night: Nights.Night)
 			monster:hearNoise(position, radius)
 		end,
 	})
-	monster = MonsterAI.new(layout, world, interactables, Nights.monsterParams(night), night.monsterKind, {
+	local params = Nights.monsterParams(night)
+	if night.monsterKind == "Statue" then
+		params.Variant = Monsters.STATUE_VARIANTS[Random.new(seed):NextInteger(1, #Monsters.STATUE_VARIANTS)]
+	end
+	monster = MonsterAI.new(layout, world, interactables, params, night.monsterKind, {
 		getPlayers = alivePlayers,
 		onCaught = RoundManager.caught,
 		onAwake = function()

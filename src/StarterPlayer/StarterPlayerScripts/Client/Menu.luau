@@ -134,17 +134,24 @@ end
 
 -- Monster preview ---------------------------------------------------------------
 
+-- statue night swaps between its two looks (each round picks one of them)
+local statueLook = 1
+local nextStatueSwap = 0
+local previewNight: Nights.Night? = nil
+
 local function previewFor(night: Nights.Night): Monsters.Rig
-	local rig = previews[night.monsterKind]
+	local variant = if night.monsterKind == "Statue" then Monsters.STATUE_VARIANTS[statueLook] else nil
+	local key = night.monsterKind .. (variant or "")
+	local rig = previews[key]
 	if rig then
 		return rig
 	end
-	local built = Monsters.build(night.monsterKind, { preview = true })
+	local built = Monsters.build(night.monsterKind, { preview = true, variant = variant })
 	if night.monsterKind == "Statue" then
-		Monsters.applyStatuePose(built, 1, nil)
+		Monsters.applyStatuePose(built, 4, nil)
 		Monsters.solve(built)
 	end
-	previews[night.monsterKind] = built
+	previews[key] = built
 	return built
 end
 
@@ -152,6 +159,8 @@ local function showPreview(night: Nights.Night)
 	if shown then
 		shown.model.Parent = nil
 	end
+	previewNight = night
+	nextStatueSwap = os.clock() + 3.5
 	local rig = previewFor(night)
 	rig.model.Parent = viewport
 	shown = rig
@@ -467,6 +476,11 @@ function Menu.init()
 			local logo = main:FindFirstChild("Logo")
 			if logo and logo:IsA("TextLabel") then
 				logo.TextTransparency = if math.random() < 0.04 then 0.2 + math.random() * 0.6 else 0
+			end
+			local pn = previewNight
+			if pn and pn.monsterKind == "Statue" and os.clock() >= nextStatueSwap then
+				statueLook = statueLook % #Monsters.STATUE_VARIANTS + 1
+				showPreview(pn)
 			end
 			local rig = shown
 			if rig then

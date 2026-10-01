@@ -769,7 +769,9 @@ Themes.atrium = {
 			if not Maze.isHub(layout, x, z) and not spots[k] and (math.abs(x - layout.entrance.x) + math.abs(z - layout.entrance.z)) > 1 then
 				spots[k] = true
 				placed += 1
-				local rig = Monsters.build("Statue", { preview = true, decoy = true })
+				-- a mix of both kinds, so you can't tell the real one by its shape
+				local variant = Monsters.STATUE_VARIANTS[ctx.random:NextInteger(1, #Monsters.STATUE_VARIANTS)]
+				local rig = Monsters.build("Statue", { preview = true, decoy = true, variant = variant })
 				Monsters.applyStatuePose(rig, ctx.random:NextInteger(1, #Monsters.STATUE_POSES), nil)
 				local center = ctx.cellCenter(x, z)
 				rig.model:PivotTo(CFrame.new(center + Vector3.new(ctx.random:NextNumber(-3, 3), rig.rootHeight, ctx.random:NextNumber(-3, 3))) * CFrame.Angles(0, ctx.random:NextNumber(0, 6.28), 0))

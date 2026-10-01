@@ -2,8 +2,8 @@
 -- Procedural animation for every monster, run locally on each client. Nothing
 -- here walks smoothly: heads snap to new angles, jaws hang, limbs twitch.
 --   Hollow    lurching gait, arms drag (or reach for you), unhinged jaw
---   Crawler   eight legs skittering, upside-down face snapping around
---   Listener  head sways side to side listening; the mouth splits when it charges
+--   Crawler   eight limbs skittering, upside-down face snapping around
+--   Listener  head sways side to side listening; it splits open when it charges
 --   Statue    no animation at all: a new pose every time it moves while unseen
 --   Amalgam   four legs, front arms reaching, back arms writhing, three heads
 
@@ -145,7 +145,7 @@ local function animateCrawler(rig: Rig, dt: number, speed: number, state: string
 	twitchHead(rig, "Neck", dt, if chase then 0.15 else 0.7, 1.2, 0.6, 1.6, 40, nil)
 	set(rig, "Jaw", CFrame.Angles(if kill then 1.0 elseif chase then 0.5 + math.abs(math.sin(t * 18)) * 0.4 else 0.15 + math.abs(math.sin(t * 2)) * 0.1, 0, 0))
 	set(rig, "Waist", CFrame.new(0, math.abs(math.sin(g * 2)) * 0.15 * stride, 0) * CFrame.Angles(rnd(0.03), math.sin(g) * 0.06 * stride, rnd(0.03)))
-	set(rig, "Tail", CFrame.Angles(math.sin(t * 2.4) * 0.15, math.sin(t * 1.7) * 0.3, 0))
+	set(rig, "Tail", CFrame.Angles(math.sin(t * 2.4) * 0.04, math.sin(g) * 0.06 * stride, 0))
 	-- tetrapod gait: L1 R2 L3 R4 together, the others opposite
 	for i = 1, 4 do
 		for _, side in { -1, 1 } do
@@ -176,8 +176,9 @@ local function animateListener(rig: Rig, dt: number, speed: number, state: strin
 	set(rig, "NeckA", CFrame.Angles(math.sin(t * 0.5) * 0.08, math.sin(t * 0.4) * 0.15, 0))
 	set(rig, "NeckB", CFrame.Angles(math.sin(t * 0.6 + 1) * 0.08, math.sin(t * 0.5 + 1) * 0.15, 0))
 	local open = if kill then 0.9 elseif hunting then 0.35 + math.abs(math.sin(t * 9)) * 0.3 else 0.05 + math.abs(math.sin(t * 1.3)) * 0.05
-	set(rig, "JawL", CFrame.Angles(0, -open, 0))
-	set(rig, "JawR", CFrame.Angles(0, open, 0))
+	-- the two halves of its head swing apart
+	set(rig, "JawL", CFrame.Angles(0, open, 0))
+	set(rig, "JawR", CFrame.Angles(0, -open, 0))
 	set(rig, "EarL", CFrame.Angles(0, 0, math.sin(t * 5) * 0.15 + (if math.random() < 0.03 then rnd(0.6) else 0)))
 	set(rig, "EarR", CFrame.Angles(0, 0, math.sin(t * 5.3) * 0.15 + (if math.random() < 0.03 then rnd(0.6) else 0)))
 	set(rig, "Spine", CFrame.Angles((if hunting then -0.2 else 0) + math.sin(t * 0.8) * 0.04, s1 * 0.06 * stride, 0))
@@ -185,7 +186,7 @@ local function animateListener(rig: Rig, dt: number, speed: number, state: strin
 	set(rig, "RHip", CFrame.Angles(s2 * 0.6 * stride, 0, 0))
 	set(rig, "LKnee", CFrame.Angles(-math.max(0, math.cos(g)) * 0.8 * stride, 0, 0))
 	set(rig, "RKnee", CFrame.Angles(-math.max(0, math.cos(g + math.pi)) * 0.8 * stride, 0, 0))
-	local reach = if hunting or kill then -0.6 else 0
+	local reach = if hunting or kill then 0.45 else 0
 	set(rig, "LShoulder", CFrame.Angles(reach + math.sin(t * 1.1) * 0.08, 0, 0))
 	set(rig, "RShoulder", CFrame.Angles(reach + math.sin(t * 1.2 + 2) * 0.08, 0, 0))
 	for i = 1, 3 do
