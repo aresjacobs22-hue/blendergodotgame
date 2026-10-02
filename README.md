@@ -120,14 +120,33 @@ Roblox doesn't allow sounds inside a place file, so you upload them once:
 
 ## Game page description
 
-The game itself never tells anyone the controls, so put them on the Roblox game page.
-Something like:
+The game itself never tells anyone anything, so the controls go on the Roblox game page.
+Paste this into the description:
 
 ```
-Five nights. Don't let it find you.
+you wake up.
+everything is grey.
 
-WASD move · SHIFT run · C crouch · F flashlight · E use / hide
-G throw a bottle · SPACE (in a locker) hold your breath
+five nights.
+something in every one of them.
+
+it hears you run.
+it sees your light.
+some of them don't need to.
+
+don't trust the walls.
+don't trust every voice.
+don't look away.
+
+make it to the morning.
+if there is one.
+
+—
+
+WASD move · SHIFT run · C crouch · F light · E use / hide
+G throw · SPACE hold your breath
+
+lights off. headphones on.
 ```
 
 ### Cover images
