@@ -1,16 +1,17 @@
 #!/usr/bin/env python3
-"""The cover for the Roblox game page: the Hollow's skull, face to face, in the dark of
-its own hallway, then put through distort.py until it's wrong.
+"""Art for the Roblox game page, put through distort.py until it's wrong:
 
-  assets/covers/cover.png   1024x1024
-  assets/covers/icon.png     512x512 (the size Roblox wants for the game icon)
+  assets/covers/cover.png      1024x1024 the Hollow's skull, face to face, in the dark
+  assets/covers/icon.png        512x512  the same, at the size Roblox wants for the icon
+  assets/covers/thumbnail.png  1920x1080 the whole of it, too tall, at the end of a black
+                                         hallway (the experience page thumbnail)
 
   LUNE=lune GODOT=godot python3 tools/monster-lab/covers.py [--seed N]
 
 The base render uses the same pipeline as maps.py (map_dump.luau -> render/map_render.gd)
 with the real night 1 map and monster.
 """
-import json, os, subprocess, sys
+import json, math, os, subprocess, sys
 from PIL import Image
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -49,6 +50,32 @@ def clear_corridor(d):
     return best or maps.best_corridor(d)
 
 
+def project(p, cam, look, fov, w, h):
+    """Where a world point lands in the picture (fractions of width/height). The camera
+    is Godot's: vertical field of view, Y up."""
+    f = [look[i] / math.sqrt(sum(v * v for v in look)) for i in range(3)]
+    right = [-f[2], 0.0, f[0]]  # forward x up
+    rn = math.sqrt(sum(v * v for v in right))
+    right = [v / rn for v in right]
+    up = [right[1] * f[2] - right[2] * f[1], right[2] * f[0] - right[0] * f[2], right[0] * f[1] - right[1] * f[0]]
+    v = [p[i] - cam[i] for i in range(3)]
+    x, y, z = (sum(v[i] * right[i] for i in range(3)), sum(v[i] * up[i] for i in range(3)), sum(v[i] * f[i] for i in range(3)))
+    t = math.tan(math.radians(fov) / 2)
+    return 0.5 + x / (z * t * (w / h)) / 2, 0.5 - y / (z * t) / 2
+
+
+def render(jobs):
+    json.dump(jobs, open(os.path.join(WORK, "jobs.json"), "w"))
+    cmd = [maps.GODOT, "--rendering-method", "gl_compatibility", "--rendering-driver", "opengl3",
+           "--path", os.path.join(HERE, "render"), "-s", "map_render.gd", "--", os.path.join(WORK, "jobs.json")]
+    if not os.environ.get("DISPLAY"):
+        cmd = ["xvfb-run", "-a", "-s", "-screen 0 1280x720x24"] + cmd
+    p = subprocess.run(cmd, capture_output=True, text=True)
+    for line in p.stdout.splitlines() + p.stderr.splitlines():
+        if "SCRIPT ERROR" in line:
+            print(line)
+
+
 def main():
     args = sys.argv[1:]
     seed = int(args[args.index("--seed") + 1]) if "--seed" in args else 4242
@@ -78,20 +105,43 @@ def main():
     view = {"name": "skull", "out": raw, "w": 1024, "h": 1024, "fov": 30, "flashlight": True,
             "lamp": 1.5, "exposure": 0.75, "pos": pos,
             "look": [head[0] - pos[0], head[1] - 0.35 - pos[1], head[2] - pos[2]]}
-    json.dump([{"json": path, "views": [view]}], open(os.path.join(WORK, "jobs.json"), "w"))
-    cmd = [maps.GODOT, "--rendering-method", "gl_compatibility", "--rendering-driver", "opengl3",
-           "--path", os.path.join(HERE, "render"), "-s", "map_render.gd", "--", os.path.join(WORK, "jobs.json")]
-    if not os.environ.get("DISPLAY"):
-        cmd = ["xvfb-run", "-a", "-s", "-screen 0 1280x720x24"] + cmd
-    p = subprocess.run(cmd, capture_output=True, text=True)
-    for line in p.stdout.splitlines() + p.stderr.splitlines():
-        if "SCRIPT ERROR" in line:
-            print(line)
+    jobs = [{"json": path, "views": [view]}]
+
+    # the thumbnail: two cells further down the same hall, all of it, facing you
+    far = run[min(2, len(run) - 1)]
+    tpath = os.path.join(WORK, "hall.json")
+    subprocess.run([maps.LUNE, "run", "tools/monster-lab/map_dump.luau", "1", str(seed), tpath,
+                    f"{far[0]},{far[1]}", f"{you[0]},{you[1]}"], cwd=ROOT, check=True)
+    td = json.load(open(tpath))
+    fx_, fz_ = (far[0] + 0.5) * C, (far[1] + 0.5) * C
+    theads = [p["cf"][:3] for p in td["parts"] if p["name"] == "Head"]
+    thead = min(theads, key=lambda h: (h[0] - fx_) ** 2 + (h[2] - fz_) ** 2)
+    eyes = sorted((p["cf"][:3] for p in td["parts"] if p["name"] == "Eye"),
+                  key=lambda e: (e[0] - thead[0]) ** 2 + (e[1] - thead[1]) ** 2 + (e[2] - thead[2]) ** 2)[:2]
+    tcam = [cam_x, 5.0, cam_z]
+    tlook = [fx_ - cam_x, 6.2 - 5.0, fz_ - cam_z]
+    traw = os.path.join(WORK, "hall.png")
+    jobs.append({"json": tpath, "views": [{"name": "hall", "out": traw, "w": 1920, "h": 1080, "fov": 42,
+                                            "flashlight": True, "lamp": 1.5, "exposure": 0.9,
+                                            "pos": tcam, "look": tlook}]})
+    render(jobs)
 
     cover = distort(raw, 1024)
     cover.save(os.path.join(DEST, "cover.png"))
     cover.resize((512, 512), Image.LANCZOS).save(os.path.join(DEST, "icon.png"))
-    print("wrote assets/covers/cover.png, assets/covers/icon.png")
+
+    # the thumbnail: the same treatment, plus a neck that's too long and a hall that bends
+    # in around it, and almost everything below the skull lost in the dark
+    hx, hy = project(thead, tcam, tlook, 42, 1920, 1080)
+    (e1x, e1y), (e2x, e2y) = (project(e, tcam, tlook, 42, 1920, 1080) for e in eyes)
+    distort(traw, (1920, 1080),
+            focus=(hx, hy + 0.14),
+            eyes=[(e1x, e1y, 2.4), (e2x, e2y, 1.9)],
+            twist=0.12, twist_radius=0.35,
+            jaw={"start": hy + 0.03, "length": 0.1, "width": 0.012, "amount": 0.045},
+            neck={"shoulders": hy + 0.08, "head": hy, "amount": 0.08, "width": 0.05},
+            barrel=0.35, light=0.42, drips_from=0.62).save(os.path.join(DEST, "thumbnail.png"))
+    print("wrote assets/covers/cover.png, icon.png, thumbnail.png")
 
 
 if __name__ == "__main__":

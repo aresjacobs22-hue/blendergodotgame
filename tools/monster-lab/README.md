@@ -32,10 +32,11 @@ It writes `out/maps/night<N>_<view>.png`, plus `out/maps/night<N>.png` with ever
 one sheet. The renderer's light falloff is softer than Roblox's to get close to Studio, but
 dark maps still come out a little darker than they look in game.
 
-`covers.py` uses the same pipeline for the Roblox cover (`assets/covers/`): the Hollow's
-skull face to face in its hallway, put through `distort.py` (crushed blacks, a warped
-face and a dragged-out jaw, ghosting, a red channel bleed, torn scanlines, drips,
-pinprick eyes, film damage).
+`covers.py` uses the same pipeline for the Roblox art (`assets/covers/`): the Hollow's
+skull face to face (icon) and the whole of it down a hallway (1920x1080 thumbnail), put
+through `distort.py` (crushed blacks, a warped face and a dragged-out jaw, a stretched
+neck and a bending hall, ghosting, a red channel bleed, torn scanlines, drips, pinprick
+eyes, film damage).
 
 The renders show the exact geometry. Lighting and materials are only close to what
 Roblox Studio shows.

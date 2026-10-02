@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""Turns a clean render into the cover: crushed to black, the face warped and the jaw
+"""Turns a clean render into cover art: crushed to black, the face warped and the jaw
 dragged long, ghost exposures, torn scanlines, a split that bleeds red, melting drips,
-pinprick eyes, film damage.
+pinprick eyes, film damage. For the wide thumbnail it can also stretch the neck (too
+tall) and bend the hallway in around it.
 
   python3 tools/monster-lab/distort.py <in.png> <out.png> [size]
 """
@@ -27,67 +28,101 @@ def sample(img, sx, sy):
     return a * (1 - fy) + b * fy
 
 
-def distort(src, size=1024, seed=13):
+# The icon: the skull fills the frame. Positions are fractions of the width/height.
+ICON = {
+    "focus": (0.5, 0.44),
+    "eyes": [(0.416, 0.414, 3.0), (0.576, 0.414, 2.4)],  # x, y, radius (px at 1024)
+    "twist": 0.2, "twist_radius": 0.3,
+    "jaw": {"start": 0.5, "length": 0.28, "width": 0.11, "amount": 0.11},
+    "neck": None,
+    "barrel": 0.0,
+    "light": 0.3,
+    "crush": 1.55,
+    "floor": 0.12,
+    "drips_from": 0.55,
+}
+
+
+def distort(src, size=1024, seed=13, **opts):
+    o = dict(ICON)
+    o.update(opts)
     rng = np.random.default_rng(seed)
-    im = Image.open(src).convert("L").resize((size, size), Image.LANCZOS)
+    W, H = (size, size) if isinstance(size, int) else size
+    im = Image.open(src).convert("L").resize((W, H), Image.LANCZOS)
     g = np.asarray(im).astype(np.float32) / 255
     g = np.clip((g - 0.05) / 0.8, 0, 1)
     h, w = g.shape
+    unit = min(w, h)
     yy, xx = np.mgrid[0:h, 0:w].astype(np.float32)
-    # the face sits a little above the middle
-    fx, fy = 0.5 * w, 0.44 * h
+    fx, fy = o["focus"][0] * w, o["focus"][1] * h
     dx, dy = xx - fx, yy - fy
-    r = np.sqrt(dx * dx + dy * dy) / w
+    r = np.sqrt(dx * dx + dy * dy) / unit
+    eye_row = o["eyes"][0][1] if o["eyes"] else -1
 
     # 0. pinprick eyes in the empty sockets (slightly mismatched); drawn first so the
     #    warp drags them along with the face
-    for ex, ey, rr in ((0.416, 0.414, 3.0), (0.576, 0.414, 2.4)):
+    for ex, ey, rr in o["eyes"]:
+        rr = rr * unit / 1024
         d = np.sqrt((xx - ex * w) ** 2 + (yy - ey * h) ** 2)
         g = np.maximum(g, np.exp(-(d / rr) ** 2) * 1.2 + np.exp(-(d / (rr * 5)) ** 2) * 0.2)
 
     # 1. warp: a slow twist around the face, a ripple through everything, and the jaw
     #    dragged downward like it's still opening
-    twist = 0.2 * np.exp(-(r / 0.3) ** 2)
+    twist = o["twist"] * np.exp(-(r / o["twist_radius"]) ** 2)
     ang = np.arctan2(dy, dx) + twist
     rad = np.sqrt(dx * dx + dy * dy)
+    if o["barrel"]:
+        # the hall bends in around it
+        k = 1 + o["barrel"] * (rad / unit) ** 2
+        rad = rad * k
     sx = fx + np.cos(ang) * rad + 5 * np.sin(yy * 0.045) + 2 * np.sin(yy * 0.31)
     sy = fy + np.sin(ang) * rad
-    jaw = np.clip((yy / h - 0.5) / 0.28, 0, 1)
-    jaw_x = np.exp(-((xx - fx) / (0.11 * w)) ** 2)
-    sy = sy - jaw * jaw_x * 0.11 * h * (1 - jaw * 0.5)
+    j = o["jaw"]
+    if j:
+        jaw = np.clip((yy / h - j["start"]) / j["length"], 0, 1)
+        jaw_x = np.exp(-((xx - fx) / (j["width"] * w)) ** 2)
+        sy = sy - jaw * jaw_x * j["amount"] * h * (1 - jaw * 0.5)
+    n = o["neck"]
+    if n:
+        # above its shoulders everything is pulled up: it's taller than it should be
+        col = np.exp(-((xx - fx) / (n["width"] * w)) ** 2)
+        above = np.clip((n["shoulders"] - yy / h) / (n["shoulders"] - n["head"]), 0, 1)
+        sy = sy + col * above * n["amount"] * h
     g = sample(g, sx, sy)
 
-    # 2. crush it: the hall falls into black, the bone stays
-    g = np.clip((g - 0.07) / 0.93, 0, 1) ** 1.55
-    light = np.exp(-(r / 0.3) ** 2)
-    g *= 0.12 + 0.88 * light
+    # 2. crush it: everything falls into black except what the light is on
+    g = np.clip((g - 0.07) / 0.93, 0, 1) ** o["crush"]
+    light = np.exp(-(r / o["light"]) ** 2)
+    g *= o["floor"] + (1 - o["floor"]) * light
 
     # 3. ghosts: two faint copies, as if it moved while the shutter was open
     for off, k in ((-17, 0.22), (23, 0.14)):
-        g = np.maximum(g, np.roll(g, off, axis=1) * k + g * (1 - k) * 0.0)
+        off = int(off * unit / 1024)
+        g = np.maximum(g, np.roll(g, off, axis=1) * k)
         g = g * (1 - k * 0.3) + np.roll(g, off, axis=1) * k * 0.3
 
-    # 4. melt: columns drip downward below the face
+    # 4. melt: columns drip downward
     drip = np.zeros(w, np.float32)
-    for _ in range(60):
+    for _ in range(int(60 * w / unit)):
         c = int(rng.integers(0, w))
         width = int(rng.integers(2, 9))
-        drip[max(0, c - width):c + width] = np.maximum(drip[max(0, c - width):c + width], rng.uniform(20, 120))
+        drip[max(0, c - width):c + width] = np.maximum(drip[max(0, c - width):c + width], rng.uniform(20, 120) * unit / 1024)
     drip = np.convolve(drip, np.ones(5) / 5, mode="same")
-    below = np.clip((yy / h - 0.55) / 0.45, 0, 1)
+    below = np.clip((yy / h - o["drips_from"]) / (1 - o["drips_from"]), 0, 1)
     g = np.maximum(g, sample(g, xx, yy - drip[None, :] * below) * 0.9)
 
     # 6. colour: grey, but the red channel slips off the edges like it's bleeding
-    rgb = np.stack([np.maximum(g, np.roll(g, 8, axis=1) * 0.9), g * 0.93, g * 0.95], -1)
+    bleed = int(8 * unit / 1024)
+    rgb = np.stack([np.maximum(g, np.roll(g, bleed, axis=1) * 0.9), g * 0.93, g * 0.95], -1)
     rgb = np.clip(rgb, 0, 1)
 
     # 7. torn scanlines: bands of rows shoved sideways (mostly away from the eyes)
     for _ in range(14):
         y0 = int(rng.integers(0, h))
-        if abs(y0 - 0.414 * h) < 30:
+        if abs(y0 - eye_row * h) < 30:
             continue
         band = int(rng.integers(2, 22))
-        shift = int(rng.normal(0, 34))
+        shift = int(rng.normal(0, 34) * w / unit)
         rgb[y0:y0 + band] = np.roll(rgb[y0:y0 + band], shift, axis=1)
         if rng.random() < 0.3:
             rgb[y0:y0 + band] *= rng.uniform(0.2, 0.6)
@@ -98,7 +133,7 @@ def distort(src, size=1024, seed=13):
     for _ in range(7):
         x = rng.integers(0, w)
         rgb[:, x:x + 1] = np.clip(rgb[:, x:x + 1] + rng.uniform(0.08, 0.25), 0, 1)
-    for _ in range(140):
+    for _ in range(int(140 * w / unit)):
         x, y = rng.integers(0, w), rng.integers(0, h)
         s = rng.integers(1, 4)
         rgb[y:y + s, x:x + s] = 0 if rng.random() < 0.6 else 0.8
