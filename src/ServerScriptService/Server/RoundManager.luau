@@ -1,15 +1,22 @@
 --!strict
--- The game loop:
---   Lobby         everyone is on the main menu, picking a night
---   Intermission  someone pressed PLAY; short countdown (others can join / vote)
---   Playing       the chosen night: build its map, monster and objective
---   Results       who made it; beating a night unlocks the next one
--- ...then everyone goes back to the menu.
+-- The game, server side. It's one place that runs as two kinds of server:
+--
+--   a lobby server   (the public ones you join): the lobby. When a group goes through
+--                    one of its doors they're teleported to a reserved server of this
+--                    same place. In Studio, where teleports don't work, the night is
+--                    played right here instead, and the doors stay shut until it's over.
+--   a night server   (reserved, one per group): plays the night the group chose
+--                    (Playing -> Results), then sends everyone back to a lobby.
+--
+-- Each player's "Where" attribute tells their client where they are: "lobby",
+-- "night", or "between" (no body: a black screen, a teleport, the results).
 
 local Lighting = game:GetService("Lighting")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 local SoundService = game:GetService("SoundService")
+local TeleportService = game:GetService("TeleportService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Curses = require(ReplicatedStorage.Shared.Curses)
@@ -19,6 +26,7 @@ local Nights = require(ReplicatedStorage.Shared.Nights)
 local Chaos = require(script.Parent.Chaos)
 local Exit = require(script.Parent.Exit)
 local Interactables = require(script.Parent.Interactables)
+local Lobby = require(script.Parent.Lobby)
 local MonsterAI = require(script.Parent.MonsterAI)
 local Objectives = require(script.Parent.Objectives)
 local Progress = require(script.Parent.Progress)
@@ -47,10 +55,14 @@ type Round = {
 
 local RoundManager = {}
 
-local ready: { [Player]: number } = {} -- player -> the night they picked
 local status: { [Player]: string } = {} -- "alive" | "caught" | "escaped"
 local looks: { [Player]: Vector3 } = {}
 local round: Round? = nil
+local lobby: Lobby.Lobby? = nil
+
+local function setWhere(player: Player, where: string)
+	player:SetAttribute("Where", where)
+end
 
 local function isAlive(player: Player): boolean
 	return status[player] == "alive" and player.Parent ~= nil
@@ -92,28 +104,17 @@ local function removeCharacter(player: Player)
 	end)
 end
 
-local function countReady(): number
-	local n = 0
-	for _ in ready do
-		n += 1
+local function loadCharacter(player: Player): boolean
+	local ok = pcall(function()
+		player:LoadCharacterAsync()
+	end)
+	if not ok then
+		-- older engines only have the (now deprecated) synchronous version
+		ok = pcall(function()
+			(player :: any):LoadCharacter()
+		end)
 	end
-	return n
-end
-
--- Most-voted night among the ready players (ties go to the earliest night).
-local function chosenNight(): number
-	local votes: { [number]: number } = {}
-	for _, n in ready do
-		votes[n] = (votes[n] or 0) + 1
-	end
-	local best, bestVotes = 1, 0
-	for n = 1, Nights.count do
-		local v = votes[n] or 0
-		if v > bestVotes then
-			best, bestVotes = n, v
-		end
-	end
-	return best
+	return ok and player.Character ~= nil
 end
 
 local function applyLighting(l: Nights.Lighting, curse: Curses.Curse?)
@@ -155,15 +156,8 @@ local function spawnPlayer(player: Player)
 	player:SetAttribute("Hiding", false)
 	player:SetAttribute("Flashlight", false)
 	player:SetAttribute("Bottles", 0)
-	local ok = pcall(function()
-		player:LoadCharacterAsync()
-	end)
-	if not ok then
-		-- older engines only have the (now deprecated) synchronous version
-		ok = pcall(function()
-			(player :: any):LoadCharacter()
-		end)
-	end
+	setWhere(player, "night")
+	local ok = loadCharacter(player)
 	local character = player.Character
 	if not ok or not character or round ~= r then
 		return
@@ -196,6 +190,7 @@ function RoundManager.caught(player: Player, monster: Model?)
 	notifyOthers(player, player.DisplayName .. " was taken.", "danger")
 	task.delay(if monster then 2.7 else 0.5, function()
 		if status[player] == "caught" then
+			setWhere(player, "between")
 			removeCharacter(player)
 		end
 	end)
@@ -218,12 +213,13 @@ function RoundManager.escaped(player: Player, kind: string)
 	end
 	task.delay(4, function()
 		if status[player] == "escaped" then
+			setWhere(player, "between")
 			removeCharacter(player)
 		end
 	end)
 end
 
-local function startRound(night: Nights.Night)
+local function startRound(night: Nights.Night, players: { Player })
 	local seed = Random.new():NextInteger(1, 2 ^ 30)
 	local layout = Maze.generate(seed, night.maze)
 	local world = WorldBuilder.build(layout, night)
@@ -342,16 +338,17 @@ local function startRound(night: Nights.Night)
 	table.clear(status)
 	round = r
 	GameState:SetAttribute("Phase", "Playing")
-	for player in ready do
+	for _, player in players do
 		task.spawn(spawnPlayer, player)
 	end
 	monster:start()
 end
 
-local function endRound()
+-- Ends the night; returns who played it.
+local function endRound(): { [Player]: boolean }
 	local r = round
 	if not r then
-		return
+		return {}
 	end
 	local survivors = {}
 	for player, s in status do
@@ -368,10 +365,8 @@ local function endRound()
 			end
 		end
 	end
-	local result = if won then "Escaped" else "Caught"
-	GameState:SetAttribute("Result", result)
+	GameState:SetAttribute("Result", if won then "Escaped" else "Caught")
 	GameState:SetAttribute("Phase", "Results")
-	Remotes.RoundResult:FireAllClients(result, survivors, math.floor(os.clock() - r.startedAt), r.night.index)
 
 	task.wait(Config.Round.ResultsTime)
 
@@ -386,43 +381,194 @@ local function endRound()
 	r.world.model:Destroy()
 	round = nil
 	table.clear(status)
-	table.clear(ready) -- everyone goes back to the menu
-	GameState:SetAttribute("ReadyCount", 0)
-	for _, player in Players:GetPlayers() do
-		removeCharacter(player)
-		player:SetAttribute("Hiding", false)
-		player:SetAttribute("Bottles", 0)
+	for player in r.participants do
+		if player.Parent then
+			removeCharacter(player)
+			setWhere(player, "between")
+			player:SetAttribute("Hiding", false)
+			player:SetAttribute("Bottles", 0)
+		end
 	end
 	GameState:SetAttribute("Curse", "")
+	return r.participants
+end
+
+-- Lobby -----------------------------------------------------------------------------
+
+local function spawnInLobby(player: Player)
+	local l = lobby
+	if not l or player.Parent == nil or status[player] == "alive" then
+		return
+	end
+	setWhere(player, "lobby")
+	player:SetAttribute("Flashlight", false)
+	if not loadCharacter(player) then
+		return
+	end
+	local character = player.Character :: Model
+	character:PivotTo(l.spawnCFrame())
+	local humanoid = character:FindFirstChildOfClass("Humanoid")
+	if humanoid then
+		humanoid.Died:Connect(function()
+			task.wait(3)
+			if player:GetAttribute("Where") == "lobby" and player.Character == character then
+				spawnInLobby(player)
+			end
+		end)
+	end
+end
+
+local function teleportsWork(): boolean
+	return not RunService:IsStudio() and game.PlaceId ~= 0
+end
+
+-- Send a group to a reserved server of this place to play `night`.
+local function sendToNight(group: { Player }, night: number): boolean
+	local ok, err = pcall(function()
+		local code = TeleportService:ReserveServer(game.PlaceId)
+		local options = Instance.new("TeleportOptions")
+		options.ReservedServerAccessCode = code
+		options:SetTeleportData({ night = night, count = #group })
+		TeleportService:TeleportAsync(game.PlaceId, group, options)
+	end)
+	if not ok then
+		warn("ACHROMA: couldn't reach a night server (" .. tostring(err) .. "); playing it here")
+	end
+	return ok
+end
+
+-- Studio (or a failed teleport): play the night in this server, then back to the lobby.
+local function playHere(group: { Player }, night: number)
+	if round then
+		for _, p in group do
+			spawnInLobby(p)
+		end
+		return
+	end
+	startRound(Nights.get(night), group)
+	repeat
+		task.wait(0.5)
+	until #alivePlayers() == 0
+	local played = endRound()
+	applyLighting(Lobby.LIGHTING)
+	GameState:SetAttribute("Phase", "Lobby")
+	GameState:SetAttribute("Night", 1)
+	for player in played do
+		task.spawn(spawnInLobby, player)
+	end
+end
+
+local function runLobby()
+	GameState:SetAttribute("Phase", "Lobby")
+	applyLighting(Lobby.LIGHTING)
+	lobby = Lobby.new({
+		highest = Progress.highest,
+		isOpen = function(): boolean
+			return round == nil
+		end,
+		launch = function(group: { Player }, night: number)
+			for _, p in group do
+				setWhere(p, "between")
+			end
+			if not (teleportsWork() and sendToNight(group, night)) then
+				task.spawn(playHere, group, night)
+			end
+		end,
+	})
+	-- a teleport that fails after it started: back to the lobby
+	TeleportService.TeleportInitFailed:Connect(function(player: Player)
+		if player:GetAttribute("Where") == "between" and status[player] == nil then
+			spawnInLobby(player)
+		end
+	end)
+	local function join(player: Player)
+		Progress.load(player)
+		spawnInLobby(player)
+	end
+	Players.PlayerAdded:Connect(join)
+	for _, player in Players:GetPlayers() do
+		task.spawn(join, player)
+	end
+end
+
+-- Night server --------------------------------------------------------------------------
+
+-- Everyone back to a (public) lobby server.
+local function sendHome(players: { Player })
+	for attempt = 1, 3 do
+		local ok = pcall(function()
+			TeleportService:TeleportAsync(game.PlaceId, players)
+		end)
+		if ok then
+			return
+		end
+		task.wait(2 * attempt)
+	end
+end
+
+local function runNightServer()
+	GameState:SetAttribute("Phase", "Waiting")
+	local planned: number? = nil
+	local expected = 1
+	local firstArrival: number? = nil
+	local function join(player: Player)
+		setWhere(player, "between")
+		local ok, data = pcall(function()
+			return player:GetJoinData().TeleportData
+		end)
+		if ok and typeof(data) == "table" then
+			local n = tonumber((data :: any).night)
+			if n and not planned then
+				planned = n
+				-- so the black screen can already say which night it is
+				GameState:SetAttribute("Night", math.clamp(math.floor(n), 1, Nights.count))
+			end
+			expected = math.max(expected, tonumber((data :: any).count) or 1)
+		end
+		firstArrival = firstArrival or os.clock()
+		Progress.load(player)
+		if round then
+			spawnPlayer(player) -- late, but the night's still going
+		end
+	end
+	Players.PlayerAdded:Connect(join)
+	for _, player in Players:GetPlayers() do
+		task.spawn(join, player)
+	end
+
+	-- wait for the whole group (or 20 seconds after the first of them)
+	repeat
+		task.wait(0.25)
+	until firstArrival and (#Players:GetPlayers() >= expected or os.clock() - (firstArrival :: number) > 20)
+	task.wait(0.5)
+	-- nobody gets a night they couldn't have chosen
+	local allowed = 1
+	for _, player in Players:GetPlayers() do
+		allowed = math.max(allowed, math.min(Progress.highest(player), Nights.count))
+	end
+	local night = math.clamp(math.floor(planned or 1), 1, allowed)
+	GameState:SetAttribute("Night", night)
+	startRound(Nights.get(night), Players:GetPlayers())
+	repeat
+		task.wait(0.5)
+	until #alivePlayers() == 0
+	endRound()
+	sendHome(Players:GetPlayers())
+	-- anyone who still turns up here goes home too
+	Players.PlayerAdded:Connect(function(player: Player)
+		sendHome({ player })
+	end)
 end
 
 function RoundManager.run()
 	Players.CharacterAutoLoads = false
 	WorldBuilder.setupCollisionGroups()
-	applyLighting(Nights.get(1).lighting)
 
 	GameState:SetAttribute("Phase", "Lobby")
-	GameState:SetAttribute("Countdown", 0)
 	GameState:SetAttribute("Night", 1)
 	GameState:SetAttribute("NightName", Nights.get(1).name)
-	GameState:SetAttribute("ReadyCount", 0)
 	GameState:SetAttribute("Done", 0)
 	GameState:SetAttribute("Goal", 0)
-
-	Players.PlayerAdded:Connect(Progress.load)
-	for _, player in Players:GetPlayers() do
-		task.spawn(Progress.load, player)
-	end
-
-	Remotes.Ready.OnServerEvent:Connect(function(player: Player, night: unknown)
-		local wanted = if typeof(night) == "number" then math.floor(night) else 1
-		local allowed = math.min(Progress.highest(player), Nights.count)
-		ready[player] = math.clamp(wanted, 1, allowed)
-		GameState:SetAttribute("ReadyCount", countReady())
-		if round and GameState:GetAttribute("Phase") == "Playing" then
-			task.spawn(spawnPlayer, player)
-		end
-	end)
 
 	-- where each player's camera is looking (the Statue can't move while watched)
 	Remotes.Look.OnServerEvent:Connect(function(player: Player, direction: unknown)
@@ -461,9 +607,7 @@ function RoundManager.run()
 	end)
 
 	Players.PlayerRemoving:Connect(function(player: Player)
-		ready[player] = nil
 		looks[player] = nil
-		GameState:SetAttribute("ReadyCount", countReady())
 		local r = round
 		if r then
 			r.interactables:release(player)
@@ -472,31 +616,11 @@ function RoundManager.run()
 		status[player] = nil
 	end)
 
-	local first = true
-	while true do
-		GameState:SetAttribute("Phase", "Lobby")
-		applyLighting(Nights.get(1).lighting)
-		while next(ready) == nil do
-			task.wait(0.25)
-		end
-
-		GameState:SetAttribute("Phase", "Intermission")
-		for i = if first then Config.Round.FirstIntermission else Config.Round.Intermission, 1, -1 do
-			local n = chosenNight()
-			GameState:SetAttribute("Night", n)
-			GameState:SetAttribute("NightName", Nights.get(n).name)
-			GameState:SetAttribute("Countdown", i)
-			task.wait(1)
-		end
-		first = false
-
-		if next(ready) ~= nil then
-			startRound(Nights.get(chosenNight()))
-			repeat
-				task.wait(0.5)
-			until #alivePlayers() == 0
-			endRound()
-		end
+	-- a reserved server is a night server; anything else is a lobby
+	if game.PrivateServerId ~= "" and game.PrivateServerOwnerId == 0 then
+		runNightServer()
+	else
+		runLobby()
 	end
 end
 

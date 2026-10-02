@@ -348,7 +348,8 @@ local function update(dt: number)
 		end
 	end
 	if ambience then
-		local target = if playing then 0.8 else 0
+		-- low wind in the lobby, the full thing out there
+		local target = if playing then 0.8 elseif ClientState.roundStatus == "lobby" then 0.3 else 0
 		ambience.Volume += (target - ambience.Volume) * math.min(1, dt * 0.8)
 	end
 	if night.id ~= chaseFor then

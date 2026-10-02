@@ -7,6 +7,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
 
 local Audio = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Audio"))
 
@@ -30,6 +31,7 @@ local staminaFill: Frame
 local batteryFrame: Frame
 local batterySegments: { Frame } = {}
 local bigTitle: TextLabel
+local controlsLabel: TextLabel
 local fadeFrame: Frame
 local flashFrame: Frame
 local whiteFrame: Frame
@@ -158,6 +160,7 @@ function Hud.init()
 	rageFrame = new("Frame", { Name = "Rage", Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.fromRGB(150, 0, 0), BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = 2 }, gui)
 
 	bigTitle = new("TextLabel", { Name = "BigTitle", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.48), Size = UDim2.new(0.9, 0, 0, 60), BackgroundTransparency = 1, Font = Hud.TITLE_FONT, TextSize = 40, TextColor3 = TEXT, Text = "", TextTransparency = 1, ZIndex = 11 }, gui)
+	controlsLabel = new("TextLabel", { Name = "Controls", AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.fromScale(0.5, 0.74), Size = UDim2.new(0.9, 0, 0, 56), BackgroundTransparency = 1, Font = Hud.TITLE_FONT, TextSize = 17, LineHeight = 1.5, TextColor3 = TEXT, Text = "", TextTransparency = 1, ZIndex = 11 }, gui)
 
 	fadeFrame = new("Frame", { Name = "Fade", Size = UDim2.fromScale(1, 1), BackgroundColor3 = BLACK, BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = 9 }, gui)
 	whiteFrame = new("Frame", { Name = "White", Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = 10 }, gui)
@@ -318,15 +321,33 @@ function Hud.setHiding(on: boolean)
 	hidingDark = on
 end
 
--- The night's title in the middle of the dark ("NIGHT 3", letter-spaced). It's already
--- there (the menu's black screen showed it while the night loaded); it fades out slowly.
+-- The controls, for the moment before a night: the only instructions the game gives.
+Hud.KEYBOARD_CONTROLS = "WASD  move       SHIFT  run       C  crouch       F  light\nE  use · hide       G  throw       SPACE  hold your breath"
+Hud.GAMEPAD_CONTROLS = "L3  run       B  crouch       Y  light\nX  use · hide       D-PAD UP  throw       R2  hold your breath"
+
+local function controlsText(): string
+	if UserInputService.KeyboardEnabled then
+		return Hud.KEYBOARD_CONTROLS
+	elseif UserInputService.GamepadEnabled then
+		return Hud.GAMEPAD_CONTROLS
+	end
+	return "" -- touch: the buttons on screen say what they do
+end
+
+-- The night's title in the middle of the dark ("NIGHT 3", letter-spaced), with the
+-- controls faint underneath. The title's already there (the black screen before showed
+-- it while the night loaded); both fade out slowly.
 function Hud.showTitle(title: string)
 	bigTitle.Text = Hud.spaced(title)
 	bigTitle.TextTransparency = 0.05
+	controlsLabel.Text = controlsText()
+	controlsLabel.TextTransparency = 1
+	TweenService:Create(controlsLabel, TweenInfo.new(1.2, Enum.EasingStyle.Sine), { TextTransparency = 0.45 }):Play()
 end
 
 function Hud.hideTitle()
 	TweenService:Create(bigTitle, TweenInfo.new(1.6, Enum.EasingStyle.Sine), { TextTransparency = 1 }):Play()
+	TweenService:Create(controlsLabel, TweenInfo.new(1.6, Enum.EasingStyle.Sine), { TextTransparency = 1 }):Play()
 end
 
 -- 0 = fully black, 1 = clear

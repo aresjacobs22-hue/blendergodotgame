@@ -57,7 +57,7 @@ function Spectate.init()
 
 	RunService:BindToRenderStep("AchromaSpectate", Enum.RenderPriority.Camera.Value + 3, function(dt: number)
 		local camera = workspace.CurrentCamera
-		local shouldSpectate = ClientState.started
+		local shouldSpectate = player:GetAttribute("Where") == "between"
 			and not ClientState.jumpscaring
 			and player.Character == nil
 			and GameState:GetAttribute("Phase") == "Playing"

@@ -1,6 +1,7 @@
 -- End-to-end: boots the real server Script and client LocalScript together in the
 -- mocked engine and plays the whole game as a fake player, through the actual UI:
---   main menu -> night 1 (survive, hiding in a locker) -> night 2 unlocked
+--   the lobby (walk into a door's square, pick the night and 1 player)
+--   -> night 1 (survive, hiding in a locker) -> night 2 unlocked
 --   -> keys + on-screen keypad -> generators -> photographs -> hearts (the end)
 --   -> back to night 1 to get caught by the Hollow (jumpscare).
 -- It also checks the game never shows words: only "NIGHT 1".."NIGHT 5", ever.
@@ -12,7 +13,7 @@ local Vector3 = roblox.Vector3
 local CFrame = Engine.CFrame
 local Enum = roblox.Enum
 
-local REMOTES = { "Ready", "Notify", "Jumpscare", "OpenKeypad", "SubmitCode", "LeaveHiding", "Flashlight", "Battery", "RoundResult", "Apparition", "Escaped", "Look", "Throw", "Breath", "Chaos" }
+local REMOTES = { "Notify", "Jumpscare", "OpenKeypad", "SubmitCode", "LeaveHiding", "Flashlight", "Battery", "Apparition", "Escaped", "Look", "Throw", "Breath", "Chaos", "Lobby" }
 
 local failures = 0
 local function check(cond: any, msg: string)
@@ -31,6 +32,7 @@ local shared = Engine.folderFromDir("Shared", "src/ReplicatedStorage/Shared")
 local server = Engine.folderFromDir("Server", "src/ServerScriptService/Server")
 local client = Engine.folderFromDir("Client", "src/StarterPlayer/StarterPlayerScripts/Client")
 local game, workspace = Engine.makeGame(server, shared, client, REMOTES)
+game:GetService("UserInputService").KeyboardEnabled = true
 local player = Engine.addPlayer(game, "Ares", 1)
 
 Engine.onDestroy = function(model)
@@ -184,8 +186,21 @@ local function prompts(objectText: string)
 end
 
 local menu
-local function card(n: number)
-	return menu.Main.Nights["Night" .. n]
+local Hud = require(client.Hud)
+local Lobby = require(server.Lobby)
+
+-- the night entries on the choice screen at a lobby door
+local function entry(n: number)
+	return menu.Choice.Nights["Night" .. n]
+end
+
+local function pad(i: number)
+	return workspace.Lobby["Pad" .. i]
+end
+
+local function inLobby(): boolean
+	local character = player.Character
+	return player:GetAttribute("Where") == "lobby" and character ~= nil and (character.HumanoidRootPart.Position - Lobby.ORIGIN).Magnitude < Lobby.RADIUS + 5
 end
 
 -- Every piece of text a player could see right now.
@@ -213,21 +228,31 @@ local function shownText(): { string }
 	return out
 end
 
--- The only words allowed on screen: the nights' numbers ("N I G H T    3").
+-- The only words allowed on screen: the nights' numbers ("N I G H T    3"), the
+-- player counts and the cross on the choice screen, and the controls before a night.
 local function onlyNights(where: string)
 	local bad = {}
 	for _, t in shownText() do
-		if not string.match(t, "^N I G H T%s+%d$") then
+		if not (string.match(t, "^N I G H T%s+%d$") or string.match(t, "^%d$") or t == "×" or t == Hud.KEYBOARD_CONTROLS) then
 			table.insert(bad, t)
 		end
 	end
 	check(#bad == 0, "no words on screen " .. where .. (if #bad > 0 then " (saw: " .. table.concat(bad, " | ") .. ")" else ""))
 end
 
-local function startNight(n: number)
-	card(n).Activated:Fire()
+-- Walk into a door's square; when the choice comes up pick the night and 1 player.
+local function startNight(n: number, door: number?)
+	placePlayer(pad(door or 1).Position)
+	if not run(3, function()
+		return menu.Choice.Visible
+	end) then
+		return false
+	end
+	entry(n).Activated:Fire()
+	check(entry(n).TextTransparency < 0.5, "night " .. n .. " can be chosen")
+	menu.Choice.Players.Players1.Activated:Fire()
 	return run(15, function()
-		return phase() == "Playing" and player.Character ~= nil
+		return phase() == "Playing" and player:GetAttribute("Where") == "night" and player.Character ~= nil
 	end)
 end
 
@@ -242,10 +267,10 @@ local function finishAndReturn(escaped: boolean)
 	end)
 	check(black, "then just black")
 	onlyNights("after the night")
-	local back = run(20, function()
-		return phase() == "Lobby" and menu.Main.Visible
+	local back = run(25, function()
+		return phase() == "Lobby" and inLobby()
 	end)
-	check(back, "back on the menu")
+	check(back, "back in the lobby")
 end
 
 local function progress(): string
@@ -263,32 +288,44 @@ local function litPips(): number
 end
 
 ---------------------------------------------------------------------------
-print("Main menu")
+print("The lobby")
 run(2)
 menu = player.PlayerGui:FindFirstChild("AchromaMenu")
-check(menu and menu.Main.Visible, "the menu shows when you open the game")
+local UserInputService = game:GetService("UserInputService")
+check(inLobby(), "you wake up in the lobby")
 check(phase() == "Lobby", "server waits in the lobby")
 check(player:GetAttribute("HighestNight") == 1, "a new player has only night 1")
-local cardCount = 0
-for n = 1, 5 do
-	if card(n) and card(n).Text == "N I G H T    " .. n then
-		cardCount += 1
+local squares = 0
+for i = 1, 4 do
+	if workspace.Lobby:FindFirstChild("Pad" .. i) then
+		squares += 1
 	end
 end
-check(cardCount == 5, "the menu is NIGHT 1 to NIGHT 5")
-onlyNights("on the menu")
-local UserInputService = game:GetService("UserInputService")
-check(UserInputService.MouseIconEnabled == true, "the cursor shows on the menu")
-check(card(1).TextTransparency < 0.5 and card(2).TextTransparency > 0.8 and card(5).TextTransparency > 0.8, "nights 2-5 are barely visible")
-card(3).Activated:Fire()
+check(squares == 4, "four doors, four squares")
+check(workspace.Lobby:FindFirstChild("Watcher") ~= nil, "something stands in the fog")
+onlyNights("in the lobby")
+check(UserInputService.MouseIconEnabled == false, "no cursor while you walk around")
+-- step into a square: the choice
+placePlayer(pad(2).Position)
 run(1)
-check(phase() == "Lobby" and not ClientState.started, "clicking a locked night does nothing")
+check(menu.Choice.Visible, "stepping into a square asks you")
+check(UserInputService.MouseIconEnabled == true, "the cursor comes up for it")
+onlyNights("at the door")
+check(entry(1).TextTransparency < 0.5 and entry(2).TextTransparency > 0.8 and entry(5).TextTransparency > 0.8, "nights 2-5 are barely there")
+entry(3).Activated:Fire()
+check(entry(3).TextTransparency > 0.8, "a night you haven't reached can't be picked")
+-- walk away: it closes and nothing happens
+placePlayer(Lobby.ORIGIN)
+run(1)
+check(not menu.Choice.Visible and UserInputService.MouseIconEnabled == false, "walking away closes it")
+check(phase() == "Lobby" and inLobby(), "and you're still in the lobby")
 
 ---------------------------------------------------------------------------
 print("Night 1: THE HOUSE (survive)")
-check(startNight(1), "night 1 starts")
-check(not menu.Main.Visible, "menu hides while playing")
+check(startNight(1), "picking 1 player goes straight in: night 1 starts")
+check(not menu.Choice.Visible and not inLobby(), "out of the lobby")
 onlyNights("as the night starts")
+check(player.PlayerGui.AchromaHud.Controls.Text == Hud.KEYBOARD_CONTROLS, "the controls show before the night")
 run(8)
 onlyNights("while playing")
 check(UserInputService.MouseIconEnabled == false, "no cursor while playing")
@@ -328,9 +365,6 @@ check(morning, "made it to 6 AM (hour " .. tostring(GameState:GetAttribute("Hour
 print("    (held breath " .. breathHeld .. " times; " .. (if revealedAt then "dragged out at " .. revealedAt else "stayed hidden") .. ")")
 finishAndReturn(true)
 check(player:GetAttribute("HighestNight") == 2, "night 2 unlocked")
-check(card(2).TextTransparency > 0.8, "night 2 is still in the dark for a moment")
-run(6)
-check(card(2).TextTransparency < 0.5 and card(1).TextTransparency > card(2).TextTransparency, "then it surfaces; night 1 dims")
 
 ---------------------------------------------------------------------------
 print("Night 2: THE RED WARD (keys)")
@@ -408,8 +442,6 @@ check(GameState:GetAttribute("ExitOpen") == true, "the portal opens")
 workspace.World.Structure.EscapeZone.Touched:Fire(player.Character.HumanoidRootPart)
 finishAndReturn(true)
 check(player:GetAttribute("HighestNight") == 6, "every night beaten")
-run(2)
-check(card(5).TextTransparency > 0.3 and card(5).TextTransparency < 0.8, "night 5 shows as cleared")
 
 ---------------------------------------------------------------------------
 print("Night 1 again: caught by the Hollow")

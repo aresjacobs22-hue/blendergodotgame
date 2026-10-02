@@ -56,9 +56,7 @@ local Config = {
 	},
 
 	Round = {
-		FirstIntermission = 4,
-		Intermission = 6,
-		ResultsTime = 9,
+		ResultsTime = 9, -- black screen after a night before the lobby
 	},
 
 	Progress = {

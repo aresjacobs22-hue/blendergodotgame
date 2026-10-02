@@ -66,17 +66,25 @@ local Audio = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Aud
 local GameState = ReplicatedStorage:WaitForChild("GameState")
 
 player.CharacterAdded:Connect(function(character: Model)
-	ClientState.roundStatus = "alive"
 	ClientState.jumpscaring = false
 	local camera = workspace.CurrentCamera
 	camera.CameraType = Enum.CameraType.Custom
 	local humanoid = character:WaitForChild("Humanoid") :: Humanoid
 	camera.CameraSubject = humanoid
-	Hud.setHudVisible(true)
 	Hud.whiteout(1, 0)
 	Hud.fade(0, 0)
 
-	-- black, the night's number, black again, and then you're just... there
+	if player:GetAttribute("Where") == "lobby" then
+		-- the lobby: no HUD, just a slow fade up from black into the fog
+		ClientState.roundStatus = "lobby"
+		Hud.setHudVisible(false)
+		Hud.fade(1, 2.5)
+		return
+	end
+
+	-- a night: black, its number and the controls, black again, and then you're just... there
+	ClientState.roundStatus = "alive"
+	Hud.setHudVisible(true)
 	local n = GameState:GetAttribute("Night")
 	Audio.play("NightIntro", nil, 0.8)
 	Hud.showTitle(string.format("NIGHT %d", if typeof(n) == "number" then n else 1))
@@ -95,10 +103,11 @@ player.CharacterRemoving:Connect(function()
 	Hud.setHudVisible(false)
 end)
 
--- The cursor only shows when there's something to click: the menu and the keypad.
--- Otherwise Roblox would leave its arrow in the middle of the screen in first person.
+-- The cursor only shows when there's something to click: the choice at a lobby door and
+-- the keypad. Otherwise Roblox would leave its arrow in the middle of the screen in first
+-- person.
 RunService.RenderStepped:Connect(function()
-	local wanted = not ClientState.started or ClientState.keypadOpen
+	local wanted = ClientState.choosing or ClientState.keypadOpen
 	if UserInputService.MouseIconEnabled ~= wanted then
 		UserInputService.MouseIconEnabled = wanted
 	end

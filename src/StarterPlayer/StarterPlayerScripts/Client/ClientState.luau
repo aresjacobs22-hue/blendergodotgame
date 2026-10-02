@@ -3,8 +3,8 @@
 -- without requiring each other.
 
 local ClientState = {
-	started = false, -- picked a night on the menu
-	roundStatus = "none", -- "none" | "alive" | "caught" | "escaped"
+	choosing = false, -- the choice screen at a lobby door is up
+	roundStatus = "none", -- "none" | "lobby" | "alive" | "caught" | "escaped"
 	fear = 0, -- 0..1, how close / how angry the monster is
 	monsterDistance = math.huge,
 	chased = false, -- the monster is chasing *you*

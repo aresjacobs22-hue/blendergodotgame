@@ -7,7 +7,7 @@ local Engine = require("./mock/engine")
 local Vector3 = roblox.Vector3
 local CFrame = Engine.CFrame
 
-local REMOTES = { "Ready", "Notify", "Jumpscare", "OpenKeypad", "SubmitCode", "LeaveHiding", "Flashlight", "Battery", "RoundResult", "Apparition", "Escaped", "Look", "Throw", "Breath", "Chaos" }
+local REMOTES = { "Notify", "Jumpscare", "OpenKeypad", "SubmitCode", "LeaveHiding", "Flashlight", "Battery", "Apparition", "Escaped", "Look", "Throw", "Breath", "Chaos", "Lobby" }
 
 local failures = 0
 local function check(cond: any, msg: string)
@@ -59,7 +59,7 @@ local function boot()
 			table.insert(Engine.log, table.concat({ ... }, " "))
 		end,
 	}
-	local require = Engine.makeLoader(globals)
+	local require, runScript = Engine.makeLoader(globals)
 	local rs = game:GetService("ReplicatedStorage")
 	local sss = game:GetService("ServerScriptService")
 	local SoundIds = require(rs.Shared.SoundIds)
@@ -78,6 +78,10 @@ local function boot()
 		Curses = require(rs.Shared.Curses),
 		Chaos = require(sss.Server.Chaos),
 		Throwables = require(sss.Server.Throwables),
+		Lobby = require(sss.Server.Lobby),
+		require = require,
+		runScript = runScript,
+		server = server,
 	}
 	Engine.Maze = mods.Maze
 	return game, workspace, mods
@@ -802,6 +806,171 @@ do
 	end)
 	check(pulled, "and it drags you out")
 	s.chaos.destroy()
+	check(#Engine.errors == 0, "no script errors (" .. #Engine.errors .. ")")
+end
+
+---------------------------------------------------------------------------
+-- step the server without a round (lobby, night-server waiting room)
+local function idle(game, seconds: number, until_: (() -> boolean)?): boolean
+	local t = 0
+	while t < seconds do
+		Engine.time += 0.05
+		Engine.runScheduled()
+		game:GetService("RunService").Heartbeat:Fire(0.05)
+		t += 0.05
+		if until_ and until_() then
+			return true
+		end
+	end
+	return false
+end
+
+print("The lobby: four doors, the choice, the countdown")
+do
+	local game, _, mods = boot()
+	local Lobby = mods.Lobby
+	local launched = {}
+	local open = true
+	local lobby = Lobby.new({
+		highest = function()
+			return 3
+		end,
+		isOpen = function()
+			return open
+		end,
+		launch = function(group, night)
+			table.insert(launched, { group = group, night = night })
+			for _, p in group do
+				p:SetAttribute("Where", "between")
+			end
+		end,
+	})
+	local a, b, c = makePlayer(game, "A", 1), makePlayer(game, "B", 2), makePlayer(game, "C", 3)
+	local function home(p)
+		p:SetAttribute("Where", "lobby")
+		placePlayer(p, Lobby.ORIGIN)
+	end
+	local function stand(p, i)
+		placePlayer(p, lobby.pads[i].center)
+	end
+	for _, p in { a, b, c } do
+		home(p)
+	end
+	check(#lobby.pads == 4, "four doors")
+
+	stand(a, 1)
+	idle(game, 0.3)
+	check(lobby.pads[1].state == "choosing" and lobby.pads[1].leader == a, "stepping into an empty square asks you")
+	lobby.choose(a, 1, 5, 1)
+	check(#launched == 1 and launched[1].group[1] == a and launched[1].night == 3, "1 player goes straight in (and only to a night you've reached)")
+	idle(game, 2.2)
+	check(lobby.pads[1].state == "idle", "the door is free again")
+
+	home(a)
+	stand(b, 2)
+	idle(game, 0.3)
+	lobby.choose(b, 2, 2, 3)
+	stand(c, 2)
+	idle(game, 0.4)
+	check(lobby.pads[2].state == "waiting" and lobby.pads[2].count.Text == "2 / 3", "3 players: it waits, and counts who's in (" .. lobby.pads[2].count.Text .. ")")
+	check(lobby.pads[2].timer.Text == "10" or lobby.pads[2].timer.Text == "9", "counting down from 10 (" .. lobby.pads[2].timer.Text .. ")")
+	idle(game, 5)
+	check(#launched == 1 and tonumber(lobby.pads[2].timer.Text) <= 5, "still counting (" .. lobby.pads[2].timer.Text .. ")")
+	idle(game, 5.5)
+	check(#launched == 2 and #launched[2].group == 2 and launched[2].night == 2, "at 0 whoever's standing in it goes through")
+
+	home(a)
+	home(b)
+	home(c)
+	stand(a, 3)
+	stand(b, 3)
+	stand(c, 3)
+	idle(game, 0.3)
+	lobby.choose(lobby.pads[3].leader, 3, 1, 2)
+	idle(game, 10.5)
+	check(#launched == 3 and #launched[3].group == 2, "never more than the number chosen")
+	local left = nil
+	for _, p in { a, b, c } do
+		if p:GetAttribute("Where") == "lobby" then
+			left = p
+		end
+	end
+	check(left ~= nil, "the one who didn't fit stays behind")
+
+	for _, p in { a, b, c } do
+		home(p)
+	end
+	idle(game, 2.5)
+	stand(a, 4)
+	idle(game, 0.3)
+	home(a)
+	idle(game, 0.3)
+	check(lobby.pads[4].state == "idle", "walking out while choosing puts it back")
+	stand(a, 4)
+	idle(game, 0.3)
+	lobby.cancel(a, 4)
+	idle(game, 0.6)
+	check(lobby.pads[4].state == "idle", "closing the choice: it doesn't ask again while you stand there")
+	home(a)
+	stand(b, 1)
+	idle(game, 0.3)
+	lobby.choose(b, 1, 1, 4)
+	home(b)
+	idle(game, 0.4)
+	check(lobby.pads[1].state == "idle" and #launched == 3, "everyone walks out: it stops")
+
+	open = false
+	stand(c, 2)
+	idle(game, 0.4)
+	check(lobby.pads[2].state == "idle", "the doors don't open while a night is being played here")
+	lobby.destroy()
+	check(#Engine.errors == 0, "no script errors (" .. #Engine.errors .. ")")
+end
+
+print("A lobby server sends the group to a reserved server")
+do
+	Engine.placeId = 4242
+	Engine.teleports = {}
+	local game, _, mods = boot()
+	local p = makePlayer(game, "Ares", 1)
+	mods.runScript(mods.server.Main)
+	idle(game, 1)
+	check(p:GetAttribute("Where") == "lobby", "you start in the lobby")
+	local padPart = game:GetService("Workspace").Lobby.Pad1
+	placePlayer(p, padPart.Position)
+	idle(game, 0.4)
+	game:GetService("ReplicatedStorage").Remotes.Lobby.OnServerEvent:Fire(p, "choose", 1, 1, 1)
+	idle(game, 0.5)
+	local t = Engine.teleports[1]
+	check(t ~= nil and t.placeId == 4242 and t.players[1] == p, "teleported to this place")
+	check(t ~= nil and t.data ~= nil and t.data.night == 1 and t.data.count == 1, "with the night and how many are coming")
+	Engine.placeId = nil
+	check(#Engine.errors == 0, "no script errors (" .. #Engine.errors .. ")")
+end
+
+print("A night server plays the group's night, then sends everyone home")
+do
+	Engine.privateServerId = "reserved"
+	Engine.teleports = {}
+	Engine.saved = { u1 = 3 }
+	Engine.joinData = { Ares = { night = 3, count = 1 } }
+	local game, _, mods = boot()
+	local p = makePlayer(game, "Ares", 1)
+	mods.runScript(mods.server.Main)
+	local GameState = game:GetService("ReplicatedStorage").GameState
+	local started = idle(game, 25, function()
+		return GameState:GetAttribute("Phase") == "Playing"
+	end)
+	check(started and GameState:GetAttribute("Night") == 3, "night 3 starts straight away (" .. tostring(GameState:GetAttribute("Night")) .. ")")
+	check(p:GetAttribute("Where") == "night", "you're in it")
+	mods.require(mods.server.RoundManager).caught(p, nil)
+	local home = idle(game, 15, function()
+		return #Engine.teleports > 0
+	end)
+	check(home and Engine.teleports[1].players[1] == p and Engine.teleports[1].data == nil, "then everyone's sent back to a lobby")
+	Engine.privateServerId = nil
+	Engine.joinData = {}
+	Engine.saved = {}
 	check(#Engine.errors == 0, "no script errors (" .. #Engine.errors .. ")")
 end
 

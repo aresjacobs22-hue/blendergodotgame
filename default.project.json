@@ -10,7 +10,6 @@
       },
       "Remotes": {
         "$className": "Folder",
-        "Ready": { "$className": "RemoteEvent" },
         "Notify": { "$className": "RemoteEvent" },
         "Jumpscare": { "$className": "RemoteEvent" },
         "OpenKeypad": { "$className": "RemoteEvent" },
@@ -18,13 +17,13 @@
         "LeaveHiding": { "$className": "RemoteEvent" },
         "Flashlight": { "$className": "RemoteEvent" },
         "Battery": { "$className": "RemoteEvent" },
-        "RoundResult": { "$className": "RemoteEvent" },
         "Apparition": { "$className": "RemoteEvent" },
         "Escaped": { "$className": "RemoteEvent" },
         "Look": { "$className": "RemoteEvent" },
         "Throw": { "$className": "RemoteEvent" },
         "Breath": { "$className": "RemoteEvent" },
-        "Chaos": { "$className": "RemoteEvent" }
+        "Chaos": { "$className": "RemoteEvent" },
+        "Lobby": { "$className": "RemoteEvent" }
       },
       "GameState": {
         "$className": "Folder"

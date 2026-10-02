@@ -170,6 +170,7 @@ local EVENTS = {
 	PromptHidden = true,
 	PromptButtonHoldBegan = true,
 	PromptButtonHoldEnded = true,
+	TeleportInitFailed = true,
 }
 
 ---------------------------------------------------------------------------
@@ -517,7 +518,47 @@ local function makeCharacter(player)
 end
 Engine.makeCharacter = makeCharacter
 
+-- DataStores keep their values in Engine.saved for the length of a test run
+Engine.saved = {}
+local memoryStore = {
+	GetAsync = function(_self, key: string)
+		return Engine.saved[key]
+	end,
+	SetAsync = function(_self, key: string, value)
+		Engine.saved[key] = value
+	end,
+	UpdateAsync = function(_self, key: string, fn)
+		Engine.saved[key] = fn(Engine.saved[key])
+	end,
+}
+ClassMethods.DataStoreService = {
+	GetDataStore = function()
+		return memoryStore
+	end,
+}
+
+-- Teleports are recorded instead of happening: Engine.teleports
+Engine.teleports = {}
+Engine.joinData = {} -- player name -> the TeleportData they "arrived" with
+ClassMethods.TeleportService = {
+	ReserveServer = function()
+		return "reserved"
+	end,
+	TeleportAsync = function(_self, placeId, players, options)
+		table.insert(Engine.teleports, { placeId = placeId, players = players, data = options and rawget(options, "_props").TeleportData })
+	end,
+	SetTeleportGui = function() end,
+}
+ClassMethods.TeleportOptions = {
+	SetTeleportData = function(self, data)
+		rawget(self, "_props").TeleportData = data
+	end,
+}
+
 ClassMethods.Player = {
+	GetJoinData = function(self)
+		return { TeleportData = Engine.joinData[self.Name] }
+	end,
 	LoadCharacterAsync = function(self)
 		local old = self.Character
 		if old then
@@ -663,6 +704,10 @@ function Engine.makeGame(serverFolder, sharedFolder, clientFolder, remoteNames: 
 		return s
 	end
 
+	-- a lobby server unless a test says otherwise (Engine.privateServerId)
+	rawget(game, "_props").PlaceId = Engine.placeId or 0
+	rawget(game, "_props").PrivateServerId = Engine.privateServerId or ""
+	rawget(game, "_props").PrivateServerOwnerId = 0
 	ClassMethods.DataModel = {
 		GetService = function(_self, name: string)
 			return services[name] or service(name)

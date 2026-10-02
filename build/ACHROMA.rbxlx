@@ -105,45 +105,40 @@
       </Item>
       <Item class="RemoteEvent" referent="15">
         <Properties>
-          <string name="Name">Look</string>
+          <string name="Name">Lobby</string>
         </Properties>
       </Item>
       <Item class="RemoteEvent" referent="16">
         <Properties>
-          <string name="Name">Notify</string>
+          <string name="Name">Look</string>
         </Properties>
       </Item>
       <Item class="RemoteEvent" referent="17">
         <Properties>
-          <string name="Name">OpenKeypad</string>
+          <string name="Name">Notify</string>
         </Properties>
       </Item>
       <Item class="RemoteEvent" referent="18">
         <Properties>
-          <string name="Name">Ready</string>
+          <string name="Name">OpenKeypad</string>
         </Properties>
       </Item>
       <Item class="RemoteEvent" referent="19">
         <Properties>
-          <string name="Name">RoundResult</string>
-        </Properties>
-      </Item>
-      <Item class="RemoteEvent" referent="20">
-        <Properties>
           <string name="Name">SubmitCode</string>
         </Properties>
       </Item>
-      <Item class="RemoteEvent" referent="21">
+      <Item class="RemoteEvent" referent="20">
         <Properties>
           <string name="Name">Throw</string>
         </Properties>
       </Item>
     </Item>
-    <Item class="Folder" referent="22">
+    <Item class="Folder" referent="21">
       <Properties>
         <string name="Name">Shared</string>
       </Properties>
-      <Item class="ModuleScript" referent="23">
+      <Item class="ModuleScript" referent="22">
         <Properties>
           <string name="Name">Audio</string>
           <string name="Source"><![CDATA[--!strict
@@ -268,7 +263,7 @@ return Audio
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="24">
+      <Item class="ModuleScript" referent="23">
         <Properties>
           <string name="Name">Config</string>
           <string name="Source"><![CDATA[--!strict
@@ -329,9 +324,7 @@ local Config = {
 	},
 
 	Round = {
-		FirstIntermission = 4,
-		Intermission = 6,
-		ResultsTime = 9,
+		ResultsTime = 9, -- black screen after a night before the lobby
 	},
 
 	Progress = {
@@ -344,7 +337,7 @@ return Config
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="25">
+      <Item class="ModuleScript" referent="24">
         <Properties>
           <string name="Name">Curses</string>
           <string name="Source"><![CDATA[--!strict
@@ -393,7 +386,7 @@ return Curses
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="26">
+      <Item class="ModuleScript" referent="25">
         <Properties>
           <string name="Name">Maze</string>
           <string name="Source"><![CDATA[--!strict
@@ -1036,7 +1029,7 @@ return Maze
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="27">
+      <Item class="ModuleScript" referent="26">
         <Properties>
           <string name="Name">Monsters</string>
           <string name="Source"><![CDATA[--!strict
@@ -2058,7 +2051,7 @@ return Monsters
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="28">
+      <Item class="ModuleScript" referent="27">
         <Properties>
           <string name="Name">Nights</string>
           <string name="Source"><![CDATA[--!strict
@@ -2447,7 +2440,7 @@ return NightsModule
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="29">
+      <Item class="ModuleScript" referent="28">
         <Properties>
           <string name="Name">SoundAtlas</string>
           <string name="Source"><![CDATA[--!strict
@@ -2546,7 +2539,7 @@ return SoundAtlas
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="30">
+      <Item class="ModuleScript" referent="29">
         <Properties>
           <string name="Name">SoundIds</string>
           <string name="Source"><![CDATA[--!strict
@@ -2570,15 +2563,15 @@ return SoundIds
       </Item>
     </Item>
   </Item>
-  <Item class="ServerScriptService" referent="31">
+  <Item class="ServerScriptService" referent="30">
     <Properties>
       <string name="Name">ServerScriptService</string>
     </Properties>
-    <Item class="Folder" referent="32">
+    <Item class="Folder" referent="31">
       <Properties>
         <string name="Name">Server</string>
       </Properties>
-      <Item class="ModuleScript" referent="33">
+      <Item class="ModuleScript" referent="32">
         <Properties>
           <string name="Name">Build</string>
           <string name="Source"><![CDATA[--!strict
@@ -2874,7 +2867,7 @@ return Build
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="34">
+      <Item class="ModuleScript" referent="33">
         <Properties>
           <string name="Name">Chaos</string>
           <string name="Source"><![CDATA[--!strict
@@ -3346,7 +3339,7 @@ return Chaos
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="35">
+      <Item class="ModuleScript" referent="34">
         <Properties>
           <string name="Name">Dressing</string>
           <string name="Source"><![CDATA[--!strict
@@ -3945,7 +3938,7 @@ return Dressing
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="36">
+      <Item class="ModuleScript" referent="35">
         <Properties>
           <string name="Name">Exit</string>
           <string name="Source"><![CDATA[--!strict
@@ -4083,7 +4076,7 @@ return Exit
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="37">
+      <Item class="ModuleScript" referent="36">
         <Properties>
           <string name="Name">Interactables</string>
           <string name="Source"><![CDATA[--!strict
@@ -4475,6 +4468,459 @@ function Interactables.destroy(self: Interactables)
 end
 
 return Interactables
+]]></string>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="37">
+        <Properties>
+          <string name="Name">Lobby</string>
+          <string name="Source"><![CDATA[--!strict
+-- The lobby: a circle of old stone in the fog, nothing around it but dark. Four doors
+-- stand on their own around the edge, each with light leaking from behind it and a
+-- square marked out on the ground in front of it. Something tall stands where the fog
+-- begins. Every so often it's somewhere else.
+--
+-- Walk into an empty square and you choose the night and how many of you there'll be.
+-- One: you go straight through. More: the sign over the door counts down from 10 and
+-- whoever is standing in the square when it reaches 0 goes through with you.
+
+local CollectionService = game:GetService("CollectionService")
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+
+local Monsters = require(ReplicatedStorage.Shared.Monsters)
+local Nights = require(ReplicatedStorage.Shared.Nights)
+
+local Remotes = ReplicatedStorage.Remotes
+
+local Lobby = {}
+
+Lobby.ORIGIN = Vector3.new(-1200, 0, 0) -- far from where the nights are built
+Lobby.RADIUS = 66 -- the stone circle
+Lobby.PAD_SIZE = 12
+Lobby.COUNTDOWN = 10
+Lobby.MAX_PLAYERS = 4
+
+-- The lobby's light: grey dark, fog closing in.
+Lobby.LIGHTING = {
+	Ambient = Color3.fromRGB(24, 24, 26),
+	FogColor = Color3.fromRGB(9, 9, 11),
+	FogStart = 18,
+	FogEnd = 115,
+	Saturation = -1,
+	Contrast = 0.25,
+	Brightness = 0,
+	Tint = Color3.fromRGB(255, 255, 255),
+	Bloom = 0.6,
+	Exposure = 0,
+	LampColor = Color3.fromRGB(230, 222, 205),
+	Reverb = "Plain",
+} :: Nights.Lighting
+
+export type Hooks = {
+	highest: (player: Player) -> number, -- highest night this player may choose
+	launch: (players: { Player }, night: number) -> (), -- send them through
+	isOpen: () -> boolean, -- false while a night is being played in this server
+}
+
+export type Pad = {
+	index: number,
+	center: Vector3,
+	state: string, -- "idle" | "choosing" | "waiting" | "gone"
+	leader: Player?,
+	night: number,
+	capacity: number,
+	order: { Player }, -- who's standing in it, in the order they stepped in
+	declined: { [Player]: boolean }, -- closed the choice: not asked again until they step out
+	deadline: number,
+	count: TextLabel,
+	timer: TextLabel,
+}
+
+export type Lobby = {
+	model: Model,
+	pads: { Pad },
+	spawnCFrame: () -> CFrame,
+	choose: (player: Player, index: number, night: number, players: number) -> (),
+	cancel: (player: Player, index: number) -> (),
+	destroy: () -> (),
+}
+
+local PALE = Color3.fromRGB(205, 200, 188)
+local STONE = Color3.fromRGB(44, 44, 46)
+
+local function part(parent: Instance, name: string, size: Vector3, cf: CFrame, material: Enum.Material, color: Color3, shape: Enum.PartType?): Part
+	local p = Instance.new("Part")
+	p.Name = name
+	p.Anchored = true
+	p.Size = size
+	p.CFrame = cf
+	p.Material = material
+	p.Color = color
+	if shape then
+		p.Shape = shape
+	end
+	p.TopSurface = Enum.SurfaceType.Smooth
+	p.BottomSurface = Enum.SurfaceType.Smooth
+	p.Parent = parent
+	return p
+end
+
+local function deco(p: Part): Part
+	p.CanCollide = false
+	p.CanQuery = false
+	p.CanTouch = false
+	return p
+end
+
+local function lamp(parent: Instance, at: Vector3, brightness: number, range: number): Part
+	local bulb = deco(part(parent, "Bulb", Vector3.new(0.6, 0.6, 0.6), CFrame.new(at), Enum.Material.Neon, Lobby.LIGHTING.LampColor, Enum.PartType.Ball))
+	deco(part(parent, "Cord", Vector3.new(0.06, 6, 0.06), CFrame.new(at + Vector3.new(0, 3.3, 0)), Enum.Material.SmoothPlastic, Color3.fromRGB(15, 15, 15)))
+	local light = Instance.new("PointLight")
+	light.Brightness = brightness
+	light.Range = range
+	light.Color = Lobby.LIGHTING.LampColor
+	light.Shadows = true
+	light.Parent = bulb
+	bulb:SetAttribute("BaseBrightness", brightness)
+	CollectionService:AddTag(bulb, "FlickerLight")
+	return bulb
+end
+
+-- A door standing on its own, slightly open, light coming from the other side.
+local function door(parent: Instance, at: CFrame): (TextLabel, TextLabel)
+	local wood = Color3.fromRGB(38, 32, 28)
+	local W, H = 6, 11
+	part(parent, "DoorPost", Vector3.new(0.8, H, 0.9), at * CFrame.new(-W / 2 - 0.4, H / 2, 0), Enum.Material.Wood, wood)
+	part(parent, "DoorPost", Vector3.new(0.8, H, 0.9), at * CFrame.new(W / 2 + 0.4, H / 2, 0), Enum.Material.Wood, wood)
+	part(parent, "Lintel", Vector3.new(W + 1.6, 0.8, 0.9), at * CFrame.new(0, H + 0.4, 0), Enum.Material.Wood, wood)
+	-- the door itself, hinged on the left and open a crack
+	local hinge = at * CFrame.new(-W / 2, 0, 0) * CFrame.Angles(0, math.rad(-22), 0)
+	part(parent, "Door", Vector3.new(W, H - 0.1, 0.35), hinge * CFrame.new(W / 2, H / 2, 0), Enum.Material.Wood, Color3.fromRGB(30, 26, 23))
+	deco(part(parent, "Knob", Vector3.new(0.35, 0.35, 0.35), hinge * CFrame.new(W - 0.6, H * 0.45, -0.3), Enum.Material.Metal, Color3.fromRGB(110, 104, 96), Enum.PartType.Ball))
+	-- what leaks out of the gap
+	local gap = deco(part(parent, "Gap", Vector3.new(0.25, H - 0.4, 0.2), at * CFrame.new(W / 2 - 0.3, H / 2, 0.2), Enum.Material.Neon, Color3.fromRGB(235, 228, 210)))
+	gap.Transparency = 0.15
+	local glow = Instance.new("SpotLight")
+	glow.Face = Enum.NormalId.Front
+	glow.Angle = 70
+	glow.Range = 22
+	glow.Brightness = 1.6
+	glow.Color = Color3.fromRGB(235, 228, 210)
+	glow.Parent = gap
+	-- the sign above it: how many are going, and how long until they do
+	local plate = part(parent, "Sign", Vector3.new(4.4, 2.4, 0.2), at * CFrame.new(0, H + 2.2, -0.1), Enum.Material.SmoothPlastic, Color3.fromRGB(10, 10, 10))
+	local gui = Instance.new("SurfaceGui")
+	gui.Face = Enum.NormalId.Front
+	gui.LightInfluence = 0
+	gui.PixelsPerStud = 50
+	gui.Parent = plate
+	local count = Instance.new("TextLabel")
+	count.Name = "Count"
+	count.BackgroundTransparency = 1
+	count.Size = UDim2.fromScale(1, 0.35)
+	count.Font = Enum.Font.Garamond
+	count.TextScaled = true
+	count.TextColor3 = PALE
+	count.TextTransparency = 0.25
+	count.Text = ""
+	count.Parent = gui
+	local timer = Instance.new("TextLabel")
+	timer.Name = "Timer"
+	timer.BackgroundTransparency = 1
+	timer.Position = UDim2.fromScale(0, 0.35)
+	timer.Size = UDim2.fromScale(1, 0.65)
+	timer.Font = Enum.Font.Garamond
+	timer.TextScaled = true
+	timer.TextColor3 = PALE
+	timer.Text = ""
+	timer.Parent = gui
+	return count, timer
+end
+
+-- The square in front of a door, marked out with faded tape.
+local function square(parent: Instance, center: Vector3, facing: CFrame)
+	local S = Lobby.PAD_SIZE
+	local tape = Color3.fromRGB(150, 146, 136)
+	local frame = CFrame.new(center) * facing.Rotation
+	for _, e in { { 0, S / 2, S, 0.3 }, { 0, -S / 2, S, 0.3 }, { S / 2, 0, 0.3, S }, { -S / 2, 0, 0.3, S } } do
+		local strip = deco(part(parent, "Tape", Vector3.new(e[3], 0.05, e[4]), frame * CFrame.new(e[1], 0.03, e[2]), Enum.Material.SmoothPlastic, tape))
+		strip.Transparency = 0.35
+	end
+end
+
+local function deadTree(parent: Instance, at: Vector3, random: Random)
+	local bark = Color3.fromRGB(28, 26, 25)
+	local trunkH = 16
+	part(parent, "Trunk", Vector3.new(trunkH, 1.6, 1.6), CFrame.new(at + Vector3.new(0, trunkH / 2, 0)) * CFrame.Angles(0, 0, math.rad(90)), Enum.Material.Wood, bark, Enum.PartType.Cylinder)
+	for i = 1, 7 do
+		local h = 6 + i * 1.4
+		local len = 3 + random:NextNumber() * 5
+		local yaw = random:NextNumber(0, math.pi * 2)
+		local tilt = math.rad(random:NextNumber(25, 65))
+		local base = CFrame.new(at + Vector3.new(0, h, 0)) * CFrame.Angles(0, yaw, 0) * CFrame.Angles(0, 0, -tilt)
+		deco(part(parent, "Branch", Vector3.new(0.35 + 0.05 * (8 - i), len, 0.35 + 0.05 * (8 - i)), base * CFrame.new(0, len / 2, 0), Enum.Material.Wood, bark))
+	end
+end
+
+function Lobby.new(hooks: Hooks): Lobby
+	local O = Lobby.ORIGIN
+	local random = Random.new()
+	local model = Instance.new("Model")
+	model.Name = "Lobby"
+
+	-- the stone circle, cracked, and nothing beyond it
+	part(model, "Ground", Vector3.new(2, Lobby.RADIUS * 2 + 8, Lobby.RADIUS * 2 + 8), CFrame.new(O + Vector3.new(0, -1, 0)) * CFrame.Angles(0, 0, math.rad(90)), Enum.Material.Slate, STONE, Enum.PartType.Cylinder)
+	for _ = 1, 70 do
+		local a, r = random:NextNumber(0, math.pi * 2), random:NextNumber(0, Lobby.RADIUS)
+		local s = random:NextNumber(2, 7)
+		local tile = deco(part(model, "Flagstone", Vector3.new(s, 0.08, s * random:NextNumber(0.6, 1.4)), CFrame.new(O + Vector3.new(math.cos(a) * r, 0.02, math.sin(a) * r)) * CFrame.Angles(0, random:NextNumber(0, 3), 0), Enum.Material.Slate, STONE:Lerp(Color3.new(0, 0, 0), random:NextNumber(0.1, 0.5))))
+		tile.CastShadow = false
+	end
+	-- an invisible edge so nobody walks off into the dark
+	for i = 0, 23 do
+		local a = i / 24 * math.pi * 2
+		local wall = part(model, "Edge", Vector3.new(19, 30, 2), CFrame.new(O + Vector3.new(math.cos(a) * (Lobby.RADIUS + 3), 15, math.sin(a) * (Lobby.RADIUS + 3))) * CFrame.Angles(0, -a + math.pi / 2, 0), Enum.Material.SmoothPlastic, STONE)
+		wall.Transparency = 1
+	end
+	deadTree(model, O + Vector3.new(9, 0, -6), random)
+
+	-- the four doors, each with its square and a bare bulb over it
+	local pads: { Pad } = {}
+	for i = 1, 4 do
+		local a = (i - 0.5) / 4 * math.pi * 2
+		local doorAt = O + Vector3.new(math.cos(a) * 44, 0, math.sin(a) * 44)
+		local facing = CFrame.lookAt(doorAt, Vector3.new(O.X, 0, O.Z))
+		local count, timer = door(model, facing)
+		local center = doorAt + facing.LookVector * (Lobby.PAD_SIZE / 2 + 1.5)
+		square(model, center, facing)
+		-- an invisible marker of the square, so it's easy to find (and test)
+		local marker = deco(part(model, "Pad" .. i, Vector3.new(Lobby.PAD_SIZE, 0.2, Lobby.PAD_SIZE), CFrame.new(center) * facing.Rotation, Enum.Material.SmoothPlastic, STONE))
+		marker.Transparency = 1
+		lamp(model, center + Vector3.new(0, 9, 0), 0.9, 18)
+		table.insert(pads, {
+			index = i,
+			center = center,
+			state = "idle",
+			leader = nil,
+			night = 1,
+			capacity = 1,
+			order = {},
+			declined = {},
+			deadline = 0,
+			count = count,
+			timer = timer,
+		})
+	end
+
+	-- the one watching from the fog
+	local watcher = Monsters.build("Hollow", { preview = true })
+	watcher.model.Name = "Watcher"
+	local function moveWatcher()
+		local a = random:NextNumber(0, math.pi * 2)
+		local at = O + Vector3.new(math.cos(a) * 84, watcher.rootHeight, math.sin(a) * 84)
+		watcher.model:PivotTo(CFrame.lookAt(at, Vector3.new(O.X, at.Y, O.Z)))
+		Monsters.solve(watcher)
+	end
+	moveWatcher()
+	watcher.model.Parent = model
+	model.Parent = workspace
+
+	local function inLobby(player: Player): Vector3?
+		if player:GetAttribute("Where") ~= "lobby" then
+			return nil
+		end
+		local character = player.Character
+		local root = if character then character:FindFirstChild("HumanoidRootPart") :: BasePart? else nil
+		return if root then root.Position else nil
+	end
+
+	local function inside(pad: Pad, player: Player): boolean
+		local pos = inLobby(player)
+		if not pos then
+			return false
+		end
+		local d = pos - pad.center
+		local half = Lobby.PAD_SIZE / 2
+		return math.abs(d.X) <= half and math.abs(d.Z) <= half and d.Y < 12
+	end
+
+	local function reset(pad: Pad)
+		pad.state = "idle"
+		pad.leader = nil
+		pad.capacity = 1
+		pad.deadline = 0
+	end
+
+	local function members(pad: Pad): { Player }
+		local out = {}
+		for _, p in pad.order do
+			if #out < pad.capacity then
+				table.insert(out, p)
+			end
+		end
+		return out
+	end
+
+	local function go(pad: Pad, group: { Player })
+		pad.state = "gone"
+		for _, p in group do
+			Remotes.Lobby:FireClient(p, "launch", pad.night)
+		end
+		hooks.launch(group, pad.night)
+		task.delay(2, function()
+			if pad.state == "gone" then
+				reset(pad)
+			end
+		end)
+	end
+
+	local function sign(pad: Pad)
+		if pad.state == "waiting" then
+			pad.count.Text = string.format("%d / %d", #members(pad), pad.capacity)
+			pad.timer.Text = tostring(math.max(1, math.ceil(pad.deadline - os.clock())))
+		elseif pad.state == "choosing" then
+			pad.count.Text = ""
+			pad.timer.Text = "· · ·"
+		else
+			pad.count.Text = ""
+			pad.timer.Text = ""
+		end
+	end
+
+	local function update()
+		local open = hooks.isOpen()
+		for _, pad in pads do
+			-- who's standing in it now, keeping the order they came in
+			local still = {}
+			for _, p in pad.order do
+				if inside(pad, p) then
+					table.insert(still, p)
+				end
+			end
+			for _, p in Players:GetPlayers() do
+				if inside(pad, p) and not table.find(still, p) then
+					table.insert(still, p)
+				end
+			end
+			pad.order = still
+			for p in pad.declined do
+				if not table.find(still, p) then
+					pad.declined[p] = nil
+				end
+			end
+
+			if not open then
+				if pad.state == "choosing" and pad.leader then
+					Remotes.Lobby:FireClient(pad.leader, "close", pad.index)
+				end
+				if pad.state ~= "gone" then
+					reset(pad)
+				end
+			elseif pad.state == "idle" then
+				for _, p in still do
+					if not pad.declined[p] then
+						pad.state = "choosing"
+						pad.leader = p
+						Remotes.Lobby:FireClient(p, "choose", pad.index, math.min(hooks.highest(p), Nights.count))
+						break
+					end
+				end
+			elseif pad.state == "choosing" then
+				local leader = pad.leader
+				if not leader or not table.find(still, leader) then
+					if leader then
+						Remotes.Lobby:FireClient(leader, "close", pad.index)
+					end
+					reset(pad)
+				end
+			elseif pad.state == "waiting" then
+				if #still == 0 then
+					reset(pad)
+				elseif os.clock() >= pad.deadline then
+					go(pad, members(pad))
+				end
+			end
+			sign(pad)
+		end
+	end
+
+	local connections: { RBXScriptConnection } = {}
+	local accum = 0
+	table.insert(connections, RunService.Heartbeat:Connect(function(dt: number)
+		accum += dt
+		if accum >= 0.2 then
+			accum = 0
+			update()
+		end
+	end))
+	local alive = true
+	task.spawn(function()
+		while alive do
+			task.wait(random:NextNumber(45, 90))
+			if alive then
+				moveWatcher()
+			end
+		end
+	end)
+
+	local lobby: Lobby
+	lobby = {
+		model = model,
+		pads = pads,
+		spawnCFrame = function(): CFrame
+			local a = random:NextNumber(0, math.pi * 2)
+			local at = O + Vector3.new(math.cos(a) * 6, 3.5, math.sin(a) * 6)
+			return CFrame.lookAt(at, at + Vector3.new(math.cos(a), 0, math.sin(a)))
+		end,
+		-- the leader picked a night and how many of them there'll be
+		choose = function(player: Player, index: number, night: number, count: number)
+			local pad = pads[index]
+			if not pad or pad.state ~= "choosing" or pad.leader ~= player then
+				return
+			end
+			pad.night = math.clamp(math.floor(night), 1, math.min(hooks.highest(player), Nights.count))
+			pad.capacity = math.clamp(math.floor(count), 1, Lobby.MAX_PLAYERS)
+			if pad.capacity == 1 then
+				go(pad, { player })
+			else
+				pad.state = "waiting"
+				pad.deadline = os.clock() + Lobby.COUNTDOWN
+				sign(pad)
+			end
+		end,
+		cancel = function(player: Player, index: number)
+			local pad = pads[index]
+			if pad and pad.state == "choosing" and pad.leader == player then
+				pad.declined[player] = true
+				reset(pad)
+			end
+		end,
+		destroy = function()
+			alive = false
+			for _, c in connections do
+				c:Disconnect()
+			end
+			model:Destroy()
+		end,
+	}
+
+	table.insert(connections, Remotes.Lobby.OnServerEvent:Connect(function(player: Player, action: unknown, index: unknown, night: unknown, count: unknown)
+		if typeof(index) ~= "number" then
+			return
+		end
+		if action == "choose" and typeof(night) == "number" and typeof(count) == "number" then
+			lobby.choose(player, index, night, count)
+		elseif action == "cancel" then
+			lobby.cancel(player, index)
+		end
+	end))
+
+	return lobby
+end
+
+return Lobby
 ]]></string>
         </Properties>
       </Item>
@@ -6243,17 +6689,24 @@ return Progress
         <Properties>
           <string name="Name">RoundManager</string>
           <string name="Source"><![CDATA[--!strict
--- The game loop:
---   Lobby         everyone is on the main menu, picking a night
---   Intermission  someone pressed PLAY; short countdown (others can join / vote)
---   Playing       the chosen night: build its map, monster and objective
---   Results       who made it; beating a night unlocks the next one
--- ...then everyone goes back to the menu.
+-- The game, server side. It's one place that runs as two kinds of server:
+--
+--   a lobby server   (the public ones you join): the lobby. When a group goes through
+--                    one of its doors they're teleported to a reserved server of this
+--                    same place. In Studio, where teleports don't work, the night is
+--                    played right here instead, and the doors stay shut until it's over.
+--   a night server   (reserved, one per group): plays the night the group chose
+--                    (Playing -> Results), then sends everyone back to a lobby.
+--
+-- Each player's "Where" attribute tells their client where they are: "lobby",
+-- "night", or "between" (no body: a black screen, a teleport, the results).
 
 local Lighting = game:GetService("Lighting")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 local SoundService = game:GetService("SoundService")
+local TeleportService = game:GetService("TeleportService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Curses = require(ReplicatedStorage.Shared.Curses)
@@ -6263,6 +6716,7 @@ local Nights = require(ReplicatedStorage.Shared.Nights)
 local Chaos = require(script.Parent.Chaos)
 local Exit = require(script.Parent.Exit)
 local Interactables = require(script.Parent.Interactables)
+local Lobby = require(script.Parent.Lobby)
 local MonsterAI = require(script.Parent.MonsterAI)
 local Objectives = require(script.Parent.Objectives)
 local Progress = require(script.Parent.Progress)
@@ -6291,10 +6745,14 @@ type Round = {
 
 local RoundManager = {}
 
-local ready: { [Player]: number } = {} -- player -> the night they picked
 local status: { [Player]: string } = {} -- "alive" | "caught" | "escaped"
 local looks: { [Player]: Vector3 } = {}
 local round: Round? = nil
+local lobby: Lobby.Lobby? = nil
+
+local function setWhere(player: Player, where: string)
+	player:SetAttribute("Where", where)
+end
 
 local function isAlive(player: Player): boolean
 	return status[player] == "alive" and player.Parent ~= nil
@@ -6336,28 +6794,17 @@ local function removeCharacter(player: Player)
 	end)
 end
 
-local function countReady(): number
-	local n = 0
-	for _ in ready do
-		n += 1
+local function loadCharacter(player: Player): boolean
+	local ok = pcall(function()
+		player:LoadCharacterAsync()
+	end)
+	if not ok then
+		-- older engines only have the (now deprecated) synchronous version
+		ok = pcall(function()
+			(player :: any):LoadCharacter()
+		end)
 	end
-	return n
-end
-
--- Most-voted night among the ready players (ties go to the earliest night).
-local function chosenNight(): number
-	local votes: { [number]: number } = {}
-	for _, n in ready do
-		votes[n] = (votes[n] or 0) + 1
-	end
-	local best, bestVotes = 1, 0
-	for n = 1, Nights.count do
-		local v = votes[n] or 0
-		if v > bestVotes then
-			best, bestVotes = n, v
-		end
-	end
-	return best
+	return ok and player.Character ~= nil
 end
 
 local function applyLighting(l: Nights.Lighting, curse: Curses.Curse?)
@@ -6399,15 +6846,8 @@ local function spawnPlayer(player: Player)
 	player:SetAttribute("Hiding", false)
 	player:SetAttribute("Flashlight", false)
 	player:SetAttribute("Bottles", 0)
-	local ok = pcall(function()
-		player:LoadCharacterAsync()
-	end)
-	if not ok then
-		-- older engines only have the (now deprecated) synchronous version
-		ok = pcall(function()
-			(player :: any):LoadCharacter()
-		end)
-	end
+	setWhere(player, "night")
+	local ok = loadCharacter(player)
 	local character = player.Character
 	if not ok or not character or round ~= r then
 		return
@@ -6440,6 +6880,7 @@ function RoundManager.caught(player: Player, monster: Model?)
 	notifyOthers(player, player.DisplayName .. " was taken.", "danger")
 	task.delay(if monster then 2.7 else 0.5, function()
 		if status[player] == "caught" then
+			setWhere(player, "between")
 			removeCharacter(player)
 		end
 	end)
@@ -6462,12 +6903,13 @@ function RoundManager.escaped(player: Player, kind: string)
 	end
 	task.delay(4, function()
 		if status[player] == "escaped" then
+			setWhere(player, "between")
 			removeCharacter(player)
 		end
 	end)
 end
 
-local function startRound(night: Nights.Night)
+local function startRound(night: Nights.Night, players: { Player })
 	local seed = Random.new():NextInteger(1, 2 ^ 30)
 	local layout = Maze.generate(seed, night.maze)
 	local world = WorldBuilder.build(layout, night)
@@ -6586,16 +7028,17 @@ local function startRound(night: Nights.Night)
 	table.clear(status)
 	round = r
 	GameState:SetAttribute("Phase", "Playing")
-	for player in ready do
+	for _, player in players do
 		task.spawn(spawnPlayer, player)
 	end
 	monster:start()
 end
 
-local function endRound()
+-- Ends the night; returns who played it.
+local function endRound(): { [Player]: boolean }
 	local r = round
 	if not r then
-		return
+		return {}
 	end
 	local survivors = {}
 	for player, s in status do
@@ -6612,10 +7055,8 @@ local function endRound()
 			end
 		end
 	end
-	local result = if won then "Escaped" else "Caught"
-	GameState:SetAttribute("Result", result)
+	GameState:SetAttribute("Result", if won then "Escaped" else "Caught")
 	GameState:SetAttribute("Phase", "Results")
-	Remotes.RoundResult:FireAllClients(result, survivors, math.floor(os.clock() - r.startedAt), r.night.index)
 
 	task.wait(Config.Round.ResultsTime)
 
@@ -6630,43 +7071,194 @@ local function endRound()
 	r.world.model:Destroy()
 	round = nil
 	table.clear(status)
-	table.clear(ready) -- everyone goes back to the menu
-	GameState:SetAttribute("ReadyCount", 0)
-	for _, player in Players:GetPlayers() do
-		removeCharacter(player)
-		player:SetAttribute("Hiding", false)
-		player:SetAttribute("Bottles", 0)
+	for player in r.participants do
+		if player.Parent then
+			removeCharacter(player)
+			setWhere(player, "between")
+			player:SetAttribute("Hiding", false)
+			player:SetAttribute("Bottles", 0)
+		end
 	end
 	GameState:SetAttribute("Curse", "")
+	return r.participants
+end
+
+-- Lobby -----------------------------------------------------------------------------
+
+local function spawnInLobby(player: Player)
+	local l = lobby
+	if not l or player.Parent == nil or status[player] == "alive" then
+		return
+	end
+	setWhere(player, "lobby")
+	player:SetAttribute("Flashlight", false)
+	if not loadCharacter(player) then
+		return
+	end
+	local character = player.Character :: Model
+	character:PivotTo(l.spawnCFrame())
+	local humanoid = character:FindFirstChildOfClass("Humanoid")
+	if humanoid then
+		humanoid.Died:Connect(function()
+			task.wait(3)
+			if player:GetAttribute("Where") == "lobby" and player.Character == character then
+				spawnInLobby(player)
+			end
+		end)
+	end
+end
+
+local function teleportsWork(): boolean
+	return not RunService:IsStudio() and game.PlaceId ~= 0
+end
+
+-- Send a group to a reserved server of this place to play `night`.
+local function sendToNight(group: { Player }, night: number): boolean
+	local ok, err = pcall(function()
+		local code = TeleportService:ReserveServer(game.PlaceId)
+		local options = Instance.new("TeleportOptions")
+		options.ReservedServerAccessCode = code
+		options:SetTeleportData({ night = night, count = #group })
+		TeleportService:TeleportAsync(game.PlaceId, group, options)
+	end)
+	if not ok then
+		warn("ACHROMA: couldn't reach a night server (" .. tostring(err) .. "); playing it here")
+	end
+	return ok
+end
+
+-- Studio (or a failed teleport): play the night in this server, then back to the lobby.
+local function playHere(group: { Player }, night: number)
+	if round then
+		for _, p in group do
+			spawnInLobby(p)
+		end
+		return
+	end
+	startRound(Nights.get(night), group)
+	repeat
+		task.wait(0.5)
+	until #alivePlayers() == 0
+	local played = endRound()
+	applyLighting(Lobby.LIGHTING)
+	GameState:SetAttribute("Phase", "Lobby")
+	GameState:SetAttribute("Night", 1)
+	for player in played do
+		task.spawn(spawnInLobby, player)
+	end
+end
+
+local function runLobby()
+	GameState:SetAttribute("Phase", "Lobby")
+	applyLighting(Lobby.LIGHTING)
+	lobby = Lobby.new({
+		highest = Progress.highest,
+		isOpen = function(): boolean
+			return round == nil
+		end,
+		launch = function(group: { Player }, night: number)
+			for _, p in group do
+				setWhere(p, "between")
+			end
+			if not (teleportsWork() and sendToNight(group, night)) then
+				task.spawn(playHere, group, night)
+			end
+		end,
+	})
+	-- a teleport that fails after it started: back to the lobby
+	TeleportService.TeleportInitFailed:Connect(function(player: Player)
+		if player:GetAttribute("Where") == "between" and status[player] == nil then
+			spawnInLobby(player)
+		end
+	end)
+	local function join(player: Player)
+		Progress.load(player)
+		spawnInLobby(player)
+	end
+	Players.PlayerAdded:Connect(join)
+	for _, player in Players:GetPlayers() do
+		task.spawn(join, player)
+	end
+end
+
+-- Night server --------------------------------------------------------------------------
+
+-- Everyone back to a (public) lobby server.
+local function sendHome(players: { Player })
+	for attempt = 1, 3 do
+		local ok = pcall(function()
+			TeleportService:TeleportAsync(game.PlaceId, players)
+		end)
+		if ok then
+			return
+		end
+		task.wait(2 * attempt)
+	end
+end
+
+local function runNightServer()
+	GameState:SetAttribute("Phase", "Waiting")
+	local planned: number? = nil
+	local expected = 1
+	local firstArrival: number? = nil
+	local function join(player: Player)
+		setWhere(player, "between")
+		local ok, data = pcall(function()
+			return player:GetJoinData().TeleportData
+		end)
+		if ok and typeof(data) == "table" then
+			local n = tonumber((data :: any).night)
+			if n and not planned then
+				planned = n
+				-- so the black screen can already say which night it is
+				GameState:SetAttribute("Night", math.clamp(math.floor(n), 1, Nights.count))
+			end
+			expected = math.max(expected, tonumber((data :: any).count) or 1)
+		end
+		firstArrival = firstArrival or os.clock()
+		Progress.load(player)
+		if round then
+			spawnPlayer(player) -- late, but the night's still going
+		end
+	end
+	Players.PlayerAdded:Connect(join)
+	for _, player in Players:GetPlayers() do
+		task.spawn(join, player)
+	end
+
+	-- wait for the whole group (or 20 seconds after the first of them)
+	repeat
+		task.wait(0.25)
+	until firstArrival and (#Players:GetPlayers() >= expected or os.clock() - (firstArrival :: number) > 20)
+	task.wait(0.5)
+	-- nobody gets a night they couldn't have chosen
+	local allowed = 1
+	for _, player in Players:GetPlayers() do
+		allowed = math.max(allowed, math.min(Progress.highest(player), Nights.count))
+	end
+	local night = math.clamp(math.floor(planned or 1), 1, allowed)
+	GameState:SetAttribute("Night", night)
+	startRound(Nights.get(night), Players:GetPlayers())
+	repeat
+		task.wait(0.5)
+	until #alivePlayers() == 0
+	endRound()
+	sendHome(Players:GetPlayers())
+	-- anyone who still turns up here goes home too
+	Players.PlayerAdded:Connect(function(player: Player)
+		sendHome({ player })
+	end)
 end
 
 function RoundManager.run()
 	Players.CharacterAutoLoads = false
 	WorldBuilder.setupCollisionGroups()
-	applyLighting(Nights.get(1).lighting)
 
 	GameState:SetAttribute("Phase", "Lobby")
-	GameState:SetAttribute("Countdown", 0)
 	GameState:SetAttribute("Night", 1)
 	GameState:SetAttribute("NightName", Nights.get(1).name)
-	GameState:SetAttribute("ReadyCount", 0)
 	GameState:SetAttribute("Done", 0)
 	GameState:SetAttribute("Goal", 0)
-
-	Players.PlayerAdded:Connect(Progress.load)
-	for _, player in Players:GetPlayers() do
-		task.spawn(Progress.load, player)
-	end
-
-	Remotes.Ready.OnServerEvent:Connect(function(player: Player, night: unknown)
-		local wanted = if typeof(night) == "number" then math.floor(night) else 1
-		local allowed = math.min(Progress.highest(player), Nights.count)
-		ready[player] = math.clamp(wanted, 1, allowed)
-		GameState:SetAttribute("ReadyCount", countReady())
-		if round and GameState:GetAttribute("Phase") == "Playing" then
-			task.spawn(spawnPlayer, player)
-		end
-	end)
 
 	-- where each player's camera is looking (the Statue can't move while watched)
 	Remotes.Look.OnServerEvent:Connect(function(player: Player, direction: unknown)
@@ -6705,9 +7297,7 @@ function RoundManager.run()
 	end)
 
 	Players.PlayerRemoving:Connect(function(player: Player)
-		ready[player] = nil
 		looks[player] = nil
-		GameState:SetAttribute("ReadyCount", countReady())
 		local r = round
 		if r then
 			r.interactables:release(player)
@@ -6716,31 +7306,11 @@ function RoundManager.run()
 		status[player] = nil
 	end)
 
-	local first = true
-	while true do
-		GameState:SetAttribute("Phase", "Lobby")
-		applyLighting(Nights.get(1).lighting)
-		while next(ready) == nil do
-			task.wait(0.25)
-		end
-
-		GameState:SetAttribute("Phase", "Intermission")
-		for i = if first then Config.Round.FirstIntermission else Config.Round.Intermission, 1, -1 do
-			local n = chosenNight()
-			GameState:SetAttribute("Night", n)
-			GameState:SetAttribute("NightName", Nights.get(n).name)
-			GameState:SetAttribute("Countdown", i)
-			task.wait(1)
-		end
-		first = false
-
-		if next(ready) ~= nil then
-			startRound(Nights.get(chosenNight()))
-			repeat
-				task.wait(0.5)
-			until #alivePlayers() == 0
-			endRound()
-		end
+	-- a reserved server is a night server; anything else is a lobby
+	if game.PrivateServerId ~= "" and game.PrivateServerOwnerId == 0 then
+		runNightServer()
+	else
+		runLobby()
 	end
 end
 
@@ -8658,7 +9228,8 @@ local function update(dt: number)
 		end
 	end
 	if ambience then
-		local target = if playing then 0.8 else 0
+		-- low wind in the lobby, the full thing out there
+		local target = if playing then 0.8 elseif ClientState.roundStatus == "lobby" then 0.3 else 0
 		ambience.Volume += (target - ambience.Volume) * math.min(1, dt * 0.8)
 	end
 	if night.id ~= chaseFor then
@@ -8845,8 +9416,8 @@ return Atmosphere
 -- without requiring each other.
 
 local ClientState = {
-	started = false, -- picked a night on the menu
-	roundStatus = "none", -- "none" | "alive" | "caught" | "escaped"
+	choosing = false, -- the choice screen at a lobby door is up
+	roundStatus = "none", -- "none" | "lobby" | "alive" | "caught" | "escaped"
 	fear = 0, -- 0..1, how close / how angry the monster is
 	monsterDistance = math.huge,
 	chased = false, -- the monster is chasing *you*
@@ -9456,6 +10027,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
 
 local Audio = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Audio"))
 
@@ -9479,6 +10051,7 @@ local staminaFill: Frame
 local batteryFrame: Frame
 local batterySegments: { Frame } = {}
 local bigTitle: TextLabel
+local controlsLabel: TextLabel
 local fadeFrame: Frame
 local flashFrame: Frame
 local whiteFrame: Frame
@@ -9607,6 +10180,7 @@ function Hud.init()
 	rageFrame = new("Frame", { Name = "Rage", Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.fromRGB(150, 0, 0), BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = 2 }, gui)
 
 	bigTitle = new("TextLabel", { Name = "BigTitle", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.48), Size = UDim2.new(0.9, 0, 0, 60), BackgroundTransparency = 1, Font = Hud.TITLE_FONT, TextSize = 40, TextColor3 = TEXT, Text = "", TextTransparency = 1, ZIndex = 11 }, gui)
+	controlsLabel = new("TextLabel", { Name = "Controls", AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.fromScale(0.5, 0.74), Size = UDim2.new(0.9, 0, 0, 56), BackgroundTransparency = 1, Font = Hud.TITLE_FONT, TextSize = 17, LineHeight = 1.5, TextColor3 = TEXT, Text = "", TextTransparency = 1, ZIndex = 11 }, gui)
 
 	fadeFrame = new("Frame", { Name = "Fade", Size = UDim2.fromScale(1, 1), BackgroundColor3 = BLACK, BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = 9 }, gui)
 	whiteFrame = new("Frame", { Name = "White", Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = 10 }, gui)
@@ -9767,15 +10341,33 @@ function Hud.setHiding(on: boolean)
 	hidingDark = on
 end
 
--- The night's title in the middle of the dark ("NIGHT 3", letter-spaced). It's already
--- there (the menu's black screen showed it while the night loaded); it fades out slowly.
+-- The controls, for the moment before a night: the only instructions the game gives.
+Hud.KEYBOARD_CONTROLS = "WASD  move       SHIFT  run       C  crouch       F  light\nE  use · hide       G  throw       SPACE  hold your breath"
+Hud.GAMEPAD_CONTROLS = "L3  run       B  crouch       Y  light\nX  use · hide       D-PAD UP  throw       R2  hold your breath"
+
+local function controlsText(): string
+	if UserInputService.KeyboardEnabled then
+		return Hud.KEYBOARD_CONTROLS
+	elseif UserInputService.GamepadEnabled then
+		return Hud.GAMEPAD_CONTROLS
+	end
+	return "" -- touch: the buttons on screen say what they do
+end
+
+-- The night's title in the middle of the dark ("NIGHT 3", letter-spaced), with the
+-- controls faint underneath. The title's already there (the black screen before showed
+-- it while the night loaded); both fade out slowly.
 function Hud.showTitle(title: string)
 	bigTitle.Text = Hud.spaced(title)
 	bigTitle.TextTransparency = 0.05
+	controlsLabel.Text = controlsText()
+	controlsLabel.TextTransparency = 1
+	TweenService:Create(controlsLabel, TweenInfo.new(1.2, Enum.EasingStyle.Sine), { TextTransparency = 0.45 }):Play()
 end
 
 function Hud.hideTitle()
 	TweenService:Create(bigTitle, TweenInfo.new(1.6, Enum.EasingStyle.Sine), { TextTransparency = 1 }):Play()
+	TweenService:Create(controlsLabel, TweenInfo.new(1.6, Enum.EasingStyle.Sine), { TextTransparency = 1 }):Play()
 end
 
 -- 0 = fully black, 1 = clear
@@ -10101,17 +10693,25 @@ local Audio = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Aud
 local GameState = ReplicatedStorage:WaitForChild("GameState")
 
 player.CharacterAdded:Connect(function(character: Model)
-	ClientState.roundStatus = "alive"
 	ClientState.jumpscaring = false
 	local camera = workspace.CurrentCamera
 	camera.CameraType = Enum.CameraType.Custom
 	local humanoid = character:WaitForChild("Humanoid") :: Humanoid
 	camera.CameraSubject = humanoid
-	Hud.setHudVisible(true)
 	Hud.whiteout(1, 0)
 	Hud.fade(0, 0)
 
-	-- black, the night's number, black again, and then you're just... there
+	if player:GetAttribute("Where") == "lobby" then
+		-- the lobby: no HUD, just a slow fade up from black into the fog
+		ClientState.roundStatus = "lobby"
+		Hud.setHudVisible(false)
+		Hud.fade(1, 2.5)
+		return
+	end
+
+	-- a night: black, its number and the controls, black again, and then you're just... there
+	ClientState.roundStatus = "alive"
+	Hud.setHudVisible(true)
 	local n = GameState:GetAttribute("Night")
 	Audio.play("NightIntro", nil, 0.8)
 	Hud.showTitle(string.format("NIGHT %d", if typeof(n) == "number" then n else 1))
@@ -10130,10 +10730,11 @@ player.CharacterRemoving:Connect(function()
 	Hud.setHudVisible(false)
 end)
 
--- The cursor only shows when there's something to click: the menu and the keypad.
--- Otherwise Roblox would leave its arrow in the middle of the screen in first person.
+-- The cursor only shows when there's something to click: the choice at a lobby door and
+-- the keypad. Otherwise Roblox would leave its arrow in the middle of the screen in first
+-- person.
 RunService.RenderStepped:Connect(function()
-	local wanted = not ClientState.started or ClientState.keypadOpen
+	local wanted = ClientState.choosing or ClientState.keypadOpen
 	if UserInputService.MouseIconEnabled ~= wanted then
 		UserInputService.MouseIconEnabled = wanted
 	end
@@ -10145,15 +10746,19 @@ end)
           <Properties>
             <string name="Name">Menu</string>
             <string name="Source"><![CDATA[--!strict
--- The menu: a black screen and five lines, NIGHT 1 to NIGHT 5. Nights you haven't
--- reached are barely there. The one you're on breathes. Click one to play it. A small
--- ring in the corner opens brightness and volume. Between nights: black, and the
--- night's number.
+-- Everything between you and the dark that isn't the HUD:
+--   * the choice at a door: step into an empty square in the lobby and the screen dims
+--     to NIGHT 1..5 (the ones you've reached) and 1 2 3 4 (how many of you). Pick a
+--     number and it's decided. A small ring in the corner opens brightness and volume.
+--   * black, with the night's number, while you're being sent through (that's also the
+--     teleport's loading screen) and black between a night and the lobby.
+-- The music box plays in the lobby and in the dark.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local SoundService = game:GetService("SoundService")
+local TeleportService = game:GetService("TeleportService")
 local TweenService = game:GetService("TweenService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
@@ -10173,27 +10778,23 @@ local Menu = {}
 local PALE = Color3.fromRGB(200, 200, 194)
 local BLACK = Color3.new(0, 0, 0)
 local FONT = Hud.TITLE_FONT
-
--- how visible each line is (TextTransparency)
-local LOCKED = 0.92
-local CLEARED = 0.55
-local CURRENT = 0.12
+local MAX_PLAYERS = 4
 
 local gui: ScreenGui
-local main: Frame
+local choice: TextButton -- the dimmed screen at a door (a button so it can be Modal)
+local nightEntries: { TextButton } = {}
+local countEntries: { TextButton } = {}
+local settings: Frame
 local overlay: Frame
 local overlayTitle: TextLabel
-local settings: Frame
-local ghost: TextLabel
-local entries: { TextButton } = {}
-local hovered: number? = nil
-local revealing: { [number]: number } = {} -- newly unlocked nights fading in: n -> start time
 local music: Sound? = nil
-local highestAtStart = 1
+local pad = 0 -- which door we're choosing at
+local highest = 1 -- highest night we may pick
+local picked = 1 -- the night that's selected
+local launching: number? = nil -- going through, to this night
 local brightness = 0
 local volume = 1
 local levelBars: { [string]: { Frame } } = {}
-local nextGhost = 0
 
 local function make<T>(className: string, props: { [string]: any }, parent: Instance?): T
 	local inst = Instance.new(className :: any)
@@ -10206,62 +10807,57 @@ local function make<T>(className: string, props: { [string]: any }, parent: Inst
 	return (inst :: any) :: T
 end
 
-local function highest(): number
-	local value = player:GetAttribute("HighestNight")
-	return if typeof(value) == "number" then value else 1
-end
-
-local function unlocked(n: number): boolean
-	return n <= highest()
-end
-
-local function cleared(n: number): boolean
-	return n < highest()
-end
-
-local function fullscreen(name: string, parent: Instance): Frame
-	return make("Frame", { Name = name, Size = UDim2.fromScale(1, 1), BackgroundColor3 = BLACK, BorderSizePixel = 0 }, parent)
+local function where(): string
+	local w = player:GetAttribute("Where")
+	return if typeof(w) == "string" then w else ""
 end
 
 -- Screen state ------------------------------------------------------------------
 
 local function refresh()
-	local phase = GameState:GetAttribute("Phase")
-	local hasCharacter = player.Character ~= nil
-
-	if not ClientState.started then
-		main.Visible = true
-		overlay.Visible = false
-	else
-		main.Visible = false
-		-- black whenever you're between nights (the endings draw their own screens)
-		local between = not ClientState.jumpscaring and not hasCharacter and not Spectate.isActive()
-		overlay.Visible = between
-		local n = GameState:GetAttribute("Night")
-		local title = if between and phase == "Intermission" then Hud.spaced(string.format("NIGHT %d", if typeof(n) == "number" then n else 1)) else ""
-		if title ~= overlayTitle.Text then
-			overlayTitle.Text = title
-			overlayTitle.TextTransparency = 1
-			TweenService:Create(overlayTitle, TweenInfo.new(2.2, Enum.EasingStyle.Sine), { TextTransparency = 0.05 }):Play()
-		end
+	local w = where()
+	-- black whenever you have no body (the endings draw their own screens), or you're
+	-- on your way through a door
+	local dark = launching ~= nil or (w == "between" and player.Character == nil and not ClientState.jumpscaring and not Spectate.isActive())
+	overlay.Visible = dark
+	-- the night's number: on the way through, and in a night server waiting for the others
+	local n = launching
+	local waitingNight = GameState:GetAttribute("Night")
+	if not n and GameState:GetAttribute("Phase") == "Waiting" and typeof(waitingNight) == "number" then
+		n = waitingNight
 	end
-
+	local title = if n then Hud.spaced(string.format("NIGHT %d", n)) else ""
+	if title ~= overlayTitle.Text then
+		overlayTitle.Text = title
+		overlayTitle.TextTransparency = 1
+		TweenService:Create(overlayTitle, TweenInfo.new(2.2, Enum.EasingStyle.Sine), { TextTransparency = 0.05 }):Play()
+	end
 	if music then
-		local wanted = if main.Visible or overlay.Visible then 0.35 else 0
+		local wanted = if dark or w == "lobby" then 0.3 else 0
 		TweenService:Create(music, TweenInfo.new(1.5), { Volume = wanted }):Play()
 	end
 end
 
-local function play(n: number)
-	if not unlocked(n) then
-		Audio.play("MenuHover", nil, 0.25, 0.6)
-		return
+local function closeChoice()
+	choice.Visible = false
+	settings.Visible = false
+	ClientState.choosing = false
+end
+
+local function selectNight(n: number)
+	picked = n
+	for i, entry in nightEntries do
+		entry.TextTransparency = if i > highest then 0.92 elseif i == picked then 0.05 else 0.6
 	end
-	Audio.play("MenuSelect", nil, 0.7, 0.85)
-	ClientState.started = true
-	highestAtStart = highest()
-	Remotes.Ready:FireServer(n)
-	refresh()
+end
+
+local function openChoice(index: number, upTo: number)
+	pad = index
+	highest = math.clamp(upTo, 1, Nights.count)
+	selectNight(highest)
+	choice.Visible = true
+	ClientState.choosing = true
+	Audio.play("MenuHover", nil, 0.4, 0.7)
 end
 
 -- Settings ----------------------------------------------------------------------
@@ -10306,47 +10902,54 @@ end
 function Menu.init()
 	gui = make("ScreenGui", { Name = "AchromaMenu", IgnoreGuiInset = true, ResetOnSpawn = false, DisplayOrder = 20, ZIndexBehavior = Enum.ZIndexBehavior.Sibling }, player:WaitForChild("PlayerGui"))
 
-	main = fullscreen("Main", gui)
-	-- keeps the mouse free while the menu is up
-	make("TextButton", { Name = "MouseCatcher", Modal = true, Text = "", BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ZIndex = 0 }, main)
-
-	local list: Frame = make("Frame", { Name = "Nights", BackgroundTransparency = 1, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(420, 6 * 56) }, main)
-	make("UIListLayout", { FillDirection = Enum.FillDirection.Vertical, HorizontalAlignment = Enum.HorizontalAlignment.Center, Padding = UDim.new(0, 14), SortOrder = Enum.SortOrder.LayoutOrder }, list)
+	-- the choice at a door: Modal frees the mouse while it's up
+	choice = make("TextButton", { Name = "Choice", Visible = false, Modal = true, AutoButtonColor = false, Text = "", Size = UDim2.fromScale(1, 1), BackgroundColor3 = BLACK, BackgroundTransparency = 0.3 }, gui)
+	local column: Frame = make("Frame", { Name = "Nights", BackgroundTransparency = 1, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.42), Size = UDim2.fromOffset(420, Nights.count * 54) }, choice)
+	make("UIListLayout", { FillDirection = Enum.FillDirection.Vertical, HorizontalAlignment = Enum.HorizontalAlignment.Center, Padding = UDim.new(0, 12), SortOrder = Enum.SortOrder.LayoutOrder }, column)
 	for _, night in Nights.list do
 		local n = night.index
-		local entry: TextButton = make("TextButton", {
-			Name = "Night" .. n,
-			LayoutOrder = n,
-			Text = Hud.spaced(string.format("NIGHT %d", n)),
-			Font = FONT,
-			TextSize = 30,
-			TextColor3 = PALE,
-			BackgroundTransparency = 1,
-			AutoButtonColor = false,
-			Size = UDim2.new(1, 0, 0, 42),
-		}, list)
+		local entry: TextButton = make("TextButton", { Name = "Night" .. n, LayoutOrder = n, Text = Hud.spaced(string.format("NIGHT %d", n)), Font = FONT, TextSize = 28, TextColor3 = PALE, BackgroundTransparency = 1, AutoButtonColor = false, Size = UDim2.new(1, 0, 0, 40) }, column)
 		entry.MouseEnter:Connect(function()
-			if unlocked(n) then
-				hovered = n
+			if n <= highest then
 				Audio.play("MenuHover", nil, 0.3, 0.9)
 			end
 		end)
-		entry.MouseLeave:Connect(function()
-			if hovered == n then
-				hovered = nil
+		entry.Activated:Connect(function()
+			if n <= highest then
+				selectNight(n)
+				Audio.play("MenuHover", nil, 0.5, 0.8)
 			end
 		end)
-		entry.Activated:Connect(function()
-			play(n)
-		end)
-		table.insert(entries, entry)
+		table.insert(nightEntries, entry)
 	end
-	-- sometimes, for a moment, there's one more
-	ghost = make("TextLabel", { Name = "Ghost", LayoutOrder = Nights.count + 1, Text = Hud.spaced(string.format("NIGHT %d", Nights.count + 1)), Font = FONT, TextSize = 30, TextColor3 = Color3.fromRGB(150, 40, 36), TextTransparency = 1, BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 42) }, list)
-	nextGhost = os.clock() + 40 + math.random() * 60
+	-- how many of you: picking one decides it
+	local row: Frame = make("Frame", { Name = "Players", BackgroundTransparency = 1, AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0.42, Nights.count * 27 + 40), Size = UDim2.fromOffset(320, 50) }, choice)
+	make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Center, Padding = UDim.new(0, 34), SortOrder = Enum.SortOrder.LayoutOrder }, row)
+	for n = 1, MAX_PLAYERS do
+		local b: TextButton = make("TextButton", { Name = "Players" .. n, LayoutOrder = n, Text = tostring(n), Font = FONT, TextSize = 34, TextColor3 = PALE, TextTransparency = 0.35, BackgroundTransparency = 1, AutoButtonColor = false, Size = UDim2.fromOffset(40, 50) }, row)
+		b.MouseEnter:Connect(function()
+			b.TextTransparency = 0
+			Audio.play("MenuHover", nil, 0.3, 1.1)
+		end)
+		b.MouseLeave:Connect(function()
+			b.TextTransparency = 0.35
+		end)
+		b.Activated:Connect(function()
+			Audio.play("MenuSelect", nil, 0.7, 0.85)
+			Remotes.Lobby:FireServer("choose", pad, picked, n)
+			closeChoice()
+		end)
+		table.insert(countEntries, b)
+	end
+	-- step back from the door: a small cross in the corner
+	local back: TextButton = make("TextButton", { Name = "Back", Text = "×", Font = FONT, TextSize = 30, TextColor3 = PALE, TextTransparency = 0.5, BackgroundTransparency = 1, Position = UDim2.fromOffset(24, 18), Size = UDim2.fromOffset(32, 32) }, choice)
+	back.Activated:Connect(function()
+		Remotes.Lobby:FireServer("cancel", pad)
+		closeChoice()
+	end)
 
-	-- settings: a small ring in the corner
-	local ring: TextButton = make("TextButton", { Name = "SettingsButton", Text = "", AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -28, 1, -28), Size = UDim2.fromOffset(16, 16), BackgroundTransparency = 1, AutoButtonColor = false }, main)
+	-- settings: a small ring in the corner of the choice screen
+	local ring: TextButton = make("TextButton", { Name = "SettingsButton", Text = "", AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -28, 1, -28), Size = UDim2.fromOffset(16, 16), BackgroundTransparency = 1, AutoButtonColor = false }, choice)
 	make("UICorner", { CornerRadius = UDim.new(0.5, 0) }, ring)
 	local ringStroke: UIStroke = make("UIStroke", { Color = PALE, Thickness = 1.2, Transparency = 0.6, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, ring)
 	ring.MouseEnter:Connect(function()
@@ -10355,7 +10958,6 @@ function Menu.init()
 	ring.MouseLeave:Connect(function()
 		ringStroke.Transparency = 0.6
 	end)
-
 	settings = make("Frame", { Name = "Settings", Visible = false, AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -56, 1, -28), Size = UDim2.fromOffset(290, 96), BackgroundColor3 = Color3.fromRGB(6, 6, 6), BorderSizePixel = 0, ZIndex = 10 }, gui)
 	make("UIStroke", { Color = PALE, Thickness = 1, Transparency = 0.8 }, settings)
 	settingRow(settings, 20, "brightness", function(dir: number)
@@ -10369,32 +10971,48 @@ function Menu.init()
 	end)
 	applySettings()
 
-	-- between nights: black, and the night's number
-	overlay = fullscreen("Overlay", gui)
-	overlay.Visible = false
+	-- the dark between places, with the night's number on the way in
+	overlay = make("Frame", { Name = "Overlay", Visible = false, Size = UDim2.fromScale(1, 1), BackgroundColor3 = BLACK, BorderSizePixel = 0 }, gui)
 	overlayTitle = make("TextLabel", { Name = "Title", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.48), Size = UDim2.new(0.9, 0, 0, 60), BackgroundTransparency = 1, Font = FONT, TextSize = 40, TextColor3 = PALE, Text = "" }, overlay)
 
-	music = Audio.track("MusicBox", nil, 0.35)
+	music = Audio.track("MusicBox", nil, 0.3)
 	if music then
 		music:Play()
 	end
 
-	player:GetAttributeChangedSignal("HighestNight"):Connect(refresh)
-	GameState:GetAttributeChangedSignal("Phase"):Connect(function()
-		local phase = GameState:GetAttribute("Phase")
-		if phase == "Lobby" and ClientState.started and player.Character == nil then
-			-- back to the menu. A night you just unlocked surfaces slowly out of the dark.
-			ClientState.started = false
-			ClientState.roundStatus = "none"
-			settings.Visible = false
-			local h = highest()
-			if h > highestAtStart and h <= Nights.count then
-				revealing[h] = os.clock() + 1
-			end
+	Remotes.Lobby.OnClientEvent:Connect(function(action: string, a: any, b: any)
+		if action == "choose" and typeof(a) == "number" and typeof(b) == "number" then
+			openChoice(a, b)
+		elseif action == "close" then
+			closeChoice()
+		elseif action == "launch" and typeof(a) == "number" then
+			closeChoice()
+			launching = a
+			refresh()
+			-- the same black screen while the teleport loads
+			pcall(function()
+				local loading: ScreenGui = make("ScreenGui", { Name = "AchromaTeleport", IgnoreGuiInset = true, DisplayOrder = 100 })
+				local copy = overlay:Clone()
+				copy.Visible = true
+				copy.Parent = loading
+				local t = copy:FindFirstChild("Title")
+				if t and t:IsA("TextLabel") then
+					t.TextTransparency = 0.05
+				end
+				TeleportService:SetTeleportGui(loading)
+			end)
+		end
+	end)
+	player:GetAttributeChangedSignal("Where"):Connect(function()
+		-- arrived somewhere (or the teleport fell through and we're back in the lobby)
+		if where() ~= "between" then
+			launching = nil
+		end
+		if where() ~= "lobby" then
+			closeChoice()
 		end
 		refresh()
 	end)
-	GameState:GetAttributeChangedSignal("Night"):Connect(refresh)
 	player.CharacterAdded:Connect(refresh)
 	player.CharacterRemoving:Connect(function()
 		task.defer(refresh)
@@ -10403,51 +11021,10 @@ function Menu.init()
 
 	local accum = 0
 	RunService.RenderStepped:Connect(function(dt: number)
-		local t = os.clock()
-		if main.Visible then
-			local phase = GameState:GetAttribute("Phase")
-			local underway = GameState:GetAttribute("Night")
-			local busy = phase == "Playing" or phase == "Intermission"
-			local current = math.min(highest(), Nights.count)
-			for n, entry in entries do
-				local k: number
-				if not unlocked(n) then
-					k = LOCKED
-				elseif hovered == n then
-					k = 0
-				elseif (busy and underway == n) or (not busy and n == current and not cleared(n)) then
-					k = CURRENT + 0.14 * (0.5 + 0.5 * math.sin(t * 1.3)) -- breathing
-				else
-					k = CLEARED
-				end
-				local since = revealing[n]
-				if since then
-					local a = math.clamp((t - since) / 4, 0, 1)
-					k = LOCKED + (k - LOCKED) * a
-					if a >= 1 then
-						revealing[n] = nil
-					end
-				end
-				-- now and then a line flickers like a dying bulb
-				if math.random() < 0.0015 then
-					k = math.min(1, k + 0.5)
-				end
-				entry.TextTransparency = k
-			end
-			if t >= nextGhost then
-				nextGhost = t + 50 + math.random() * 70
-				ghost.TextTransparency = 0.82
-				task.delay(0.09, function()
-					ghost.TextTransparency = 1
-				end)
-			end
-		end
 		accum += dt
 		if accum > 0.5 then
 			accum = 0
-			if ClientState.started and player.Character == nil then
-				refresh()
-			end
+			refresh()
 		end
 	end)
 	refresh()
@@ -11118,7 +11695,7 @@ function Spectate.init()
 
 	RunService:BindToRenderStep("AchromaSpectate", Enum.RenderPriority.Camera.Value + 3, function(dt: number)
 		local camera = workspace.CurrentCamera
-		local shouldSpectate = ClientState.started
+		local shouldSpectate = player:GetAttribute("Where") == "between"
 			and not ClientState.jumpscaring
 			and player.Character == nil
 			and GameState:GetAttribute("Phase") == "Playing"
