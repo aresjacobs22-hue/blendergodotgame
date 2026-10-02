@@ -1,8 +1,9 @@
 # ACHROMA
 
 A Roblox horror game: **five nights, five maps, five monsters**. Each night has its own
-look, its own monster and its own objective. Beat one to unlock the next. Your progress
-is saved.
+look, its own monster and its own objective. All five are open from the start: play them
+in order or jump straight to the one you want. How far you've got is saved, and a door
+always starts on your next unbeaten night.
 
 **The game never explains itself.** You wake up in a lobby in the fog. A night starts
 with its number on black (and the controls, faintly, just that once), and then you're
@@ -69,7 +70,7 @@ Also in the game:
 - **The keypad remembers**: on night 2 it faintly shows the digits from the keys you
   picked up, so you never have to read anything.
 - **1-4 players per night**: each group is on its own for its night (its own server), and
-  if anyone makes it out everyone in the group unlocks the next night.
+  if anyone makes it out, the night counts as beaten for everyone in the group.
 - **When it catches you**: after the jumpscare, black, and two choices: **TRY AGAIN**
   (showing how many of your group want to, like 2 / 4) or **BACK TO LOBBY** (you go
   right away). When the whole group has picked TRY AGAIN, the night starts over on a new
@@ -83,9 +84,9 @@ Also in the game:
 Download **`build/ACHROMA.rbxlx`**. In Roblox Studio go to **File → Open from File…**,
 pick it, then press **Play** (F5).
 
-In Studio **all 5 nights are unlocked**, so you can test any of them. In the published game
-players start with only Night 1. To change this, set `UnlockAllInStudio = false` in
-`Config`.
+**All 5 nights are unlocked** for everyone, in Studio and in the published game. To go
+back to unlocking them one by one, set `UnlockAll = false` in `Config` (Studio still opens
+all of them for testing unless you also set `UnlockAllInStudio = false`).
 
 The game is **silent** until you do step 2.
 
@@ -216,7 +217,7 @@ the Hollow): `LUNE=lune GODOT=godot python3 tools/monster-lab/covers.py`.
 | `src/ServerScriptService/Server/MonsterAI.luau` | the monsters' brains (sight, hearing, lunges, statue rules, ...) |
 | `src/ServerScriptService/Server/Lobby.luau` | the lobby: its look, the four doors, the choice and the countdown |
 | `src/ServerScriptService/Server/RoundManager.luau` | lobby servers, night servers and the teleports between them; the night → results loop |
-| `src/ServerScriptService/Server/Progress.luau` | saving which nights you've unlocked |
+| `src/ServerScriptService/Server/Progress.luau` | saving how far you've got (which nights you've beaten) |
 | `src/StarterPlayer/StarterPlayerScripts/Client/` | everything on screen: the choice at a door, HUD, wordless prompts, flashlight, fear effects, monster animation, jumpscares |
 | `tools/generate_audio.py` | synthesizes every sound (`python3 tools/generate_audio.py`, needs numpy + ffmpeg) |
 | `tools/monster-lab/` | renders the monsters and the maps to PNGs with Godot, for checking designs without opening Studio |
@@ -252,7 +253,7 @@ rojo build default.project.json -o build/ACHROMA.rbxlx  # rebuild the place file
 - `tests/e2e.spec.luau`: the real server and client together. A fake player plays the whole
   game from the lobby (walking into a door's square and picking the night and 1 player
   each time): survives night 1 in a locker (holding its breath whenever the
-  monster comes past), unlocks and beats nights 2-5 (keys
+  monster comes past), checks that every night is open from the start, beats nights 2-5 (keys
   and the keypad screen, generators, photographs, hearts), then gets caught on night 1 for
   the jumpscare, picks TRY AGAIN (the night starts over), gets caught again and picks
   BACK TO LOBBY. At every step it reads everything on screen and fails if any words

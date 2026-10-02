@@ -297,7 +297,7 @@ menu = player.PlayerGui:FindFirstChild("AchromaMenu")
 local UserInputService = game:GetService("UserInputService")
 check(inLobby(), "you wake up in the lobby")
 check(phase() == "Lobby", "server waits in the lobby")
-check(player:GetAttribute("HighestNight") == 1, "a new player has only night 1")
+check(player:GetAttribute("HighestNight") == 1, "a new player hasn't beaten anything")
 local squares = 0
 for i = 1, 4 do
 	if workspace.Lobby:FindFirstChild("Pad" .. i) then
@@ -314,9 +314,13 @@ run(1)
 check(menu.Choice.Visible, "stepping into a square asks you")
 check(UserInputService.MouseIconEnabled == true, "the cursor comes up for it")
 onlyNights("at the door")
-check(entry(1).TextTransparency < 0.5 and entry(2).TextTransparency > 0.8 and entry(5).TextTransparency > 0.8, "nights 2-5 are barely there")
-entry(3).Activated:Fire()
-check(entry(3).TextTransparency > 0.8, "a night you haven't reached can't be picked")
+local allOpen = true
+for i = 2, 5 do
+	allOpen = allOpen and entry(i).TextTransparency < 0.7
+end
+check(entry(1).TextTransparency < 0.1 and allOpen, "all five nights are open, night 1 picked first")
+entry(5).Activated:Fire()
+check(entry(5).TextTransparency < 0.1 and entry(1).TextTransparency > 0.5, "any night can be picked, even night 5")
 -- walk away: it closes and nothing happens
 placePlayer(Lobby.ORIGIN)
 run(1)
@@ -367,10 +371,15 @@ release("AchromaBreath")
 check(morning, "made it to 6 AM (hour " .. tostring(GameState:GetAttribute("Hour")) .. ")")
 print("    (held breath " .. breathHeld .. " times; " .. (if revealedAt then "dragged out at " .. revealedAt else "stayed hidden") .. ")")
 finishAndReturn(true)
-check(player:GetAttribute("HighestNight") == 2, "night 2 unlocked")
+check(player:GetAttribute("HighestNight") == 2, "night 1 beaten: saved")
 
 ---------------------------------------------------------------------------
 print("Night 2: THE RED WARD (keys)")
+placePlayer(pad(1).Position)
+run(1)
+check(menu.Choice.Visible and entry(2).TextTransparency < 0.1, "the door now starts on night 2")
+placePlayer(Lobby.ORIGIN)
+run(1)
 check(startNight(2), "night 2 starts")
 check(GameState:GetAttribute("NightName") == "THE RED WARD", "it's the ward")
 check(workspace.Monster:GetAttribute("Kind") == "Crawler", "the Crawler is here")
@@ -397,7 +406,7 @@ check(UserInputService.MouseIconEnabled == false, "and goes away again after")
 check(GameState:GetAttribute("ExitOpen") == true, "typing the code opens the exit")
 workspace.World.Structure.EscapeZone.Touched:Fire(player.Character.HumanoidRootPart)
 finishAndReturn(true)
-check(player:GetAttribute("HighestNight") == 3, "night 3 unlocked")
+check(player:GetAttribute("HighestNight") == 3, "night 2 beaten: saved")
 
 ---------------------------------------------------------------------------
 print("Night 3: THE DROWNED TUNNELS (power)")
@@ -411,7 +420,7 @@ run(2)
 check(GameState:GetAttribute("ExitOpen") == true, "the lift opens (" .. progress() .. ")")
 workspace.World.Structure.EscapeZone.Touched:Fire(player.Character.HumanoidRootPart)
 finishAndReturn(true)
-check(player:GetAttribute("HighestNight") == 4, "night 4 unlocked")
+check(player:GetAttribute("HighestNight") == 4, "night 3 beaten: saved")
 
 ---------------------------------------------------------------------------
 print("Night 4: THE ATRIUM (photographs)")
@@ -429,7 +438,7 @@ for _, prompt in prompts("Photograph") do
 	run(0.2)
 end
 finishAndReturn(true)
-check(player:GetAttribute("HighestNight") == 5, "night 5 unlocked")
+check(player:GetAttribute("HighestNight") == 5, "night 4 beaten: saved")
 
 ---------------------------------------------------------------------------
 print("Night 5: THE VOID (hearts)")

@@ -334,7 +334,8 @@ local Config = {
 
 	Progress = {
 		DataStoreName = "AchromaProgress_v1",
-		UnlockAllInStudio = true, -- in Studio every night is unlocked so you can test them
+		UnlockAll = true, -- every night can be played from the start (progress is still saved)
+		UnlockAllInStudio = true, -- with UnlockAll off: in Studio every night is still open, for testing
 	},
 }
 
@@ -6621,9 +6622,11 @@ return Objectives
         <Properties>
           <string name="Name">Progress</string>
           <string name="Source"><![CDATA[--!strict
--- Which nights each player has unlocked, saved with DataStores. The value lives on
--- the Player as the "HighestNight" attribute so the menu can read it:
---   1..5 = highest night you may play, 6 = you've beaten all five.
+-- How far each player has got, saved with DataStores. The value lives on the Player
+-- as the "HighestNight" attribute so the menu can read it:
+--   1..5 = the first night you haven't beaten yet, 6 = you've beaten all five.
+-- With Config.Progress.UnlockAll every night is open anyway; the door's choice just
+-- starts on your next unbeaten night.
 -- DataStores only work in a published game (or with Studio API access turned on);
 -- without them progress just lasts for the session.
 
@@ -6656,9 +6659,6 @@ function Progress.load(player: Player)
 			highest = math.clamp(math.floor(value), 1, Nights.count + 1)
 		end
 	end
-	if RunService:IsStudio() and Config.Progress.UnlockAllInStudio then
-		highest = math.max(highest, Nights.count)
-	end
 	player:SetAttribute("HighestNight", highest)
 end
 
@@ -6667,7 +6667,15 @@ function Progress.highest(player: Player): number
 	return if typeof(value) == "number" then value else 1
 end
 
--- You beat `night`: unlock the next one.
+-- The highest night this player may choose.
+function Progress.allowed(player: Player): number
+	if Config.Progress.UnlockAll or (RunService:IsStudio() and Config.Progress.UnlockAllInStudio) then
+		return Nights.count
+	end
+	return math.min(Progress.highest(player), Nights.count)
+end
+
+-- You beat `night`: the next one is yours.
 function Progress.beat(player: Player, night: number)
 	local unlocked = math.min(night + 1, Nights.count + 1)
 	if unlocked <= Progress.highest(player) then
@@ -7241,7 +7249,7 @@ local function runLobby()
 	GameState:SetAttribute("Phase", "Lobby")
 	applyLighting(Lobby.LIGHTING)
 	lobby = Lobby.new({
-		highest = Progress.highest,
+		highest = Progress.allowed,
 		isOpen = function(): boolean
 			return not nightBusy
 		end,
@@ -7323,7 +7331,7 @@ local function runNightServer()
 	-- nobody gets a night they couldn't have chosen
 	local allowed = 1
 	for _, player in Players:GetPlayers() do
-		allowed = math.max(allowed, math.min(Progress.highest(player), Nights.count))
+		allowed = math.max(allowed, Progress.allowed(player))
 	end
 	local night = math.clamp(math.floor(planned or 1), 1, allowed)
 	GameState:SetAttribute("Night", night)
@@ -10965,7 +10973,9 @@ end
 local function openChoice(index: number, upTo: number)
 	pad = index
 	highest = math.clamp(upTo, 1, Nights.count)
-	selectNight(highest)
+	-- start on the first night you haven't beaten
+	local reached = player:GetAttribute("HighestNight")
+	selectNight(math.clamp(if typeof(reached) == "number" then reached else 1, 1, highest))
 	choice.Visible = true
 	ClientState.choosing = true
 	Audio.play("MenuHover", nil, 0.4, 0.7)

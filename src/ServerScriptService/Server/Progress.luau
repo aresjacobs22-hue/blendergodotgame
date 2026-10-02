@@ -1,7 +1,9 @@
 --!strict
--- Which nights each player has unlocked, saved with DataStores. The value lives on
--- the Player as the "HighestNight" attribute so the menu can read it:
---   1..5 = highest night you may play, 6 = you've beaten all five.
+-- How far each player has got, saved with DataStores. The value lives on the Player
+-- as the "HighestNight" attribute so the menu can read it:
+--   1..5 = the first night you haven't beaten yet, 6 = you've beaten all five.
+-- With Config.Progress.UnlockAll every night is open anyway; the door's choice just
+-- starts on your next unbeaten night.
 -- DataStores only work in a published game (or with Studio API access turned on);
 -- without them progress just lasts for the session.
 
@@ -34,9 +36,6 @@ function Progress.load(player: Player)
 			highest = math.clamp(math.floor(value), 1, Nights.count + 1)
 		end
 	end
-	if RunService:IsStudio() and Config.Progress.UnlockAllInStudio then
-		highest = math.max(highest, Nights.count)
-	end
 	player:SetAttribute("HighestNight", highest)
 end
 
@@ -45,7 +44,15 @@ function Progress.highest(player: Player): number
 	return if typeof(value) == "number" then value else 1
 end
 
--- You beat `night`: unlock the next one.
+-- The highest night this player may choose.
+function Progress.allowed(player: Player): number
+	if Config.Progress.UnlockAll or (RunService:IsStudio() and Config.Progress.UnlockAllInStudio) then
+		return Nights.count
+	end
+	return math.min(Progress.highest(player), Nights.count)
+end
+
+-- You beat `night`: the next one is yours.
 function Progress.beat(player: Player, night: number)
 	local unlocked = math.min(night + 1, Nights.count + 1)
 	if unlocked <= Progress.highest(player) then

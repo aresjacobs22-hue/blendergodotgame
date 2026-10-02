@@ -546,7 +546,7 @@ local function runLobby()
 	GameState:SetAttribute("Phase", "Lobby")
 	applyLighting(Lobby.LIGHTING)
 	lobby = Lobby.new({
-		highest = Progress.highest,
+		highest = Progress.allowed,
 		isOpen = function(): boolean
 			return not nightBusy
 		end,
@@ -628,7 +628,7 @@ local function runNightServer()
 	-- nobody gets a night they couldn't have chosen
 	local allowed = 1
 	for _, player in Players:GetPlayers() do
-		allowed = math.max(allowed, math.min(Progress.highest(player), Nights.count))
+		allowed = math.max(allowed, Progress.allowed(player))
 	end
 	local night = math.clamp(math.floor(planned or 1), 1, allowed)
 	GameState:SetAttribute("Night", night)

@@ -119,7 +119,9 @@ end
 local function openChoice(index: number, upTo: number)
 	pad = index
 	highest = math.clamp(upTo, 1, Nights.count)
-	selectNight(highest)
+	-- start on the first night you haven't beaten
+	local reached = player:GetAttribute("HighestNight")
+	selectNight(math.clamp(if typeof(reached) == "number" then reached else 1, 1, highest))
 	choice.Visible = true
 	ClientState.choosing = true
 	Audio.play("MenuHover", nil, 0.4, 0.7)

@@ -952,7 +952,7 @@ print("A night server plays the group's night, then sends everyone home")
 do
 	Engine.privateServerId = "reserved"
 	Engine.teleports = {}
-	Engine.saved = { u1 = 3 }
+	Engine.saved = {} -- hasn't beaten anything: every night is open anyway
 	Engine.joinData = { Ares = { night = 3, count = 1 } }
 	local game, _, mods = boot()
 	local p = makePlayer(game, "Ares", 1)

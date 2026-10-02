@@ -61,7 +61,8 @@ local Config = {
 
 	Progress = {
 		DataStoreName = "AchromaProgress_v1",
-		UnlockAllInStudio = true, -- in Studio every night is unlocked so you can test them
+		UnlockAll = true, -- every night can be played from the start (progress is still saved)
+		UnlockAllInStudio = true, -- with UnlockAll off: in Studio every night is still open, for testing
 	},
 }
 
