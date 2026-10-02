@@ -1,6 +1,6 @@
 -- Builds a night's map with the real server code (inside the mocked engine from
 -- tests/mock) and writes every part, light and sign to JSON for map_render.
---   lune run tools/monster-lab/map_dump.luau <night 1-5> <seed> <out.json> [monster cell x,z]
+--   lune run tools/monster-lab/map_dump.luau <night 1-5> <seed> <out.json> [monster cell x,z] [face cell x,z]
 local fs = require("@lune/fs")
 local serde = require("@lune/serde")
 local process = require("@lune/process")
@@ -103,7 +103,10 @@ Objectives.start({
 local mx, mz = string.match(process.args[4] or "", "^(%-?%d+),(%-?%d+)$")
 if mx then
 	local cx, cz = Maze.cellCenter(layout, { x = tonumber(mx) :: number, z = tonumber(mz) :: number })
-	local face = Vector3.new(layout.entrance.x, 0, layout.entrance.z) - Vector3.new(tonumber(mx) :: number, 0, tonumber(mz) :: number)
+	-- it looks toward the entrance, or toward a given cell (where the camera is)
+	local fx, fz = string.match(process.args[5] or "", "^(%-?%d+),(%-?%d+)$")
+	local towards = if fx then Vector3.new(tonumber(fx) :: number, 0, tonumber(fz) :: number) else Vector3.new(layout.entrance.x, 0, layout.entrance.z)
+	local face = towards - Vector3.new(tonumber(mx) :: number, 0, tonumber(mz) :: number)
 	local pos = Vector3.new(cx, monster.rig.rootHeight, cz)
 	monster.rig.model:PivotTo(if face.Magnitude > 0.1 then CFrame.lookAt(pos, pos + face) else CFrame.new(pos))
 	monster.rig.model:SetAttribute("Shown", true)
