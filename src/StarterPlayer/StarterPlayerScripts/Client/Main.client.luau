@@ -7,7 +7,9 @@ end
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 local StarterGui = game:GetService("StarterGui")
+local UserInputService = game:GetService("UserInputService")
 
 local Atmosphere = require(script.Parent.Atmosphere)
 local ClientState = require(script.Parent.ClientState)
@@ -93,4 +95,13 @@ end)
 
 player.CharacterRemoving:Connect(function()
 	Hud.setHudVisible(false)
+end)
+
+-- The cursor only shows when there's something to click: the menu and the keypad.
+-- Otherwise Roblox would leave its arrow in the middle of the screen in first person.
+RunService.RenderStepped:Connect(function()
+	local wanted = not ClientState.started or ClientState.keypadOpen
+	if UserInputService.MouseIconEnabled ~= wanted then
+		UserInputService.MouseIconEnabled = wanted
+	end
 end)

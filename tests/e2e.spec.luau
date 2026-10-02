@@ -277,6 +277,8 @@ for n = 1, 5 do
 end
 check(cardCount == 5, "the menu is NIGHT 1 to NIGHT 5")
 onlyNights("on the menu")
+local UserInputService = game:GetService("UserInputService")
+check(UserInputService.MouseIconEnabled == true, "the cursor shows on the menu")
 check(card(1).TextTransparency < 0.5 and card(2).TextTransparency > 0.8 and card(5).TextTransparency > 0.8, "nights 2-5 are barely visible")
 card(3).Activated:Fire()
 run(1)
@@ -289,6 +291,7 @@ check(not menu.Main.Visible, "menu hides while playing")
 onlyNights("as the night starts")
 run(8)
 onlyNights("while playing")
+check(UserInputService.MouseIconEnabled == false, "no cursor while playing")
 check(GameState:GetAttribute("Goal") == 6 and litPips() == 0, "six dark dots for the hours (" .. progress() .. ")")
 press("AchromaFlashlight")
 run(0.3)
@@ -345,6 +348,7 @@ keypad:FindFirstChildOfClass("ProximityPrompt").Triggered:Fire(player)
 run(0.2)
 local panel = player.PlayerGui.AchromaKeypad.Panel
 check(player.PlayerGui.AchromaKeypad.Enabled, "keypad screen opens")
+check(UserInputService.MouseIconEnabled == true, "the cursor comes back for the keypad")
 local display = panel:FindFirstChildOfClass("TextLabel").Text
 check(string.find(display, string.sub(Engine.layout.code, 1, 1), 1, true) ~= nil, "it shows the digits from the keys you found, faintly (" .. display .. ")")
 for i = 1, #Engine.layout.code do
@@ -352,6 +356,7 @@ for i = 1, #Engine.layout.code do
 end
 panel.KeyOK.Activated:Fire()
 run(1)
+check(UserInputService.MouseIconEnabled == false, "and goes away again after")
 check(GameState:GetAttribute("ExitOpen") == true, "typing the code opens the exit")
 workspace.World.Structure.EscapeZone.Touched:Fire(player.Character.HumanoidRootPart)
 finishAndReturn(true)

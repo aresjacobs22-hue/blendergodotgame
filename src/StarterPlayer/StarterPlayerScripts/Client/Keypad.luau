@@ -65,8 +65,8 @@ end
 
 local function close()
 	isOpen = false
+	ClientState.keypadOpen = false
 	gui.Enabled = false
-	UserInputService.MouseIconEnabled = true
 end
 
 local function rootPosition(): Vector3?
@@ -79,9 +79,9 @@ local function open()
 	code = ""
 	refresh()
 	isOpen = true
+	ClientState.keypadOpen = true
 	openedAt = rootPosition()
 	gui.Enabled = true
-	UserInputService.MouseIconEnabled = true
 end
 
 local function press(key: string)
