@@ -274,12 +274,11 @@ local function shake()
 	if not camera or camera.CameraType == Enum.CameraType.Scriptable then
 		return
 	end
-	local t = os.clock()
-	-- the world is never quite level: a slow drift of the horizon (under half a degree,
-	-- a little more when it's close)
-	local tilt = (math.sin(t * 0.21) * 0.005 + math.noise(t * 0.3, 2.7) * 0.004) * (1 + ClientState.fear)
 	local amount = ClientState.fear ^ 2 * 0.004 + shakeImpulse * 0.02 + (if ClientState.chased then 0.004 else 0)
-	camera.CFrame *= CFrame.Angles(math.noise(t * 9, 0.3) * amount * 2, math.noise(t * 9, 4.1) * amount * 2, math.noise(t * 7, 8.7) * amount * 3 + tilt)
+	if amount > 0.0002 then
+		local t = os.clock()
+		camera.CFrame *= CFrame.Angles(math.noise(t * 9, 0.3) * amount * 2, math.noise(t * 9, 4.1) * amount * 2, math.noise(t * 7, 8.7) * amount * 3)
+	end
 end
 
 local function update(dt: number)

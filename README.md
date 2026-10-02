@@ -53,11 +53,6 @@ Also in the game:
   ticks for your flashlight battery, a mark for each bottle you carry, and a thin line
   for your breath while you hide. Things you can use show a small dot with the key to
   press. That's all.
-- **The picture is wrong**, like a tape copied too many times: film grain, scanlines, a
-  dark band rolling down the screen, lines tearing across with a red fringe, scratches,
-  red bleeding in at the edges, a horizon that's never quite level and a lens that
-  breathes. Every few seconds the tape chokes and the screen shreds red for a split
-  second. All of it gets worse the closer it is (`Client/Distortion.luau`).
 - **A new random map every time** you play a night.
 - **Flashlight** with a battery, **stamina**, **crouch-sneaking**, and **lockers** to hide in.
 - **Atmosphere**: flickering lamps, a heartbeat, jumpscares, a clock that chimes the
