@@ -1,5 +1,5 @@
 --!strict
--- On-screen everything, and no words: film grain, vignette, glitches, a few faint dots
+-- On-screen everything, and no words: vignette, glitches, a few faint dots
 -- for how far along you are, stamina, flashlight battery, bottles, the hold-your-breath
 -- meter, the night's title, fades, flashes and the red of its rage.
 
@@ -33,8 +33,6 @@ local bigTitle: TextLabel
 local fadeFrame: Frame
 local flashFrame: Frame
 local whiteFrame: Frame
-local grain: Frame
-local specks: { Frame } = {}
 local vignette: { Frame } = {}
 local glitchBars: { Frame } = {}
 local crosshair: Frame
@@ -109,12 +107,6 @@ function Hud.init()
 		DisplayOrder = 5,
 		ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
 	}, player:WaitForChild("PlayerGui"))
-
-	-- film grain + dust
-	grain = new("Frame", { Name = "Grain", Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0.97, BorderSizePixel = 0, ZIndex = 1 }, gui)
-	for _ = 1, 36 do
-		table.insert(specks, new("Frame", { Size = UDim2.fromOffset(2, 2), BorderSizePixel = 0, ZIndex = 1, BackgroundTransparency = 1 }, gui))
-	end
 
 	-- vignette
 	table.insert(vignette, edgeShade("Top", UDim2.fromScale(1, 0.38), UDim2.fromScale(0, 0), Vector2.zero, 90))
@@ -202,17 +194,6 @@ end
 
 function Hud._update(dt: number)
 	local t = os.clock()
-
-	-- grain flicker + dust
-	grain.BackgroundTransparency = 0.955 + math.random() * 0.03 - fearLevel * 0.02
-	for i, s in specks do
-		if math.random() < 0.5 then
-			s.Position = UDim2.fromScale(math.random(), math.random())
-			s.BackgroundColor3 = if i % 3 == 0 then BLACK else Color3.new(1, 1, 1)
-			s.BackgroundTransparency = 0.55 + math.random() * 0.4
-			s.Size = UDim2.fromOffset(math.random(1, 3), math.random(1, 3))
-		end
-	end
 
 	-- vignette tightens with fear and pulses with the heartbeat
 	pulse = math.max(0, pulse - dt * 3)

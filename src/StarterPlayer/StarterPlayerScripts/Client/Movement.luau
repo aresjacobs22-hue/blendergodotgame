@@ -88,7 +88,10 @@ local function update(dt: number)
 	h.CameraOffset = Vector3.new(bobX, crouchOffset + bobY, 0)
 
 	if camera and not ClientState.jumpscaring then
-		local targetFov = P.FieldOfView + (if wantsSprint then 7 else 0) + ClientState.fear * 6
+		-- the lens never quite settles: it breathes, and faster when it's close
+		local t = os.clock()
+		local breathe = math.sin(t * (0.35 + ClientState.fear * 0.8)) * (1.4 + ClientState.fear * 2)
+		local targetFov = P.FieldOfView + (if wantsSprint then 7 else 0) + ClientState.fear * 6 + breathe
 		camera.FieldOfView += (targetFov - camera.FieldOfView) * math.min(1, dt * 5)
 	end
 
