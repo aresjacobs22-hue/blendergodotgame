@@ -32,6 +32,9 @@ It writes `out/maps/night<N>_<view>.png`, plus `out/maps/night<N>.png` with ever
 one sheet. The renderer's light falloff is softer than Roblox's to get close to Studio, but
 dark maps still come out a little darker than they look in game.
 
+`lobby.py` renders the lobby (`map_dump.luau lobby`): a door mid-countdown, the thing in
+the fog, and the circle from above, into `out/lobby/`.
+
 `covers.py` uses the same pipeline for the Roblox art (`assets/covers/`): the Hollow's
 skull face to face (icon) and the whole of it down a hallway (1920x1080 thumbnail), put
 through `distort.py` (crushed blacks, a warped face and a dragged-out jaw, a stretched

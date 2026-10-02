@@ -4504,10 +4504,10 @@ Lobby.MAX_PLAYERS = 4
 
 -- The lobby's light: grey dark, fog closing in.
 Lobby.LIGHTING = {
-	Ambient = Color3.fromRGB(24, 24, 26),
-	FogColor = Color3.fromRGB(9, 9, 11),
-	FogStart = 18,
-	FogEnd = 115,
+	Ambient = Color3.fromRGB(48, 48, 52),
+	FogColor = Color3.fromRGB(14, 14, 16),
+	FogStart = 25,
+	FogEnd = 150,
 	Saturation = -1,
 	Contrast = 0.25,
 	Brightness = 0,
@@ -4548,7 +4548,7 @@ export type Lobby = {
 }
 
 local PALE = Color3.fromRGB(205, 200, 188)
-local STONE = Color3.fromRGB(44, 44, 46)
+local STONE = Color3.fromRGB(64, 64, 66)
 
 local function part(parent: Instance, name: string, size: Vector3, cf: CFrame, material: Enum.Material, color: Color3, shape: Enum.PartType?): Part
 	local p = Instance.new("Part")
@@ -4604,9 +4604,9 @@ local function door(parent: Instance, at: CFrame): (TextLabel, TextLabel)
 	gap.Transparency = 0.15
 	local glow = Instance.new("SpotLight")
 	glow.Face = Enum.NormalId.Front
-	glow.Angle = 70
-	glow.Range = 22
-	glow.Brightness = 1.6
+	glow.Angle = 80
+	glow.Range = 28
+	glow.Brightness = 2.4
 	glow.Color = Color3.fromRGB(235, 228, 210)
 	glow.Parent = gap
 	-- the sign above it: how many are going, and how long until they do
@@ -4698,7 +4698,7 @@ function Lobby.new(hooks: Hooks): Lobby
 		-- an invisible marker of the square, so it's easy to find (and test)
 		local marker = deco(part(model, "Pad" .. i, Vector3.new(Lobby.PAD_SIZE, 0.2, Lobby.PAD_SIZE), CFrame.new(center) * facing.Rotation, Enum.Material.SmoothPlastic, STONE))
 		marker.Transparency = 1
-		lamp(model, center + Vector3.new(0, 9, 0), 0.9, 18)
+		lamp(model, center + Vector3.new(0, 9, 0), 1.3, 24)
 		table.insert(pads, {
 			index = i,
 			center = center,

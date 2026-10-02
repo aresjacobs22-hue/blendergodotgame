@@ -1,6 +1,7 @@
 -- Builds a night's map with the real server code (inside the mocked engine from
 -- tests/mock) and writes every part, light and sign to JSON for map_render.
 --   lune run tools/monster-lab/map_dump.luau <night 1-5> <seed> <out.json> [monster cell x,z] [face cell x,z]
+--   lune run tools/monster-lab/map_dump.luau lobby <seed> <out.json>      (the lobby instead)
 local fs = require("@lune/fs")
 local serde = require("@lune/serde")
 local process = require("@lune/process")
@@ -53,12 +54,30 @@ local Exit = require_(sss.Server.Exit)
 local MonsterAI = require_(sss.Server.MonsterAI)
 local Objectives = require_(sss.Server.Objectives)
 local Monsters = require_(rs.Shared.Monsters)
+local Lobby = require_(sss.Server.Lobby)
 Engine.Maze = Maze
 
+local lobbyMode = process.args[1] == "lobby"
 local night = Nights.get(nightIndex)
-local layout = Maze.generate(seed, night.maze)
+local layout, world
+local lobby
+if lobbyMode then
+	lobby = Lobby.new({
+		highest = function()
+			return 1
+		end,
+		launch = function() end,
+		isOpen = function()
+			return true
+		end,
+	})
+	-- one door mid-countdown, as if two of them just stepped in
+	lobby.pads[1].count.Text = "2 / 4"
+	lobby.pads[1].timer.Text = "7"
+else
+layout = Maze.generate(seed, night.maze)
 Engine.layout = layout
-local world = WorldBuilder.build(layout, night)
+world = WorldBuilder.build(layout, night)
 local exit = Exit.new(world)
 local monster
 local interactables = Interactables.new(layout, world, {
@@ -110,6 +129,7 @@ if mx then
 	local pos = Vector3.new(cx, monster.rig.rootHeight, cz)
 	monster.rig.model:PivotTo(if face.Magnitude > 0.1 then CFrame.lookAt(pos, pos + face) else CFrame.new(pos))
 	monster.rig.model:SetAttribute("Shown", true)
+end
 end
 
 local function r(x: number): number
@@ -187,29 +207,29 @@ for _, d in workspace:GetDescendants() do
 	end
 end
 
-local l = night.lighting
+local l = if lobbyMode then Lobby.LIGHTING else night.lighting
 local spawns = {}
-for _, s in world.spawnPoints do
+for _, s in if lobbyMode then { lobby.spawnCFrame() } else world.spawnPoints do
 	local p, look = s.Position, s.LookVector
 	table.insert(spawns, { pos = { r(p.X), r(p.Y), r(p.Z) }, look = { r(look.X), r(look.Y), r(look.Z) } })
 end
 local edges = {}
-for k, v in layout.edges do
+for k, v in if layout then layout.edges else {} do
 	edges[k] = v
 end
 fs.writeFile(outPath, serde.encode("json", {
-	night = night.index,
-	id = night.id,
-	theme = night.theme,
-	cellSize = layout.cellSize,
-	width = layout.width,
-	depth = layout.depth,
-	ceiling = night.maze.CeilingHeight,
+	night = if lobbyMode then 0 else night.index,
+	id = if lobbyMode then "lobby" else night.id,
+	theme = if lobbyMode then "lobby" else night.theme,
+	cellSize = if layout then layout.cellSize else 0,
+	width = if layout then layout.width else 0,
+	depth = if layout then layout.depth else 0,
+	ceiling = if lobbyMode then 200 else night.maze.CeilingHeight,
 	wallHeight = night.maze.WallHeight,
-	hub = layout.hub,
-	entrance = layout.entrance,
+	hub = if layout then layout.hub else nil,
+	entrance = if layout then layout.entrance else nil,
 	edges = edges,
-	rooms = layout.roomBlocks,
+	rooms = if layout then layout.roomBlocks else {},
 	lights = lights,
 	parts = parts,
 	texts = texts,
