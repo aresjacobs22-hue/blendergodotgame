@@ -130,16 +130,13 @@ WASD move · SHIFT run · C crouch · F flashlight · E use / hide
 G throw a bottle · SPACE (in a locker) hold your breath
 ```
 
-### Cover images
+### Cover image
 
-`assets/covers/` has the store art, rendered from the real maps and monsters:
-
-- `icon.png` (512×512): the game icon.
-- `thumb_title.png` and `thumb_night1.png` … `thumb_night5.png` (1920×1080): thumbnails.
-
-Upload them at [create.roblox.com](https://create.roblox.com) → your experience →
-*Configure* → *Places* / *Basic Info* (the icon) and *Thumbnails*. To render them again
-(after changing a map or a monster): `LUNE=lune GODOT=godot python3 tools/monster-lab/covers.py`.
+`assets/covers/cover.png` (1024×1024) is the cover: the Hollow's skull in the dark,
+distorted. `assets/covers/icon.png` is the same image at 512×512, the size Roblox wants for
+the game icon. Upload it at [create.roblox.com](https://create.roblox.com) → your
+experience → *Configure* → *Basic Info*. To make it again (after changing the Hollow):
+`LUNE=lune GODOT=godot python3 tools/monster-lab/covers.py`.
 
 ## Controls
 
