@@ -130,6 +130,17 @@ WASD move · SHIFT run · C crouch · F flashlight · E use / hide
 G throw a bottle · SPACE (in a locker) hold your breath
 ```
 
+### Cover images
+
+`assets/covers/` has the store art, rendered from the real maps and monsters:
+
+- `icon.png` (512×512): the game icon.
+- `thumb_title.png` and `thumb_night1.png` … `thumb_night5.png` (1920×1080): thumbnails.
+
+Upload them at [create.roblox.com](https://create.roblox.com) → your experience →
+*Configure* → *Places* / *Basic Info* (the icon) and *Thumbnails*. To render them again
+(after changing a map or a monster): `LUNE=lune GODOT=godot python3 tools/monster-lab/covers.py`.
+
 ## Controls
 
 | | Keyboard | Gamepad | Phone |

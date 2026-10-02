@@ -27,8 +27,36 @@ PALE = (200, 200, 194)
 
 # how far down the corridor it stands (cells), and how much to open up each night's
 # exposure so the thumbnail still reads when it's small on the Roblox page
-MONSTER_CELL = {1: 2, 2: 1, 3: 2, 4: 2, 5: 2}
-EXPOSURE = {1: 1.7, 2: 1.3, 3: 1.8, 4: 1.0, 5: 2.0}
+MONSTER_CELL = {1: 2, 2: 1, 3: 2, 4: 1, 5: 2}
+EXPOSURE = {1: 1.7, 2: 1.3, 3: 1.8, 4: 0.85, 5: 2.0}
+ICON_EXPOSURE = 0.75
+
+
+def clear_corridor(d):
+    """The longest straight, well-lit run of plain corridor (no hub, no rooms: their
+    furniture gets between you and it)."""
+    rooms = {(c["x"], c["z"]) for block in d.get("rooms", []) for c in block}
+    C = d["cellSize"]
+    lamps = [l["pos"] for l in d["lights"] if l["enabled"]]
+    best, best_score = None, -1
+    for z in range(d["depth"]):
+        for x in range(d["width"]):
+            for dirn, (dx, dz) in maps.DIRS.items():
+                run = [(x, z)]
+                cx, cz = x, z
+                while len(run) < 6 and maps.edge(d, cx, cz, dirn) in maps.PASSABLE:
+                    cx, cz = cx + dx, cz + dz
+                    if not (0 <= cx < d["width"] and 0 <= cz < d["depth"]):
+                        break
+                    run.append((cx, cz))
+                if len(run) < 4 or any(maps.is_hub(d, rx, rz) or (rx, rz) in rooms for rx, rz in run):
+                    continue
+                lit = sum(1 for rx, rz in run for l in lamps
+                          if abs(l[0] - (rx + 0.5) * C) < C * 0.7 and abs(l[2] - (rz + 0.5) * C) < C * 0.7)
+                score = len(run) + lit * 2.5
+                if score > best_score:
+                    best, best_score = (run, dirn), score
+    return best or maps.best_corridor(d)
 
 
 def spaced(text):
@@ -56,6 +84,10 @@ def finish(path_in, path_out, L, size, title=None, title_y=0.5, title_size=46, v
     a *= (1 - vignette * np.clip(r - 0.25, 0, 1) ** 1.6)[..., None]
     rng = np.random.default_rng(7)
     a += rng.normal(0, 0.022, (h, w))[..., None]
+    if title:
+        # let the words sit in shadow: darken a soft band behind them
+        band = np.exp(-((yy / h - title_y) / 0.09) ** 2)
+        a *= (1 - 0.65 * band)[..., None]
     out = Image.fromarray((np.clip(a, 0, 1) * 255).astype(np.uint8))
     if title:
         layer = Image.new("RGBA", out.size, (0, 0, 0, 0))
@@ -82,7 +114,7 @@ def main():
 
     for n in range(1, 6):
         plain = maps.dump(n, seed, os.path.join(WORK, f"night{n}_plain.json"))
-        corridor = maps.best_corridor(plain)
+        corridor = clear_corridor(plain)
         run, dirn = corridor
         dx, dz = maps.DIRS[dirn]
         C = plain["cellSize"]
@@ -93,7 +125,7 @@ def main():
 
         shots = [("night", run[min(MONSTER_CELL[n], len(run) - 1)])]
         if n == 1:
-            shots.append(("title", run[-1]))  # far away, at the end of the hall
+            shots.append(("title", run[min(3, len(run) - 1)]))  # further down the hall
             shots.append(("icon", run[1]))
         for kind, mcell in shots:
             name = f"{kind}{n}" if kind == "night" else kind
@@ -106,13 +138,13 @@ def main():
             head = head_of(d, (mx, mz))
             view = {"name": name, "flashlight": True, "lamp": 1.5, "exposure": EXPOSURE[n]}
             if kind == "icon":
-                # close, a little below its face, looking up into the skull
+                # face to face with the skull, the dark hall behind it
                 tx, tz = cam_x - head[0], cam_z - head[2]
                 dist = (tx * tx + tz * tz) ** 0.5
                 ux, uz = tx / dist, tz / dist
-                pos = [head[0] + ux * 7.5, head[1] - 1.6, head[2] + uz * 7.5]
-                view.update({"w": 1024, "h": 1024, "fov": 34, "pos": pos,
-                             "look": [head[0] - pos[0], head[1] + 0.2 - pos[1], head[2] - pos[2]]})
+                pos = [head[0] + ux * 8.5, head[1] - 0.5, head[2] + uz * 8.5]
+                view.update({"w": 1024, "h": 1024, "fov": 30, "exposure": ICON_EXPOSURE, "pos": pos,
+                             "look": [head[0] - pos[0], head[1] - 0.35 - pos[1], head[2] - pos[2]]})
             else:
                 pos = [cam_x, 5.0, cam_z]
                 aim_y = head[1] * 0.62 if kind == "night" else 4.6
@@ -136,7 +168,7 @@ def main():
         if kind == "night":
             finish(src, os.path.join(DEST, f"thumb_night{n}.png"), L, (1920, 1080), f"NIGHT {n}", 0.88)
         elif kind == "title":
-            finish(src, os.path.join(DEST, "thumb_title.png"), L, (1920, 1080), "ACHROMA", 0.24, 110, 0.7)
+            finish(src, os.path.join(DEST, "thumb_title.png"), L, (1920, 1080), "ACHROMA", 0.84, 96, 0.7)
         else:
             finish(src, os.path.join(DEST, "icon.png"), L, (512, 512), None, vignette=0.75)
 
