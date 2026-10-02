@@ -23,7 +23,8 @@
         "Throw": { "$className": "RemoteEvent" },
         "Breath": { "$className": "RemoteEvent" },
         "Chaos": { "$className": "RemoteEvent" },
-        "Lobby": { "$className": "RemoteEvent" }
+        "Lobby": { "$className": "RemoteEvent" },
+        "Retry": { "$className": "RemoteEvent" }
       },
       "GameState": {
         "$className": "Folder"

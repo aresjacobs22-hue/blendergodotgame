@@ -125,20 +125,25 @@
       </Item>
       <Item class="RemoteEvent" referent="19">
         <Properties>
-          <string name="Name">SubmitCode</string>
+          <string name="Name">Retry</string>
         </Properties>
       </Item>
       <Item class="RemoteEvent" referent="20">
+        <Properties>
+          <string name="Name">SubmitCode</string>
+        </Properties>
+      </Item>
+      <Item class="RemoteEvent" referent="21">
         <Properties>
           <string name="Name">Throw</string>
         </Properties>
       </Item>
     </Item>
-    <Item class="Folder" referent="21">
+    <Item class="Folder" referent="22">
       <Properties>
         <string name="Name">Shared</string>
       </Properties>
-      <Item class="ModuleScript" referent="22">
+      <Item class="ModuleScript" referent="23">
         <Properties>
           <string name="Name">Audio</string>
           <string name="Source"><![CDATA[--!strict
@@ -263,7 +268,7 @@ return Audio
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="23">
+      <Item class="ModuleScript" referent="24">
         <Properties>
           <string name="Name">Config</string>
           <string name="Source"><![CDATA[--!strict
@@ -337,7 +342,7 @@ return Config
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="24">
+      <Item class="ModuleScript" referent="25">
         <Properties>
           <string name="Name">Curses</string>
           <string name="Source"><![CDATA[--!strict
@@ -386,7 +391,7 @@ return Curses
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="25">
+      <Item class="ModuleScript" referent="26">
         <Properties>
           <string name="Name">Maze</string>
           <string name="Source"><![CDATA[--!strict
@@ -1029,7 +1034,7 @@ return Maze
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="26">
+      <Item class="ModuleScript" referent="27">
         <Properties>
           <string name="Name">Monsters</string>
           <string name="Source"><![CDATA[--!strict
@@ -2051,7 +2056,7 @@ return Monsters
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="27">
+      <Item class="ModuleScript" referent="28">
         <Properties>
           <string name="Name">Nights</string>
           <string name="Source"><![CDATA[--!strict
@@ -2440,7 +2445,7 @@ return NightsModule
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="28">
+      <Item class="ModuleScript" referent="29">
         <Properties>
           <string name="Name">SoundAtlas</string>
           <string name="Source"><![CDATA[--!strict
@@ -2539,7 +2544,7 @@ return SoundAtlas
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="29">
+      <Item class="ModuleScript" referent="30">
         <Properties>
           <string name="Name">SoundIds</string>
           <string name="Source"><![CDATA[--!strict
@@ -2563,15 +2568,15 @@ return SoundIds
       </Item>
     </Item>
   </Item>
-  <Item class="ServerScriptService" referent="30">
+  <Item class="ServerScriptService" referent="31">
     <Properties>
       <string name="Name">ServerScriptService</string>
     </Properties>
-    <Item class="Folder" referent="31">
+    <Item class="Folder" referent="32">
       <Properties>
         <string name="Name">Server</string>
       </Properties>
-      <Item class="ModuleScript" referent="32">
+      <Item class="ModuleScript" referent="33">
         <Properties>
           <string name="Name">Build</string>
           <string name="Source"><![CDATA[--!strict
@@ -2867,7 +2872,7 @@ return Build
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="33">
+      <Item class="ModuleScript" referent="34">
         <Properties>
           <string name="Name">Chaos</string>
           <string name="Source"><![CDATA[--!strict
@@ -3339,7 +3344,7 @@ return Chaos
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="34">
+      <Item class="ModuleScript" referent="35">
         <Properties>
           <string name="Name">Dressing</string>
           <string name="Source"><![CDATA[--!strict
@@ -3938,7 +3943,7 @@ return Dressing
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="35">
+      <Item class="ModuleScript" referent="36">
         <Properties>
           <string name="Name">Exit</string>
           <string name="Source"><![CDATA[--!strict
@@ -4076,7 +4081,7 @@ return Exit
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="36">
+      <Item class="ModuleScript" referent="37">
         <Properties>
           <string name="Name">Interactables</string>
           <string name="Source"><![CDATA[--!strict
@@ -4471,7 +4476,7 @@ return Interactables
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="37">
+      <Item class="ModuleScript" referent="38">
         <Properties>
           <string name="Name">Lobby</string>
           <string name="Source"><![CDATA[--!strict
@@ -4924,7 +4929,7 @@ return Lobby
 ]]></string>
         </Properties>
       </Item>
-      <Item class="Script" referent="38">
+      <Item class="Script" referent="39">
         <Properties>
           <string name="Name">Main</string>
           <token name="RunContext">0</token>
@@ -4936,7 +4941,7 @@ RoundManager.run()
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="39">
+      <Item class="ModuleScript" referent="40">
         <Properties>
           <string name="Name">MonsterAI</string>
           <string name="Source"><![CDATA[--!strict
@@ -5994,7 +5999,7 @@ return MonsterAI
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="40">
+      <Item class="ModuleScript" referent="41">
         <Properties>
           <string name="Name">Objectives</string>
           <string name="Source"><![CDATA[--!strict
@@ -6612,7 +6617,7 @@ return Objectives
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="41">
+      <Item class="ModuleScript" referent="42">
         <Properties>
           <string name="Name">Progress</string>
           <string name="Source"><![CDATA[--!strict
@@ -6685,7 +6690,7 @@ return Progress
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="42">
+      <Item class="ModuleScript" referent="43">
         <Properties>
           <string name="Name">RoundManager</string>
           <string name="Source"><![CDATA[--!strict
@@ -6697,6 +6702,11 @@ return Progress
 --                    played right here instead, and the doors stay shut until it's over.
 --   a night server   (reserved, one per group): plays the night the group chose
 --                    (Playing -> Results), then sends everyone back to a lobby.
+--
+-- Either way a group is on its own for its night. When you're caught you get two
+-- choices: TRY AGAIN (it shows how many of the group want to, like 2 / 4) or BACK TO
+-- LOBBY. If the whole group tries again, the night starts over; otherwise everyone goes
+-- back to the lobby.
 --
 -- Each player's "Where" attribute tells their client where they are: "lobby",
 -- "night", or "between" (no body: a black screen, a teleport, the results).
@@ -6749,6 +6759,13 @@ local status: { [Player]: string } = {} -- "alive" | "caught" | "escaped"
 local looks: { [Player]: Vector3 } = {}
 local round: Round? = nil
 local lobby: Lobby.Lobby? = nil
+local nightBusy = false -- a group's night (and its try-again vote) is going on here
+
+-- The group playing here and what each of them chose when they were caught.
+local group: { Player } = {}
+local groupSize = 0
+local votes: { [Player]: string } = {} -- "again" | "lobby"
+local goBack: (players: { Player }) -> () = function() end
 
 local function setWhere(player: Player, where: string)
 	player:SetAttribute("Where", where)
@@ -6882,6 +6899,17 @@ function RoundManager.caught(player: Player, monster: Model?)
 		if status[player] == "caught" then
 			setWhere(player, "between")
 			removeCharacter(player)
+		end
+		-- then the choice (unless someone already got out: that night's won). The night may
+		-- already be over by now, if you were the last one.
+		local won = false
+		for _, s in status do
+			if s == "escaped" then
+				won = true
+			end
+		end
+		if table.find(group, player) and votes[player] == nil and player.Parent and not won then
+			Remotes.Retry:FireClient(player, "open", RoundManager.againCount(), groupSize)
 		end
 	end)
 end
@@ -7034,11 +7062,11 @@ local function startRound(night: Nights.Night, players: { Player })
 	monster:start()
 end
 
--- Ends the night; returns who played it.
-local function endRound(): { [Player]: boolean }
+-- Ends the night and clears it away; returns whether anyone made it out.
+local function endRound(): boolean
 	local r = round
 	if not r then
-		return {}
+		return false
 	end
 	local survivors = {}
 	for player, s in status do
@@ -7057,8 +7085,9 @@ local function endRound(): { [Player]: boolean }
 	end
 	GameState:SetAttribute("Result", if won then "Escaped" else "Caught")
 	GameState:SetAttribute("Phase", "Results")
-
-	task.wait(Config.Round.ResultsTime)
+	if won then
+		task.wait(Config.Round.ResultsTime) -- let the ending play out
+	end
 
 	for _, c in r.connections do
 		c:Disconnect()
@@ -7080,7 +7109,70 @@ local function endRound(): { [Player]: boolean }
 		end
 	end
 	GameState:SetAttribute("Curse", "")
-	return r.participants
+	return won
+end
+
+-- The try-again vote ----------------------------------------------------------------
+
+function RoundManager.againCount(): number
+	local n = 0
+	for p, v in votes do
+		if v == "again" and p.Parent then
+			n += 1
+		end
+	end
+	return n
+end
+
+local function present(players: { Player }): { Player }
+	local out = {}
+	for _, p in players do
+		if p.Parent then
+			table.insert(out, p)
+		end
+	end
+	return out
+end
+
+local function tell(players: { Player }, ...: any)
+	for _, p in present(players) do
+		Remotes.Retry:FireClient(p, ...)
+	end
+end
+
+-- The group's night, again and again for as long as all of them want to try again.
+-- `back` sends players to a lobby (a teleport home, or a respawn in this one).
+local function playNight(players: { Player }, nightIndex: number, back: (players: { Player }) -> ())
+	nightBusy = true
+	group = table.clone(players)
+	groupSize = #players
+	goBack = back
+	while true do
+		table.clear(votes)
+		startRound(Nights.get(nightIndex), present(group))
+		repeat
+			task.wait(0.5)
+		until #alivePlayers() == 0
+		if endRound() then
+			tell(group, "close")
+			break
+		end
+		-- caught, all of them: wait for everyone's choice (a minute at most)
+		local deadline = os.clock() + 60
+		repeat
+			task.wait(0.25)
+		until RoundManager.againCount() >= groupSize or #present(group) < groupSize or os.clock() > deadline
+		tell(group, "close")
+		if RoundManager.againCount() < groupSize then
+			break
+		end
+	end
+	local remaining = present(group)
+	table.clear(group)
+	table.clear(votes)
+	groupSize = 0
+	back(remaining)
+	nightBusy = false
 end
 
 -- Lobby -----------------------------------------------------------------------------
@@ -7128,24 +7220,21 @@ local function sendToNight(group: { Player }, night: number): boolean
 end
 
 -- Studio (or a failed teleport): play the night in this server, then back to the lobby.
-local function playHere(group: { Player }, night: number)
-	if round then
-		for _, p in group do
+local function playHere(players: { Player }, night: number)
+	if nightBusy then
+		for _, p in players do
 			spawnInLobby(p)
 		end
 		return
 	end
-	startRound(Nights.get(night), group)
-	repeat
-		task.wait(0.5)
-	until #alivePlayers() == 0
-	local played = endRound()
+	playNight(players, night, function(back: { Player })
+		for _, p in back do
+			task.spawn(spawnInLobby, p)
+		end
+	end)
 	applyLighting(Lobby.LIGHTING)
 	GameState:SetAttribute("Phase", "Lobby")
 	GameState:SetAttribute("Night", 1)
-	for player in played do
-		task.spawn(spawnInLobby, player)
-	end
 end
 
 local function runLobby()
@@ -7154,7 +7243,7 @@ local function runLobby()
 	lobby = Lobby.new({
 		highest = Progress.highest,
 		isOpen = function(): boolean
-			return round == nil
+			return not nightBusy
 		end,
 		launch = function(group: { Player }, night: number)
 			for _, p in group do
@@ -7238,11 +7327,7 @@ local function runNightServer()
 	end
 	local night = math.clamp(math.floor(planned or 1), 1, allowed)
 	GameState:SetAttribute("Night", night)
-	startRound(Nights.get(night), Players:GetPlayers())
-	repeat
-		task.wait(0.5)
-	until #alivePlayers() == 0
-	endRound()
+	playNight(Players:GetPlayers(), night, sendHome)
 	sendHome(Players:GetPlayers())
 	-- anyone who still turns up here goes home too
 	Players.PlayerAdded:Connect(function(player: Player)
@@ -7296,6 +7381,22 @@ function RoundManager.run()
 		end
 	end)
 
+	-- what a caught player chose: TRY AGAIN, or BACK TO LOBBY (which leaves right away)
+	Remotes.Retry.OnServerEvent:Connect(function(player: Player, choice: unknown)
+		if not table.find(group, player) or status[player] == "alive" or votes[player] ~= nil then
+			return
+		end
+		if choice == "again" then
+			votes[player] = "again"
+			tell(group, "count", RoundManager.againCount(), groupSize)
+		elseif choice == "lobby" then
+			votes[player] = "lobby"
+			table.remove(group, table.find(group, player) :: number)
+			Remotes.Retry:FireClient(player, "close")
+			goBack({ player })
+		end
+	end)
+
 	Players.PlayerRemoving:Connect(function(player: Player)
 		looks[player] = nil
 		local r = round
@@ -7318,7 +7419,7 @@ return RoundManager
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="43">
+      <Item class="ModuleScript" referent="44">
         <Properties>
           <string name="Name">Themes</string>
           <string name="Source"><![CDATA[--!strict
@@ -8434,7 +8535,7 @@ return Themes
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="44">
+      <Item class="ModuleScript" referent="45">
         <Properties>
           <string name="Name">Throwables</string>
           <string name="Source"><![CDATA[--!strict
@@ -8609,7 +8710,7 @@ return Throwables
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="45">
+      <Item class="ModuleScript" referent="46">
         <Properties>
           <string name="Name">WorldBuilder</string>
           <string name="Source"><![CDATA[--!strict
@@ -8836,26 +8937,26 @@ return WorldBuilder
       </Item>
     </Item>
   </Item>
-  <Item class="SoundService" referent="46">
+  <Item class="SoundService" referent="47">
     <Properties>
       <string name="Name">SoundService</string>
       <token name="AmbientReverb">14</token>
       <bool name="RespectFilteringEnabled">true</bool>
     </Properties>
-    <Item class="SoundGroup" referent="47">
+    <Item class="SoundGroup" referent="48">
       <Properties>
         <string name="Name">AchromaMaster</string>
         <float name="Volume">1</float>
       </Properties>
     </Item>
   </Item>
-  <Item class="StarterGui" referent="48">
+  <Item class="StarterGui" referent="49">
     <Properties>
       <string name="Name">StarterGui</string>
       <bool name="ResetPlayerGuiOnSpawn">false</bool>
     </Properties>
   </Item>
-  <Item class="StarterPlayer" referent="49">
+  <Item class="StarterPlayer" referent="50">
     <Properties>
       <string name="Name">StarterPlayer</string>
       <bool name="AutoJumpEnabled">false</bool>
@@ -8867,15 +8968,15 @@ return WorldBuilder
       <float name="CharacterWalkSpeed">10</float>
       <bool name="EnableMouseLockOption">false</bool>
     </Properties>
-    <Item class="StarterPlayerScripts" referent="50">
+    <Item class="StarterPlayerScripts" referent="51">
       <Properties>
         <string name="Name">StarterPlayerScripts</string>
       </Properties>
-      <Item class="Folder" referent="51">
+      <Item class="Folder" referent="52">
         <Properties>
           <string name="Name">Client</string>
         </Properties>
-        <Item class="ModuleScript" referent="52">
+        <Item class="ModuleScript" referent="53">
           <Properties>
             <string name="Name">Atmosphere</string>
             <string name="Source"><![CDATA[--!strict
@@ -9408,7 +9509,7 @@ return Atmosphere
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="53">
+        <Item class="ModuleScript" referent="54">
           <Properties>
             <string name="Name">ClientState</string>
             <string name="Source"><![CDATA[--!strict
@@ -9416,7 +9517,7 @@ return Atmosphere
 -- without requiring each other.
 
 local ClientState = {
-	choosing = false, -- the choice screen at a lobby door is up
+	choosing = false, -- a screen with choices is up (at a lobby door, or after you're caught)
 	roundStatus = "none", -- "none" | "lobby" | "alive" | "caught" | "escaped"
 	fear = 0, -- 0..1, how close / how angry the monster is
 	monsterDistance = math.huge,
@@ -9436,7 +9537,7 @@ return ClientState
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="54">
+        <Item class="ModuleScript" referent="55">
           <Properties>
             <string name="Name">Endings</string>
             <string name="Source"><![CDATA[--!strict
@@ -9536,7 +9637,7 @@ return Endings
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="55">
+        <Item class="ModuleScript" referent="56">
           <Properties>
             <string name="Name">Events</string>
             <string name="Source"><![CDATA[--!strict
@@ -9704,7 +9805,7 @@ return Events
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="56">
+        <Item class="ModuleScript" referent="57">
           <Properties>
             <string name="Name">Flashlight</string>
             <string name="Source"><![CDATA[--!strict
@@ -9875,7 +9976,7 @@ return Flashlight
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="57">
+        <Item class="ModuleScript" referent="58">
           <Properties>
             <string name="Name">Hiding</string>
             <string name="Source"><![CDATA[--!strict
@@ -10015,7 +10116,7 @@ return Hiding
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="58">
+        <Item class="ModuleScript" referent="59">
           <Properties>
             <string name="Name">Hud</string>
             <string name="Source"><![CDATA[--!strict
@@ -10400,7 +10501,7 @@ return Hud
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="59">
+        <Item class="ModuleScript" referent="60">
           <Properties>
             <string name="Name">Keypad</string>
             <string name="Source"><![CDATA[--!strict
@@ -10622,7 +10723,7 @@ return Keypad
 ]]></string>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="60">
+        <Item class="LocalScript" referent="61">
           <Properties>
             <string name="Name">Main</string>
             <string name="Source"><![CDATA[--!strict
@@ -10650,7 +10751,6 @@ local Menu = require(script.Parent.Menu)
 local MonsterAnimator = require(script.Parent.MonsterAnimator)
 local Movement = require(script.Parent.Movement)
 local Prompts = require(script.Parent.Prompts)
-local Spectate = require(script.Parent.Spectate)
 
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local player = Players.LocalPlayer
@@ -10678,7 +10778,6 @@ MonsterAnimator.init()
 Endings.init()
 Hiding.init()
 Keypad.init()
-Spectate.init()
 Events.init()
 Prompts.init()
 Menu.init()
@@ -10730,9 +10829,9 @@ player.CharacterRemoving:Connect(function()
 	Hud.setHudVisible(false)
 end)
 
--- The cursor only shows when there's something to click: the choice at a lobby door and
--- the keypad. Otherwise Roblox would leave its arrow in the middle of the screen in first
--- person.
+-- The cursor only shows when there's something to click: the choice at a lobby door,
+-- TRY AGAIN / BACK TO LOBBY, and the keypad. Otherwise Roblox would leave its arrow in
+-- the middle of the screen in first person.
 RunService.RenderStepped:Connect(function()
 	local wanted = ClientState.choosing or ClientState.keypadOpen
 	if UserInputService.MouseIconEnabled ~= wanted then
@@ -10742,7 +10841,7 @@ end)
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="61">
+        <Item class="ModuleScript" referent="62">
           <Properties>
             <string name="Name">Menu</string>
             <string name="Source"><![CDATA[--!strict
@@ -10752,6 +10851,8 @@ end)
 --     number and it's decided. A small ring in the corner opens brightness and volume.
 --   * black, with the night's number, while you're being sent through (that's also the
 --     teleport's loading screen) and black between a night and the lobby.
+--   * when you're caught: TRY AGAIN (with how many of your group want to, 1 / 4) or
+--     BACK TO LOBBY.
 -- The music box plays in the lobby and in the dark.
 
 local Players = game:GetService("Players")
@@ -10767,7 +10868,6 @@ local Nights = require(Shared:WaitForChild("Nights"))
 local ClientState = require(script.Parent.ClientState)
 local Endings = require(script.Parent.Endings)
 local Hud = require(script.Parent.Hud)
-local Spectate = require(script.Parent.Spectate)
 
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local GameState = ReplicatedStorage:WaitForChild("GameState")
@@ -10792,6 +10892,11 @@ local pad = 0 -- which door we're choosing at
 local highest = 1 -- highest night we may pick
 local picked = 1 -- the night that's selected
 local launching: number? = nil -- going through, to this night
+local death: Frame -- TRY AGAIN / BACK TO LOBBY
+local againButton: TextButton
+local againCount: TextLabel
+local retryOpen = false -- the server offered the choice
+local votedAgain = false
 local brightness = 0
 local volume = 1
 local levelBars: { [string]: { Frame } } = {}
@@ -10818,8 +10923,10 @@ local function refresh()
 	local w = where()
 	-- black whenever you have no body (the endings draw their own screens), or you're
 	-- on your way through a door
-	local dark = launching ~= nil or (w == "between" and player.Character == nil and not ClientState.jumpscaring and not Spectate.isActive())
+	local dark = launching ~= nil or (w == "between" and player.Character == nil and not ClientState.jumpscaring)
 	overlay.Visible = dark
+	death.Visible = retryOpen and not ClientState.jumpscaring and player.Character == nil
+	ClientState.choosing = choice.Visible or death.Visible
 	-- the night's number: on the way through, and in a night server waiting for the others
 	local n = launching
 	local waitingNight = GameState:GetAttribute("Night")
@@ -10841,7 +10948,11 @@ end
 local function closeChoice()
 	choice.Visible = false
 	settings.Visible = false
-	ClientState.choosing = false
+	ClientState.choosing = death.Visible
+end
+
+local function setAgainCount(again: number, size: number)
+	againCount.Text = string.format("%d / %d", again, size)
 end
 
 local function selectNight(n: number)
@@ -10975,6 +11086,41 @@ function Menu.init()
 	overlay = make("Frame", { Name = "Overlay", Visible = false, Size = UDim2.fromScale(1, 1), BackgroundColor3 = BLACK, BorderSizePixel = 0 }, gui)
 	overlayTitle = make("TextLabel", { Name = "Title", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.48), Size = UDim2.new(0.9, 0, 0, 60), BackgroundTransparency = 1, Font = FONT, TextSize = 40, TextColor3 = PALE, Text = "" }, overlay)
 
+	-- caught: try again (all of you), or go back
+	death = make("Frame", { Name = "Death", Visible = false, Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ZIndex = 5 }, gui)
+	againButton = make("TextButton", { Name = "Again", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.42), Size = UDim2.fromOffset(520, 56), BackgroundTransparency = 1, AutoButtonColor = false, Modal = true, Font = FONT, TextSize = 38, TextColor3 = PALE, TextTransparency = 0.25, Text = Hud.spaced("TRY AGAIN"), ZIndex = 5 }, death)
+	againCount = make("TextLabel", { Name = "Count", AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0.42, 34), Size = UDim2.fromOffset(200, 30), BackgroundTransparency = 1, Font = FONT, TextSize = 22, TextColor3 = PALE, TextTransparency = 0.45, Text = "0 / 1", ZIndex = 5 }, death)
+	local lobbyButton: TextButton = make("TextButton", { Name = "Lobby", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.62), Size = UDim2.fromOffset(520, 44), BackgroundTransparency = 1, AutoButtonColor = false, Font = FONT, TextSize = 24, TextColor3 = PALE, TextTransparency = 0.5, Text = Hud.spaced("BACK TO LOBBY"), ZIndex = 5 }, death)
+	for _, b in { againButton, lobbyButton } do
+		local rest = b.TextTransparency
+		b.MouseEnter:Connect(function()
+			if not (b == againButton and votedAgain) then
+				b.TextTransparency = 0
+				Audio.play("MenuHover", nil, 0.3, 0.9)
+			end
+		end)
+		b.MouseLeave:Connect(function()
+			if not (b == againButton and votedAgain) then
+				b.TextTransparency = rest
+			end
+		end)
+	end
+	againButton.Activated:Connect(function()
+		if votedAgain then
+			return
+		end
+		votedAgain = true
+		againButton.TextTransparency = 0
+		Audio.play("MenuSelect", nil, 0.7, 0.85)
+		Remotes.Retry:FireServer("again")
+	end)
+	lobbyButton.Activated:Connect(function()
+		Audio.play("MenuSelect", nil, 0.6, 0.7)
+		Remotes.Retry:FireServer("lobby")
+		retryOpen = false
+		refresh()
+	end)
+
 	music = Audio.track("MusicBox", nil, 0.3)
 	if music then
 		music:Play()
@@ -11002,6 +11148,19 @@ function Menu.init()
 				TeleportService:SetTeleportGui(loading)
 			end)
 		end
+	end)
+	Remotes.Retry.OnClientEvent:Connect(function(action: string, again: any, size: any)
+		if action == "open" then
+			retryOpen = true
+			votedAgain = false
+			againButton.TextTransparency = 0.25
+			setAgainCount(if typeof(again) == "number" then again else 0, if typeof(size) == "number" then size else 1)
+		elseif action == "count" and typeof(again) == "number" and typeof(size) == "number" then
+			setAgainCount(again, size)
+		elseif action == "close" then
+			retryOpen = false
+		end
+		refresh()
 	end)
 	player:GetAttributeChangedSignal("Where"):Connect(function()
 		-- arrived somewhere (or the teleport fell through and we're back in the lobby)
@@ -11034,7 +11193,7 @@ return Menu
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="62">
+        <Item class="ModuleScript" referent="63">
           <Properties>
             <string name="Name">MonsterAnimator</string>
             <string name="Source"><![CDATA[--!strict
@@ -11351,7 +11510,7 @@ return MonsterAnimator
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="63">
+        <Item class="ModuleScript" referent="64">
           <Properties>
             <string name="Name">Movement</string>
             <string name="Source"><![CDATA[--!strict
@@ -11492,7 +11651,7 @@ return Movement
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="64">
+        <Item class="ModuleScript" referent="65">
           <Properties>
             <string name="Name">Prompts</string>
             <string name="Source"><![CDATA[--!strict
@@ -11630,106 +11789,6 @@ function Prompts.init()
 end
 
 return Prompts
-]]></string>
-          </Properties>
-        </Item>
-        <Item class="ModuleScript" referent="65">
-          <Properties>
-            <string name="Name">Spectate</string>
-            <string name="Source"><![CDATA[--!strict
--- After you're caught (or escape) while others are still inside, watch over a
--- survivor's shoulder. Click / R1 / tap to switch who you follow.
-
-local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
-
-local ClientState = require(script.Parent.ClientState)
-
-local GameState = ReplicatedStorage:WaitForChild("GameState")
-local player = Players.LocalPlayer
-
-local Spectate = {}
-
-local target: Player? = nil
-local active = false
-local smoothed: CFrame? = nil
-
-local function survivors(): { Player }
-	local list = {}
-	for _, p in Players:GetPlayers() do
-		local character = p.Character
-		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-		if p ~= player and humanoid and humanoid.Health > 0 and character and character:FindFirstChild("Head") then
-			table.insert(list, p)
-		end
-	end
-	return list
-end
-
-local function nextTarget()
-	local list = survivors()
-	if #list == 0 then
-		target = nil
-		return
-	end
-	local index = table.find(list, target :: any) or 0
-	target = list[index % #list + 1]
-	smoothed = nil
-end
-
-function Spectate.isActive(): boolean
-	return active
-end
-
-function Spectate.init()
-	UserInputService.InputBegan:Connect(function(input: InputObject, processed: boolean)
-		if not active or processed then
-			return
-		end
-		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch or input.KeyCode == Enum.KeyCode.ButtonR1 then
-			nextTarget()
-		end
-	end)
-
-	RunService:BindToRenderStep("AchromaSpectate", Enum.RenderPriority.Camera.Value + 3, function(dt: number)
-		local camera = workspace.CurrentCamera
-		local shouldSpectate = player:GetAttribute("Where") == "between"
-			and not ClientState.jumpscaring
-			and player.Character == nil
-			and GameState:GetAttribute("Phase") == "Playing"
-		if not shouldSpectate then
-			active = false
-			return
-		end
-
-		local list = survivors()
-		if not target or not table.find(list, target) then
-			target = nil
-			nextTarget()
-		end
-		local t = target
-		local character = if t then t.Character else nil
-		local head = if character then character:FindFirstChild("Head") :: BasePart? else nil
-		if not t or not head then
-			active = false
-			return
-		end
-		active = true
-		camera.CameraType = Enum.CameraType.Scriptable
-		local look = head.CFrame.LookVector
-		local flatLook = Vector3.new(look.X, 0, look.Z)
-		if flatLook.Magnitude < 0.01 then
-			flatLook = Vector3.new(0, 0, -1)
-		end
-		local goal = CFrame.lookAt(head.Position - flatLook.Unit * 5 + Vector3.new(0, 2.2, 0), head.Position + flatLook.Unit * 10)
-		smoothed = if smoothed then smoothed:Lerp(goal, math.min(1, dt * 6)) else goal
-		camera.CFrame = smoothed :: CFrame
-	end)
-end
-
-return Spectate
 ]]></string>
           </Properties>
         </Item>

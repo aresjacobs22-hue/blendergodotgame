@@ -7,7 +7,7 @@ local Engine = require("./mock/engine")
 local Vector3 = roblox.Vector3
 local CFrame = Engine.CFrame
 
-local REMOTES = { "Notify", "Jumpscare", "OpenKeypad", "SubmitCode", "LeaveHiding", "Flashlight", "Battery", "Apparition", "Escaped", "Look", "Throw", "Breath", "Chaos", "Lobby" }
+local REMOTES = { "Notify", "Jumpscare", "OpenKeypad", "SubmitCode", "LeaveHiding", "Flashlight", "Battery", "Apparition", "Escaped", "Look", "Throw", "Breath", "Chaos", "Lobby", "Retry" }
 
 local failures = 0
 local function check(cond: any, msg: string)
@@ -963,14 +963,74 @@ do
 	end)
 	check(started and GameState:GetAttribute("Night") == 3, "night 3 starts straight away (" .. tostring(GameState:GetAttribute("Night")) .. ")")
 	check(p:GetAttribute("Where") == "night", "you're in it")
-	mods.require(mods.server.RoundManager).caught(p, nil)
+	local RoundManager = mods.require(mods.server.RoundManager)
+	local Retry = game:GetService("ReplicatedStorage").Remotes.Retry
+	RoundManager.caught(p, nil)
+	idle(game, 1)
+	check(#Engine.teleports == 0, "caught: it waits for your choice")
+	Retry.OnServerEvent:Fire(p, "again")
+	local again = idle(game, 5, function()
+		return GameState:GetAttribute("Phase") == "Playing" and p:GetAttribute("Where") == "night"
+	end)
+	check(again, "TRY AGAIN (1 / 1): the night starts over")
+	RoundManager.caught(p, nil)
+	idle(game, 1)
+	Retry.OnServerEvent:Fire(p, "lobby")
 	local home = idle(game, 15, function()
 		return #Engine.teleports > 0
 	end)
-	check(home and Engine.teleports[1].players[1] == p and Engine.teleports[1].data == nil, "then everyone's sent back to a lobby")
+	check(home and Engine.teleports[1].players[1] == p and Engine.teleports[1].data == nil, "BACK TO LOBBY: sent back to a lobby")
 	Engine.privateServerId = nil
 	Engine.joinData = {}
 	Engine.saved = {}
+	check(#Engine.errors == 0, "no script errors (" .. #Engine.errors .. ")")
+end
+
+print("A group's night: TRY AGAIN needs all of them")
+do
+	Engine.teleports = {}
+	local game, _, mods = boot()
+	local a, b = makePlayer(game, "A", 1), makePlayer(game, "B", 2)
+	mods.runScript(mods.server.Main)
+	idle(game, 1)
+	local rs = game:GetService("ReplicatedStorage")
+	local GameState = rs.GameState
+	local pad1 = game:GetService("Workspace").Lobby.Pad1
+	placePlayer(a, pad1.Position)
+	idle(game, 0.4)
+	rs.Remotes.Lobby.OnServerEvent:Fire(a, "choose", 1, 1, 2)
+	placePlayer(b, pad1.Position)
+	local function both(where: string): boolean
+		return a:GetAttribute("Where") == where and b:GetAttribute("Where") == where
+	end
+	local started = idle(game, 14, function()
+		return GameState:GetAttribute("Phase") == "Playing" and both("night")
+	end)
+	check(started, "the two of them go in together after the countdown")
+	local RoundManager = mods.require(mods.server.RoundManager)
+	local Retry = rs.Remotes.Retry
+	RoundManager.caught(a, nil)
+	RoundManager.caught(b, nil)
+	idle(game, 1)
+	Retry.OnServerEvent:Fire(a, "again")
+	check(RoundManager.againCount() == 1, "one tries again: 1 / 2")
+	idle(game, 2)
+	check(GameState:GetAttribute("Phase") ~= "Playing", "one isn't enough")
+	Retry.OnServerEvent:Fire(b, "again")
+	check(idle(game, 5, function()
+		return GameState:GetAttribute("Phase") == "Playing" and both("night")
+	end), "2 / 2: it starts over for both of them")
+	RoundManager.caught(a, nil)
+	RoundManager.caught(b, nil)
+	idle(game, 1)
+	Retry.OnServerEvent:Fire(a, "again")
+	Retry.OnServerEvent:Fire(b, "lobby")
+	check(idle(game, 2, function()
+		return b:GetAttribute("Where") == "lobby"
+	end), "BACK TO LOBBY: straight back")
+	check(idle(game, 5, function()
+		return a:GetAttribute("Where") == "lobby" and GameState:GetAttribute("Phase") == "Lobby"
+	end), "not all of them wanted to try again, so everyone's back")
 	check(#Engine.errors == 0, "no script errors (" .. #Engine.errors .. ")")
 end
 

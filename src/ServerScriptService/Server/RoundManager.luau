@@ -8,6 +8,11 @@
 --   a night server   (reserved, one per group): plays the night the group chose
 --                    (Playing -> Results), then sends everyone back to a lobby.
 --
+-- Either way a group is on its own for its night. When you're caught you get two
+-- choices: TRY AGAIN (it shows how many of the group want to, like 2 / 4) or BACK TO
+-- LOBBY. If the whole group tries again, the night starts over; otherwise everyone goes
+-- back to the lobby.
+--
 -- Each player's "Where" attribute tells their client where they are: "lobby",
 -- "night", or "between" (no body: a black screen, a teleport, the results).
 
@@ -59,6 +64,13 @@ local status: { [Player]: string } = {} -- "alive" | "caught" | "escaped"
 local looks: { [Player]: Vector3 } = {}
 local round: Round? = nil
 local lobby: Lobby.Lobby? = nil
+local nightBusy = false -- a group's night (and its try-again vote) is going on here
+
+-- The group playing here and what each of them chose when they were caught.
+local group: { Player } = {}
+local groupSize = 0
+local votes: { [Player]: string } = {} -- "again" | "lobby"
+local goBack: (players: { Player }) -> () = function() end
 
 local function setWhere(player: Player, where: string)
 	player:SetAttribute("Where", where)
@@ -192,6 +204,17 @@ function RoundManager.caught(player: Player, monster: Model?)
 		if status[player] == "caught" then
 			setWhere(player, "between")
 			removeCharacter(player)
+		end
+		-- then the choice (unless someone already got out: that night's won). The night may
+		-- already be over by now, if you were the last one.
+		local won = false
+		for _, s in status do
+			if s == "escaped" then
+				won = true
+			end
+		end
+		if table.find(group, player) and votes[player] == nil and player.Parent and not won then
+			Remotes.Retry:FireClient(player, "open", RoundManager.againCount(), groupSize)
 		end
 	end)
 end
@@ -344,11 +367,11 @@ local function startRound(night: Nights.Night, players: { Player })
 	monster:start()
 end
 
--- Ends the night; returns who played it.
-local function endRound(): { [Player]: boolean }
+-- Ends the night and clears it away; returns whether anyone made it out.
+local function endRound(): boolean
 	local r = round
 	if not r then
-		return {}
+		return false
 	end
 	local survivors = {}
 	for player, s in status do
@@ -367,8 +390,9 @@ local function endRound(): { [Player]: boolean }
 	end
 	GameState:SetAttribute("Result", if won then "Escaped" else "Caught")
 	GameState:SetAttribute("Phase", "Results")
-
-	task.wait(Config.Round.ResultsTime)
+	if won then
+		task.wait(Config.Round.ResultsTime) -- let the ending play out
+	end
 
 	for _, c in r.connections do
 		c:Disconnect()
@@ -390,7 +414,70 @@ local function endRound(): { [Player]: boolean }
 		end
 	end
 	GameState:SetAttribute("Curse", "")
-	return r.participants
+	return won
+end
+
+-- The try-again vote ----------------------------------------------------------------
+
+function RoundManager.againCount(): number
+	local n = 0
+	for p, v in votes do
+		if v == "again" and p.Parent then
+			n += 1
+		end
+	end
+	return n
+end
+
+local function present(players: { Player }): { Player }
+	local out = {}
+	for _, p in players do
+		if p.Parent then
+			table.insert(out, p)
+		end
+	end
+	return out
+end
+
+local function tell(players: { Player }, ...: any)
+	for _, p in present(players) do
+		Remotes.Retry:FireClient(p, ...)
+	end
+end
+
+-- The group's night, again and again for as long as all of them want to try again.
+-- `back` sends players to a lobby (a teleport home, or a respawn in this one).
+local function playNight(players: { Player }, nightIndex: number, back: (players: { Player }) -> ())
+	nightBusy = true
+	group = table.clone(players)
+	groupSize = #players
+	goBack = back
+	while true do
+		table.clear(votes)
+		startRound(Nights.get(nightIndex), present(group))
+		repeat
+			task.wait(0.5)
+		until #alivePlayers() == 0
+		if endRound() then
+			tell(group, "close")
+			break
+		end
+		-- caught, all of them: wait for everyone's choice (a minute at most)
+		local deadline = os.clock() + 60
+		repeat
+			task.wait(0.25)
+		until RoundManager.againCount() >= groupSize or #present(group) < groupSize or os.clock() > deadline
+		tell(group, "close")
+		if RoundManager.againCount() < groupSize then
+			break
+		end
+	end
+	local remaining = present(group)
+	table.clear(group)
+	table.clear(votes)
+	groupSize = 0
+	back(remaining)
+	nightBusy = false
 end
 
 -- Lobby -----------------------------------------------------------------------------
@@ -438,24 +525,21 @@ local function sendToNight(group: { Player }, night: number): boolean
 end
 
 -- Studio (or a failed teleport): play the night in this server, then back to the lobby.
-local function playHere(group: { Player }, night: number)
-	if round then
-		for _, p in group do
+local function playHere(players: { Player }, night: number)
+	if nightBusy then
+		for _, p in players do
 			spawnInLobby(p)
 		end
 		return
 	end
-	startRound(Nights.get(night), group)
-	repeat
-		task.wait(0.5)
-	until #alivePlayers() == 0
-	local played = endRound()
+	playNight(players, night, function(back: { Player })
+		for _, p in back do
+			task.spawn(spawnInLobby, p)
+		end
+	end)
 	applyLighting(Lobby.LIGHTING)
 	GameState:SetAttribute("Phase", "Lobby")
 	GameState:SetAttribute("Night", 1)
-	for player in played do
-		task.spawn(spawnInLobby, player)
-	end
 end
 
 local function runLobby()
@@ -464,7 +548,7 @@ local function runLobby()
 	lobby = Lobby.new({
 		highest = Progress.highest,
 		isOpen = function(): boolean
-			return round == nil
+			return not nightBusy
 		end,
 		launch = function(group: { Player }, night: number)
 			for _, p in group do
@@ -548,11 +632,7 @@ local function runNightServer()
 	end
 	local night = math.clamp(math.floor(planned or 1), 1, allowed)
 	GameState:SetAttribute("Night", night)
-	startRound(Nights.get(night), Players:GetPlayers())
-	repeat
-		task.wait(0.5)
-	until #alivePlayers() == 0
-	endRound()
+	playNight(Players:GetPlayers(), night, sendHome)
 	sendHome(Players:GetPlayers())
 	-- anyone who still turns up here goes home too
 	Players.PlayerAdded:Connect(function(player: Player)
@@ -603,6 +683,22 @@ function RoundManager.run()
 			light.Range = beam.range * 0.85
 			light.Brightness = beam.brightness * 0.8
 			light.Enabled = on
+		end
+	end)
+
+	-- what a caught player chose: TRY AGAIN, or BACK TO LOBBY (which leaves right away)
+	Remotes.Retry.OnServerEvent:Connect(function(player: Player, choice: unknown)
+		if not table.find(group, player) or status[player] == "alive" or votes[player] ~= nil then
+			return
+		end
+		if choice == "again" then
+			votes[player] = "again"
+			tell(group, "count", RoundManager.againCount(), groupSize)
+		elseif choice == "lobby" then
+			votes[player] = "lobby"
+			table.remove(group, table.find(group, player) :: number)
+			Remotes.Retry:FireClient(player, "close")
+			goBack({ player })
 		end
 	end)
 

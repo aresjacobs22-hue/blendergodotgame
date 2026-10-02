@@ -23,7 +23,6 @@ local Menu = require(script.Parent.Menu)
 local MonsterAnimator = require(script.Parent.MonsterAnimator)
 local Movement = require(script.Parent.Movement)
 local Prompts = require(script.Parent.Prompts)
-local Spectate = require(script.Parent.Spectate)
 
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local player = Players.LocalPlayer
@@ -51,7 +50,6 @@ MonsterAnimator.init()
 Endings.init()
 Hiding.init()
 Keypad.init()
-Spectate.init()
 Events.init()
 Prompts.init()
 Menu.init()
@@ -103,9 +101,9 @@ player.CharacterRemoving:Connect(function()
 	Hud.setHudVisible(false)
 end)
 
--- The cursor only shows when there's something to click: the choice at a lobby door and
--- the keypad. Otherwise Roblox would leave its arrow in the middle of the screen in first
--- person.
+-- The cursor only shows when there's something to click: the choice at a lobby door,
+-- TRY AGAIN / BACK TO LOBBY, and the keypad. Otherwise Roblox would leave its arrow in
+-- the middle of the screen in first person.
 RunService.RenderStepped:Connect(function()
 	local wanted = ClientState.choosing or ClientState.keypadOpen
 	if UserInputService.MouseIconEnabled ~= wanted then

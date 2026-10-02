@@ -11,7 +11,7 @@ local Engine = require("../../tests/mock/engine")
 local CFrame = Engine.CFrame
 local Vector3 = roblox.Vector3
 
-local REMOTES = { "Notify", "Jumpscare", "OpenKeypad", "SubmitCode", "LeaveHiding", "Flashlight", "Battery", "Apparition", "Escaped", "Look", "Throw", "Breath", "Chaos", "Lobby" }
+local REMOTES = { "Notify", "Jumpscare", "OpenKeypad", "SubmitCode", "LeaveHiding", "Flashlight", "Battery", "Apparition", "Escaped", "Look", "Throw", "Breath", "Chaos", "Lobby", "Retry" }
 
 local nightIndex = tonumber(process.args[1]) or 1
 local seed = tonumber(process.args[2]) or 1234

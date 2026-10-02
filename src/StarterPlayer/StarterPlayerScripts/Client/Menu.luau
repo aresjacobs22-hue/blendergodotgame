@@ -5,6 +5,8 @@
 --     number and it's decided. A small ring in the corner opens brightness and volume.
 --   * black, with the night's number, while you're being sent through (that's also the
 --     teleport's loading screen) and black between a night and the lobby.
+--   * when you're caught: TRY AGAIN (with how many of your group want to, 1 / 4) or
+--     BACK TO LOBBY.
 -- The music box plays in the lobby and in the dark.
 
 local Players = game:GetService("Players")
@@ -20,7 +22,6 @@ local Nights = require(Shared:WaitForChild("Nights"))
 local ClientState = require(script.Parent.ClientState)
 local Endings = require(script.Parent.Endings)
 local Hud = require(script.Parent.Hud)
-local Spectate = require(script.Parent.Spectate)
 
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local GameState = ReplicatedStorage:WaitForChild("GameState")
@@ -45,6 +46,11 @@ local pad = 0 -- which door we're choosing at
 local highest = 1 -- highest night we may pick
 local picked = 1 -- the night that's selected
 local launching: number? = nil -- going through, to this night
+local death: Frame -- TRY AGAIN / BACK TO LOBBY
+local againButton: TextButton
+local againCount: TextLabel
+local retryOpen = false -- the server offered the choice
+local votedAgain = false
 local brightness = 0
 local volume = 1
 local levelBars: { [string]: { Frame } } = {}
@@ -71,8 +77,10 @@ local function refresh()
 	local w = where()
 	-- black whenever you have no body (the endings draw their own screens), or you're
 	-- on your way through a door
-	local dark = launching ~= nil or (w == "between" and player.Character == nil and not ClientState.jumpscaring and not Spectate.isActive())
+	local dark = launching ~= nil or (w == "between" and player.Character == nil and not ClientState.jumpscaring)
 	overlay.Visible = dark
+	death.Visible = retryOpen and not ClientState.jumpscaring and player.Character == nil
+	ClientState.choosing = choice.Visible or death.Visible
 	-- the night's number: on the way through, and in a night server waiting for the others
 	local n = launching
 	local waitingNight = GameState:GetAttribute("Night")
@@ -94,7 +102,11 @@ end
 local function closeChoice()
 	choice.Visible = false
 	settings.Visible = false
-	ClientState.choosing = false
+	ClientState.choosing = death.Visible
+end
+
+local function setAgainCount(again: number, size: number)
+	againCount.Text = string.format("%d / %d", again, size)
 end
 
 local function selectNight(n: number)
@@ -228,6 +240,41 @@ function Menu.init()
 	overlay = make("Frame", { Name = "Overlay", Visible = false, Size = UDim2.fromScale(1, 1), BackgroundColor3 = BLACK, BorderSizePixel = 0 }, gui)
 	overlayTitle = make("TextLabel", { Name = "Title", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.48), Size = UDim2.new(0.9, 0, 0, 60), BackgroundTransparency = 1, Font = FONT, TextSize = 40, TextColor3 = PALE, Text = "" }, overlay)
 
+	-- caught: try again (all of you), or go back
+	death = make("Frame", { Name = "Death", Visible = false, Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ZIndex = 5 }, gui)
+	againButton = make("TextButton", { Name = "Again", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.42), Size = UDim2.fromOffset(520, 56), BackgroundTransparency = 1, AutoButtonColor = false, Modal = true, Font = FONT, TextSize = 38, TextColor3 = PALE, TextTransparency = 0.25, Text = Hud.spaced("TRY AGAIN"), ZIndex = 5 }, death)
+	againCount = make("TextLabel", { Name = "Count", AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0.42, 34), Size = UDim2.fromOffset(200, 30), BackgroundTransparency = 1, Font = FONT, TextSize = 22, TextColor3 = PALE, TextTransparency = 0.45, Text = "0 / 1", ZIndex = 5 }, death)
+	local lobbyButton: TextButton = make("TextButton", { Name = "Lobby", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.62), Size = UDim2.fromOffset(520, 44), BackgroundTransparency = 1, AutoButtonColor = false, Font = FONT, TextSize = 24, TextColor3 = PALE, TextTransparency = 0.5, Text = Hud.spaced("BACK TO LOBBY"), ZIndex = 5 }, death)
+	for _, b in { againButton, lobbyButton } do
+		local rest = b.TextTransparency
+		b.MouseEnter:Connect(function()
+			if not (b == againButton and votedAgain) then
+				b.TextTransparency = 0
+				Audio.play("MenuHover", nil, 0.3, 0.9)
+			end
+		end)
+		b.MouseLeave:Connect(function()
+			if not (b == againButton and votedAgain) then
+				b.TextTransparency = rest
+			end
+		end)
+	end
+	againButton.Activated:Connect(function()
+		if votedAgain then
+			return
+		end
+		votedAgain = true
+		againButton.TextTransparency = 0
+		Audio.play("MenuSelect", nil, 0.7, 0.85)
+		Remotes.Retry:FireServer("again")
+	end)
+	lobbyButton.Activated:Connect(function()
+		Audio.play("MenuSelect", nil, 0.6, 0.7)
+		Remotes.Retry:FireServer("lobby")
+		retryOpen = false
+		refresh()
+	end)
+
 	music = Audio.track("MusicBox", nil, 0.3)
 	if music then
 		music:Play()
@@ -255,6 +302,19 @@ function Menu.init()
 				TeleportService:SetTeleportGui(loading)
 			end)
 		end
+	end)
+	Remotes.Retry.OnClientEvent:Connect(function(action: string, again: any, size: any)
+		if action == "open" then
+			retryOpen = true
+			votedAgain = false
+			againButton.TextTransparency = 0.25
+			setAgainCount(if typeof(again) == "number" then again else 0, if typeof(size) == "number" then size else 1)
+		elseif action == "count" and typeof(again) == "number" and typeof(size) == "number" then
+			setAgainCount(again, size)
+		elseif action == "close" then
+			retryOpen = false
+		end
+		refresh()
 	end)
 	player:GetAttributeChangedSignal("Where"):Connect(function()
 		-- arrived somewhere (or the teleport fell through and we're back in the lobby)

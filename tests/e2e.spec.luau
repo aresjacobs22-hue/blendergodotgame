@@ -3,7 +3,8 @@
 --   the lobby (walk into a door's square, pick the night and 1 player)
 --   -> night 1 (survive, hiding in a locker) -> night 2 unlocked
 --   -> keys + on-screen keypad -> generators -> photographs -> hearts (the end)
---   -> back to night 1 to get caught by the Hollow (jumpscare).
+--   -> back to night 1 to get caught by the Hollow (jumpscare) -> TRY AGAIN (it starts
+--   over) -> caught again -> BACK TO LOBBY.
 -- It also checks the game never shows words: only "NIGHT 1".."NIGHT 5", ever.
 -- Run with:  lune run tests/e2e.spec.luau
 local roblox = require("@lune/roblox")
@@ -13,7 +14,7 @@ local Vector3 = roblox.Vector3
 local CFrame = Engine.CFrame
 local Enum = roblox.Enum
 
-local REMOTES = { "Notify", "Jumpscare", "OpenKeypad", "SubmitCode", "LeaveHiding", "Flashlight", "Battery", "Apparition", "Escaped", "Look", "Throw", "Breath", "Chaos", "Lobby" }
+local REMOTES = { "Notify", "Jumpscare", "OpenKeypad", "SubmitCode", "LeaveHiding", "Flashlight", "Battery", "Apparition", "Escaped", "Look", "Throw", "Breath", "Chaos", "Lobby", "Retry" }
 
 local failures = 0
 local function check(cond: any, msg: string)
@@ -229,11 +230,13 @@ local function shownText(): { string }
 end
 
 -- The only words allowed on screen: the nights' numbers ("N I G H T    3"), the
--- player counts and the cross on the choice screen, and the controls before a night.
+-- player counts and the cross on the choice screen, the controls before a night, and
+-- TRY AGAIN (1 / 4) / BACK TO LOBBY when you're caught.
 local function onlyNights(where: string)
 	local bad = {}
 	for _, t in shownText() do
-		if not (string.match(t, "^N I G H T%s+%d$") or string.match(t, "^%d$") or t == "×" or t == Hud.KEYBOARD_CONTROLS) then
+		local choice = t == Hud.spaced("TRY AGAIN") or t == Hud.spaced("BACK TO LOBBY") or string.match(t, "^%d / %d$")
+		if not (string.match(t, "^N I G H T%s+%d$") or string.match(t, "^%d$") or t == "×" or t == Hud.KEYBOARD_CONTROLS or choice) then
 			table.insert(bad, t)
 		end
 	end
@@ -447,21 +450,50 @@ check(player:GetAttribute("HighestNight") == 6, "every night beaten")
 print("Night 1 again: caught by the Hollow")
 check(startNight(1), "night 1 starts again")
 run(1)
-local monster = workspace.Monster
-local m = monster.HumanoidRootPart
 -- walk straight into it once it's awake
-local awake = run(80, function()
-	return GameState:GetAttribute("MonsterAwake") == true
-end, 0.1)
-check(awake, "it wakes up at 1 AM")
-placePlayer(m.Position + m.CFrame.LookVector * 3)
-local caught = run(3, function()
-	return ClientState.jumpscaring
-end)
-check(caught, "it catches you: jumpscare")
+local function getCaught()
+	local awake = run(80, function()
+		return GameState:GetAttribute("MonsterAwake") == true
+	end, 0.1)
+	check(awake, "it wakes up at 1 AM")
+	local m = workspace.Monster.HumanoidRootPart
+	placePlayer(m.Position + m.CFrame.LookVector * 3)
+	local caught = run(3, function()
+		return ClientState.jumpscaring
+	end)
+	check(caught, "it catches you: jumpscare")
+end
+getCaught()
 check(workspace.CurrentCamera.CameraType == Enum.CameraType.Scriptable, "camera pulled into its face")
 onlyNights("during the jumpscare")
-finishAndReturn(false)
+local offered = run(10, function()
+	return menu.Death.Visible
+end)
+check(offered, "then the choice: TRY AGAIN or BACK TO LOBBY")
+check(menu.Death.Again.Text == Hud.spaced("TRY AGAIN") and menu.Death.Lobby.Text == Hud.spaced("BACK TO LOBBY"), "it says so")
+check(menu.Death.Count.Text == "0 / 1", "nobody has chosen yet (" .. menu.Death.Count.Text .. ")")
+check(UserInputService.MouseIconEnabled == true, "with the cursor")
+check(player:GetAttribute("Where") == "between" and player.Character == nil, "no body, no spectating")
+onlyNights("on the choice")
+menu.Death.Again.Activated:Fire()
+local again = run(15, function()
+	return phase() == "Playing" and player:GetAttribute("Where") == "night" and player.Character ~= nil
+end)
+check(again, "TRY AGAIN, 1 / 1: the night starts over")
+check(not menu.Death.Visible and UserInputService.MouseIconEnabled == false, "the choice is gone")
+run(1)
+getCaught()
+check(run(10, function()
+	return menu.Death.Visible
+end), "caught again: the choice again")
+menu.Death.Lobby.Activated:Fire()
+local back = run(15, function()
+	return inLobby()
+end)
+check(back, "BACK TO LOBBY: back in the lobby")
+check(run(3, function()
+	return phase() == "Lobby"
+end), "and the doors are open again")
 
 ---------------------------------------------------------------------------
 print("Notifications received: " .. #notifications)

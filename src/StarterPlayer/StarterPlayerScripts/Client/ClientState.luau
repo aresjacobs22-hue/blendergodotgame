@@ -3,7 +3,7 @@
 -- without requiring each other.
 
 local ClientState = {
-	choosing = false, -- the choice screen at a lobby door is up
+	choosing = false, -- a screen with choices is up (at a lobby door, or after you're caught)
 	roundStatus = "none", -- "none" | "lobby" | "alive" | "caught" | "escaped"
 	fear = 0, -- 0..1, how close / how angry the monster is
 	monsterDistance = math.huge,
