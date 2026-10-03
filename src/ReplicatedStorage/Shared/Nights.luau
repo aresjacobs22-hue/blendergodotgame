@@ -9,6 +9,7 @@ export type MazeParams = {
 	WallHeight: number,
 	CeilingHeight: number,
 	DoorHeight: number,
+	DoorWidth: number?, -- default 5.5
 	Width: number,
 	Depth: number,
 	Hub: string, -- "house" (fixed 5x3 blueprint) or "hall" (one open room)

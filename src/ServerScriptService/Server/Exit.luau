@@ -66,7 +66,7 @@ function Exit.new(world: World): Exit
 		elseif style == "lift" then
 			material = Enum.Material.Metal
 			color = Color3.fromRGB(120, 124, 126)
-		elseif world.night.theme == "ward" then
+		elseif world.theme.portholes then
 			material = Enum.Material.Metal
 			color = Color3.fromRGB(190, 192, 194)
 		end
@@ -80,7 +80,7 @@ function Exit.new(world: World): Exit
 				opened = hinge * CFrame.Angles(0, math.rad(-sx * 95), 0) * hinge:Inverse() * closed
 			end
 			local leaf = ctx.part(folder, "ExitDoor", Vector3.new(w / 2 - 0.08, h - 0.05, 0.5), closed, material, color, nil)
-			if world.night.theme == "ward" then
+			if world.theme.portholes then
 				-- round porthole windows
 				local window = ctx.part(folder, "Porthole", Vector3.new(0.6, 1.3, 1.3), closed * CFrame.new(0, h * 0.18, 0) * CFrame.Angles(0, math.rad(90), 0), Enum.Material.Glass, Color3.fromRGB(40, 10, 10), Enum.PartType.Cylinder)
 				window.Anchored = false

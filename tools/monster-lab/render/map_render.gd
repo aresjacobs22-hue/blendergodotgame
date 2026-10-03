@@ -310,6 +310,9 @@ func _render(data: Dictionary, view: Dictionary) -> void:
 		fl.spot_angle = float(F["angle"]) / 2.0
 		fl.spot_attenuation = 0.45
 		fl.shadow_enabled = true
+		# a large bias: at the flashlight's range the default one stripes every wall it hits
+		fl.shadow_bias = 0.6
+		fl.shadow_normal_bias = 2.0
 		cam.add_child(fl)
 		fl.position = Vector3(0.4, -0.35, 0)
 		var spill := SpotLight3D.new()

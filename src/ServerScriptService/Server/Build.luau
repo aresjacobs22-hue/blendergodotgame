@@ -95,7 +95,7 @@ function Build.new(layout: Maze.Layout, night: Nights.Night, model: Model): Ctx
 	ctx.H = H
 	ctx.ceiling = m.CeilingHeight
 	ctx.T = T
-	ctx.doorWidth = 5.5
+	ctx.doorWidth = m.DoorWidth or 5.5
 	ctx.doorHeight = math.min(m.DoorHeight, H - 1)
 	ctx.exitWidth = 7
 	ctx.exitHeight = math.min(m.DoorHeight + 0.5, H - 1)
@@ -255,12 +255,27 @@ function Build.wallBox(ctx: Ctx, parent: Instance, frame: CFrame, length: number
 	end
 end
 
-function Build.wallWithOpening(ctx: Ctx, parent: Instance, frame: CFrame, width: number, height: number, front: Style, back: Style)
+function Build.wallWithOpening(ctx: Ctx, parent: Instance, frame: CFrame, width: number, height: number, front: Style, back: Style, wallHeight: number?)
+	local H = wallHeight or ctx.H
 	local length = ctx.C - ctx.T
 	local side = (length - width) / 2
-	Build.wallBox(ctx, parent, frame, side, ctx.H, 0, -(width + side) / 2, front, back)
-	Build.wallBox(ctx, parent, frame, side, ctx.H, 0, (width + side) / 2, front, back)
-	Build.wallBox(ctx, parent, frame, width, ctx.H - height, height, 0, front, back)
+	Build.wallBox(ctx, parent, frame, side, H, 0, -(width + side) / 2, front, back)
+	Build.wallBox(ctx, parent, frame, side, H, 0, (width + side) / 2, front, back)
+	Build.wallBox(ctx, parent, frame, width, H - height, height, 0, front, back)
+end
+
+-- The top of a wall that stops short: a few broken chunks still standing on it.
+function Build.jaggedTop(ctx: Ctx, parent: Instance, frame: CFrame, length: number, top: number, style: Style)
+	local random = ctx.random
+	local x = -length / 2
+	while x < length / 2 - 0.4 do
+		local w = math.min(random:NextNumber(0.8, 3.2), length / 2 - x)
+		if random:NextNumber() < 0.55 then
+			local h = random:NextNumber(0.3, 1.6)
+			ctx.styled(parent, "WallChunk", Vector3.new(w, h, ctx.T * random:NextNumber(0.6, 1)), frame * CFrame.new(x + w / 2, top + h / 2, 0), style)
+		end
+		x += w
+	end
 end
 
 function Build.doorTrim(ctx: Ctx, parent: Instance, frame: CFrame, width: number, height: number, style: Style)
@@ -271,10 +286,10 @@ function Build.doorTrim(ctx: Ctx, parent: Instance, frame: CFrame, width: number
 	ctx.part(parent, "Trim", Vector3.new(width + 0.85, 0.45, depth), frame * CFrame.new(0, height + 0.2, 0), style.material, style.color, nil)
 end
 
-function Build.brokenWall(ctx: Ctx, parent: Instance, frame: CFrame, front: Style, back: Style)
+function Build.brokenWall(ctx: Ctx, parent: Instance, frame: CFrame, front: Style, back: Style, wallHeight: number?)
 	local random = ctx.random
-	local width, height = 6, math.min(9.5, ctx.H - 1.5)
-	Build.wallWithOpening(ctx, parent, frame, width, height, front, back)
+	local width, height = 6, math.min(9.5, (wallHeight or ctx.H) - 1.5)
+	Build.wallWithOpening(ctx, parent, frame, width, height, front, back, wallHeight)
 	for _ = 1, 5 do
 		local sx = if random:NextNumber() < 0.5 then -1 else 1
 		local size = Vector3.new(random:NextNumber(0.6, 1.6), random:NextNumber(0.8, 2.4), ctx.T * 0.9)

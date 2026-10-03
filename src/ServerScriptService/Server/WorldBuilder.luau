@@ -31,7 +31,10 @@ local WorldBuilder = {}
 
 WorldBuilder.setupCollisionGroups = Build.setupCollisionGroups
 
-local function buildEdges(ctx: Build.Ctx, theme: Themes.Theme)
+-- Builds every wall and returns how tall each one ended up ("x,z,dir" -> height); a
+-- theme can make some walls stop short of the ceiling.
+local function buildEdges(ctx: Build.Ctx, theme: Themes.Theme): { [string]: number }
+	local heights: { [string]: number } = {}
 	local layout = ctx.layout
 	local W, D = layout.width, layout.depth
 	local function styleOf(x: number, z: number): Style
@@ -49,24 +52,31 @@ local function buildEdges(ctx: Build.Ctx, theme: Themes.Theme)
 					local front = styleOf(x, z)
 					local back = styleOf(x + Maze.DX[dir], z + Maze.DZ[dir])
 					local frame = ctx.edgeFrame(x, z, dir)
+					local edgeHeight = theme.edgeHeight
+					local h = if edgeHeight and kind ~= "open" and kind ~= "exit" then edgeHeight(ctx, x, z, dir) else ctx.H
+					heights[string.format("%d,%d,%s", x, z, dir)] = h
 					if kind == "wall" then
-						Build.wallBox(ctx, ctx.structure, frame, ctx.C - ctx.T, ctx.H, 0, 0, front, back)
+						Build.wallBox(ctx, ctx.structure, frame, ctx.C - ctx.T, h, 0, 0, front, back)
+						if h < ctx.H then
+							Build.jaggedTop(ctx, ctx.structure, frame, ctx.C - ctx.T, h, front)
+						end
 					elseif kind == "door" or kind == "doorway" then
-						Build.wallWithOpening(ctx, ctx.structure, frame, ctx.doorWidth, ctx.doorHeight, front, back)
+						Build.wallWithOpening(ctx, ctx.structure, frame, ctx.doorWidth, ctx.doorHeight, front, back, h)
 						Build.doorTrim(ctx, ctx.structure, frame, ctx.doorWidth, ctx.doorHeight, theme.trim)
 					elseif kind == "exit" then
 						Build.wallWithOpening(ctx, ctx.structure, frame, ctx.exitWidth, ctx.exitHeight, front, back)
 						Build.doorTrim(ctx, ctx.structure, frame, ctx.exitWidth, ctx.exitHeight, theme.trim)
 					elseif kind == "hole" then
-						Build.brokenWall(ctx, ctx.structure, frame, front, back)
+						Build.brokenWall(ctx, ctx.structure, frame, front, back, h)
 					end
 				end
 			end
 		end
 	end
+	return heights
 end
 
-local function buildPillars(ctx: Build.Ctx, theme: Themes.Theme)
+local function buildPillars(ctx: Build.Ctx, theme: Themes.Theme, heights: { [string]: number })
 	local layout = ctx.layout
 	local W, D = layout.width, layout.depth
 	local C, H, T = ctx.C, ctx.H, ctx.T
@@ -91,6 +101,14 @@ local function buildPillars(ctx: Build.Ctx, theme: Themes.Theme)
 					end
 				end
 				if needed then
+					-- as tall as the tallest wall it holds up
+					local h = 0
+					for _, k in { string.format("%d,%d,N", i - 1, j - 1), string.format("%d,%d,N", i, j - 1), string.format("%d,%d,E", i - 1, j - 1), string.format("%d,%d,E", i - 1, j) } do
+						h = math.max(h, heights[k] or 0)
+					end
+					if h <= 0 then
+						h = H
+					end
 					local hubCount = 0
 					for _, c in { { i - 1, j - 1 }, { i, j - 1 }, { i - 1, j }, { i, j } } do
 						if Maze.inBounds(layout, c[1], c[2]) and Maze.isHub(layout, c[1], c[2]) then
@@ -98,7 +116,7 @@ local function buildPillars(ctx: Build.Ctx, theme: Themes.Theme)
 						end
 					end
 					local style = if hubCount >= 2 then theme.hubWall else theme.wall
-					ctx.part(ctx.structure, "Pillar", Vector3.new(T + 0.5, H, T + 0.5), CFrame.new(i * C, H / 2, j * C), style.material, ctx.vary(style.color, 0.1), nil)
+					ctx.part(ctx.structure, "Pillar", Vector3.new(T + 0.5, h, T + 0.5), CFrame.new(i * C, h / 2, j * C), style.material, ctx.vary(style.color, 0.1), nil)
 				end
 			end
 		end
@@ -149,8 +167,8 @@ function WorldBuilder.build(layout: Layout, night: Nights.Night): World
 		ctx.styled(ctx.structure, "HubCeiling", Vector3.new(C, 1, C), CFrame.new((cx + 0.5) * C, ctx.ceiling + 0.45, (cz + 0.5) * C), theme.hubCeiling)
 	end
 
-	buildEdges(ctx, theme)
-	buildPillars(ctx, theme)
+	local heights = buildEdges(ctx, theme)
+	buildPillars(ctx, theme, heights)
 
 	for _, c in layout.lights do
 		theme.lamp(ctx, c, ctx.cellCenter(c.x, c.z))
