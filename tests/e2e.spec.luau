@@ -205,6 +205,10 @@ local function inLobby(): boolean
 end
 
 -- Every piece of text a player could see right now.
+local function hud()
+	return player.PlayerGui.AchromaHud
+end
+
 local function shownText(): { string }
 	local out = {}
 	local function visible(g): boolean
@@ -229,14 +233,29 @@ local function shownText(): { string }
 	return out
 end
 
+-- What each night asks of you, in red at the top of the screen.
+local OBJECTIVES = {
+	"SURVIVE UNTIL 6 AM",
+	"FIND THE FOUR KEYS",
+	"ENTER THE CODE AT THE EXIT",
+	"GET OUT",
+	"START THE THREE GENERATORS",
+	"GET TO THE LIFT",
+	"FIND THE SIX PHOTOGRAPHS",
+	"DESTROY THE THREE HEARTS",
+	"GET TO THE PORTAL",
+}
+
 -- The only words allowed on screen: the nights' numbers ("N I G H T    3"), the
--- player counts and the cross on the choice screen, the controls before a night, and
--- TRY AGAIN (1 / 4) / BACK TO LOBBY when you're caught.
+-- player counts and the cross on the choice screen, the controls before a night, the
+-- objective and the hour during one, and TRY AGAIN (1 / 4) / BACK TO LOBBY when you're
+-- caught.
 local function onlyNights(where: string)
 	local bad = {}
 	for _, t in shownText() do
 		local choice = t == Hud.spaced("TRY AGAIN") or t == Hud.spaced("BACK TO LOBBY") or string.match(t, "^%d / %d$")
-		if not (string.match(t, "^N I G H T%s+%d$") or string.match(t, "^%d$") or t == "×" or t == Hud.KEYBOARD_CONTROLS or choice) then
+		local playing = table.find(OBJECTIVES, t) ~= nil or string.match(t, "^%d+ AM$")
+		if not (string.match(t, "^N I G H T%s+%d$") or string.match(t, "^%d$") or t == "×" or t == Hud.KEYBOARD_CONTROLS or choice or playing) then
 			table.insert(bad, t)
 		end
 	end
@@ -274,6 +293,14 @@ local function finishAndReturn(escaped: boolean)
 		return phase() == "Lobby" and inLobby()
 	end)
 	check(back, "back in the lobby")
+	check(not hud().Objective.Visible and not hud().Clock.Visible, "no objective or clock in the lobby")
+end
+
+-- the objective at the top: in red, and saying `text`
+local function objectiveIs(text: string): boolean
+	local label = hud().Objective
+	local color = label.TextColor3
+	return label.Visible and label.Text == text and label.AnchorPoint.Y == 0 and label.Position.Y.Offset < 40 and color.R > 0.5 and color.G < 0.15 and color.B < 0.15
 end
 
 local function progress(): string
@@ -336,7 +363,10 @@ check(player.PlayerGui.AchromaHud.Controls.Text == Hud.KEYBOARD_CONTROLS, "the c
 run(8)
 onlyNights("while playing")
 check(UserInputService.MouseIconEnabled == false, "no cursor while playing")
-check(GameState:GetAttribute("Goal") == 6 and litPips() == 0, "six dark dots for the hours (" .. progress() .. ")")
+check(objectiveIs("SURVIVE UNTIL 6 AM"), "the objective in red at the top (" .. hud().Objective.Text .. ")")
+local clock = hud().Clock
+check(clock.Visible and clock.Text == "12 AM" and clock.AnchorPoint.X == 1 and clock.Position.X.Scale == 1 and clock.Position.Y.Offset < 40, "12 AM in the top right corner (" .. clock.Text .. ")")
+check(not hud().Pips.Visible, "the hour instead of dots")
 press("AchromaFlashlight")
 run(0.3)
 check(player:GetAttribute("Flashlight") == true, "flashlight works")
@@ -349,12 +379,16 @@ check(ClientState.hiding, "hiding")
 -- hold your breath whenever it comes close to the locker
 local breathHeld = 0
 local revealedAt = nil
+local atThree = nil
 local morning = run(320, function()
 	if ClientState.roundStatus ~= "alive" then
 		return true
 	end
 	if not ClientState.hiding and not revealedAt then
 		revealedAt = tostring(GameState:GetAttribute("Hour")) .. " AM"
+	end
+	if GameState:GetAttribute("Hour") == 3 and not atThree then
+		atThree = clock.Text
 	end
 	local monster = workspace:FindFirstChild("Monster")
 	local character = player.Character
@@ -369,6 +403,7 @@ local morning = run(320, function()
 end, 0.1) and ClientState.roundStatus == "escaped"
 release("AchromaBreath")
 check(morning, "made it to 6 AM (hour " .. tostring(GameState:GetAttribute("Hour")) .. ")")
+check(atThree == "3 AM", "the clock kept time (" .. tostring(atThree) .. " at 3)")
 print("    (held breath " .. breathHeld .. " times; " .. (if revealedAt then "dragged out at " .. revealedAt else "stayed hidden") .. ")")
 finishAndReturn(true)
 check(player:GetAttribute("HighestNight") == 2, "night 1 beaten: saved")
@@ -383,11 +418,14 @@ run(1)
 check(startNight(2), "night 2 starts")
 check(GameState:GetAttribute("NightName") == "THE RED WARD", "it's the ward")
 check(workspace.Monster:GetAttribute("Kind") == "Crawler", "the Crawler is here")
+check(objectiveIs("FIND THE FOUR KEYS"), "FIND THE FOUR KEYS (" .. hud().Objective.Text .. ")")
+check(hud().Pips.Visible and not hud().Clock.Visible, "dots, no clock")
 for _, prompt in prompts("Key") do
 	prompt.Triggered:Fire(player)
 	run(0.2)
 end
 check(progress() == "4/5" and litPips() == 4, "four of five dots lit (" .. progress() .. ")")
+check(objectiveIs("ENTER THE CODE AT THE EXIT"), "then ENTER THE CODE AT THE EXIT")
 local keypad = workspace.World:FindFirstChild("Keypad", true)
 placePlayer(keypad.Position + Vector3.new(0, 0, 4))
 keypad:FindFirstChildOfClass("ProximityPrompt").Triggered:Fire(player)
@@ -404,6 +442,8 @@ panel.KeyOK.Activated:Fire()
 run(1)
 check(UserInputService.MouseIconEnabled == false, "and goes away again after")
 check(GameState:GetAttribute("ExitOpen") == true, "typing the code opens the exit")
+check(objectiveIs("GET OUT"), "then GET OUT")
+onlyNights("with the exit open")
 workspace.World.Structure.EscapeZone.Touched:Fire(player.Character.HumanoidRootPart)
 finishAndReturn(true)
 check(player:GetAttribute("HighestNight") == 3, "night 2 beaten: saved")
@@ -412,12 +452,14 @@ check(player:GetAttribute("HighestNight") == 3, "night 2 beaten: saved")
 print("Night 3: THE DROWNED TUNNELS (power)")
 check(startNight(3), "night 3 starts")
 check(workspace.Monster:GetAttribute("Kind") == "Listener", "the Listener is here")
+check(objectiveIs("START THE THREE GENERATORS"), "START THE THREE GENERATORS (" .. hud().Objective.Text .. ")")
 for _, prompt in prompts("Generator") do
 	prompt.Triggered:Fire(player)
 	run(0.2)
 end
 run(2)
 check(GameState:GetAttribute("ExitOpen") == true, "the lift opens (" .. progress() .. ")")
+check(objectiveIs("GET TO THE LIFT"), "then GET TO THE LIFT")
 workspace.World.Structure.EscapeZone.Touched:Fire(player.Character.HumanoidRootPart)
 finishAndReturn(true)
 check(player:GetAttribute("HighestNight") == 4, "night 3 beaten: saved")
@@ -426,6 +468,7 @@ check(player:GetAttribute("HighestNight") == 4, "night 3 beaten: saved")
 print("Night 4: THE ATRIUM (photographs)")
 check(startNight(4), "night 4 starts")
 check(workspace.Monster:GetAttribute("Kind") == "Statue", "the Statue is here")
+check(objectiveIs("FIND THE SIX PHOTOGRAPHS"), "FIND THE SIX PHOTOGRAPHS (" .. hud().Objective.Text .. ")")
 local decoys = 0
 for _, d in workspace.World:GetDescendants() do
 	if d.Name == "Statue" and d.ClassName == "Model" then
@@ -444,6 +487,7 @@ check(player:GetAttribute("HighestNight") == 5, "night 4 beaten: saved")
 print("Night 5: THE VOID (hearts)")
 check(startNight(5), "night 5 starts")
 check(workspace.Monster:GetAttribute("Kind") == "Amalgam", "the Amalgam is here")
+check(objectiveIs("DESTROY THE THREE HEARTS"), "DESTROY THE THREE HEARTS (" .. hud().Objective.Text .. ")")
 local hearts = prompts("Heart")
 check(#hearts == 3, "3 hearts")
 for _, prompt in hearts do
@@ -451,6 +495,7 @@ for _, prompt in hearts do
 end
 run(1)
 check(GameState:GetAttribute("ExitOpen") == true, "the portal opens")
+check(objectiveIs("GET TO THE PORTAL"), "then GET TO THE PORTAL")
 workspace.World.Structure.EscapeZone.Touched:Fire(player.Character.HumanoidRootPart)
 finishAndReturn(true)
 check(player:GetAttribute("HighestNight") == 6, "every night beaten")

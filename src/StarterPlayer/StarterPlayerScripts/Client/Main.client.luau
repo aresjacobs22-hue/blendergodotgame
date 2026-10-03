@@ -80,7 +80,8 @@ player.CharacterAdded:Connect(function(character: Model)
 		return
 	end
 
-	-- a night: black, its number and the controls, black again, and then you're just... there
+	-- a night: black, its number and the controls, black again, and then you're just...
+	-- there, with what to do in red at the top
 	ClientState.roundStatus = "alive"
 	Hud.setHudVisible(true)
 	local n = GameState:GetAttribute("Night")
@@ -91,6 +92,7 @@ player.CharacterAdded:Connect(function(character: Model)
 		task.delay(1.4, function()
 			if ClientState.roundStatus == "alive" then
 				Hud.fade(1, 4)
+				Hud.revealObjective()
 				Atmosphere.wakeUp()
 			end
 		end)

@@ -5,9 +5,11 @@ look, its own monster and its own objective. All five are open from the start: p
 in order or jump straight to the one you want. How far you've got is saved, and a door
 always starts on your next unbeaten night.
 
-**The game never explains itself.** You wake up in a lobby in the fog. A night starts
+**The game barely explains itself.** You wake up in a lobby in the fog. A night starts
 with its number on black (and the controls, faintly, just that once), and then you're
-just there. No objectives on screen, no messages, no tutorials, no "you died" screen. Everything below is
+just there, with what to do in dripping red letters across the top of the screen
+(SURVIVE UNTIL 6 AM, FIND THE FOUR KEYS, ...). No messages, no tutorials, no "you died"
+screen. Everything below is
 for you, not the player: players find it out (or read it on the game page, see
 [Game page description](#game-page-description)).
 
@@ -57,11 +59,14 @@ Also in the game:
     square when it hits 0 goes through with you. Others can walk in until it's full;
     walk out to leave it.
   - The small ring on that screen opens brightness and volume.
-- **What's on screen while you play**: a few faint dots at the top that light up as you
-  get further (the hours on night 1, keys, generators, photographs, hearts), five faint
-  ticks for your flashlight battery, a mark for each bottle you carry, and a thin line
-  for your breath while you hide. Things you can use show a small dot with the key to
-  press. That's all.
+- **What's on screen while you play**: the objective in red at the top. It changes when
+  the next step comes: FIND THE FOUR KEYS, then ENTER THE CODE AT THE EXIT, then GET OUT.
+  On night 1, the hour is in the top right (12 AM ... 5 AM, and it flashes red when it
+  changes). On the other nights, a few faint dots under the objective light up as you get
+  further (keys, generators, photographs, hearts). There are also five faint ticks for
+  your flashlight battery, a mark for each bottle you carry, and a thin line for your
+  breath while you hide. Things you can use show a small dot with the key to press.
+  That's all.
 - **A new random map every time** you play a night.
 - **Flashlight** with a battery, **stamina**, **crouch-sneaking**, and **lockers** to hide in.
 - **Atmosphere**: flickering lamps, a heartbeat, jumpscares, a clock that chimes the
@@ -213,7 +218,7 @@ the Hollow): `LUNE=lune GODOT=godot python3 tools/monster-lab/covers.py`.
 | `src/ServerScriptService/Server/Dressing.luau` | furniture and the special rooms (dining room, morgue, cistern, ...) |
 | `src/ServerScriptService/Server/Chaos.luau` | what each curse does, the random events, the rage, breath-holding |
 | `src/ServerScriptService/Server/Throwables.luau` | the bottles |
-| `src/ServerScriptService/Server/Objectives.luau` | survive / keys / generators / photographs / hearts (and their progress dots) |
+| `src/ServerScriptService/Server/Objectives.luau` | survive / keys / generators / photographs / hearts (their red objective text and progress dots) |
 | `src/ServerScriptService/Server/MonsterAI.luau` | the monsters' brains (sight, hearing, lunges, statue rules, ...) |
 | `src/ServerScriptService/Server/Lobby.luau` | the lobby: its look, the four doors, the choice and the countdown |
 | `src/ServerScriptService/Server/RoundManager.luau` | lobby servers, night servers and the teleports between them; the night → results loop |
@@ -256,9 +261,11 @@ rojo build default.project.json -o build/ACHROMA.rbxlx  # rebuild the place file
   monster comes past), checks that every night is open from the start, beats nights 2-5 (keys
   and the keypad screen, generators, photographs, hearts), then gets caught on night 1 for
   the jumpscare, picks TRY AGAIN (the night starts over), gets caught again and picks
-  BACK TO LOBBY. At every step it reads everything on screen and fails if any words
-  other than "NIGHT 1".."NIGHT 5", the player counts, the controls before a night and
-  TRY AGAIN / BACK TO LOBBY show up.
+  BACK TO LOBBY. It checks that each night's objective appears in red at the top and
+  changes with each step, and that night 1's clock reads 12 AM in the top right and keeps
+  time. At every step it reads everything on screen and fails if any words other than
+  "NIGHT 1".."NIGHT 5", the player counts, the controls before a night, the objectives,
+  the hour and TRY AGAIN / BACK TO LOBBY show up.
 
 These tests run outside Roblox, so they can't judge rendering, physics or how scary it
 feels. Playtest in Studio before you publish.

@@ -5,6 +5,8 @@
 --   power    start 3 generators (loud!), then take the service lift
 --   collect  take 6 photographs
 --   hearts   destroy 3 hearts (it knows each time), then run for the portal
+-- What to do right now is the "Objective" on GameState: the client puts it at the top
+-- of the screen in red.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -47,9 +49,21 @@ local function rgb(r: number, g: number, b: number): Color3
 	return Color3.fromRGB(r, g, b)
 end
 
-local function openExit(ctx: Ctx, message: string)
+local NUMBERS = { "ONE", "TWO", "THREE", "FOUR", "FIVE", "SIX", "SEVEN", "EIGHT", "NINE", "TEN" }
+
+local function setObjective(text: string)
+	GameState:SetAttribute("Objective", text)
+end
+
+-- "FIND THE FOUR KEYS"
+local function objective(verb: string, count: number, things: string): string
+	return string.format("%s THE %s %s", verb, NUMBERS[count] or tostring(count), things)
+end
+
+local function openExit(ctx: Ctx, message: string, goal: string)
 	ctx.exit:open()
 	GameState:SetAttribute("ExitOpen", true)
+	setObjective(goal)
 	ctx.notifyAll(message, "danger")
 	ctx.monster:onExitOpened()
 end
@@ -64,6 +78,7 @@ local function survive(ctx: Ctx): Objective
 	local done = false
 	GameState:SetAttribute("Hour", 0)
 	ctx.setProgress(0, 6)
+	setObjective("SURVIVE UNTIL 6 AM")
 	local connection = RunService.Heartbeat:Connect(function()
 		if done then
 			return
@@ -124,6 +139,7 @@ local function keys(ctx: Ctx): Objective
 	-- one dot per key, and one for the door
 	ctx.setProgress(0, count + 1)
 	GameState:SetAttribute("CodeMask", table.concat(mask))
+	setObjective(objective("FIND", count, "KEYS"))
 
 	-- padlocks + chain on the exit, keypad beside it
 	local exit = ctx.exit
@@ -200,7 +216,7 @@ local function keys(ctx: Ctx): Objective
 			exitOpen = true
 			refreshKeypad()
 			ctx.setProgress(count + 1, count + 1)
-			openExit(ctx, "The exit is open. RUN.")
+			openExit(ctx, "The exit is open. RUN.", "GET OUT")
 		else
 			Audio.play("KeypadError", keypad, 1.3, 1, 100)
 			screen.Text = "WRONG"
@@ -278,6 +294,7 @@ local function keys(ctx: Ctx): Objective
 			ctx.monster:awaken()
 			ctx.monster:hearNoise(crate.Position, 45)
 			if found >= count then
+				setObjective("ENTER THE CODE AT THE EXIT")
 				ctx.notifyAll("Every padlock is open. Get to the keypad by the exit.", "key")
 			end
 		end)
@@ -305,6 +322,7 @@ local function power(ctx: Ctx): Objective
 	local count = #layout.spots
 	local running = 0
 	ctx.setProgress(0, count)
+	setObjective(objective("START", count, "GENERATORS"))
 
 	-- each lamp belongs to the nearest generator
 	local maps = {}
@@ -402,7 +420,7 @@ local function power(ctx: Ctx): Objective
 					panelLabel.Text = "LIFT\nONLINE"
 					panelLabel.TextColor3 = rgb(80, 255, 120)
 				end
-				openExit(ctx, "The lift has power. GET OUT.")
+				openExit(ctx, "The lift has power. GET OUT.", "GET TO THE LIFT")
 			else
 				ctx.notifyAll(string.format("%s started a generator. That was LOUD. (%d/%d)", player.DisplayName, running, count), "key")
 			end
@@ -436,6 +454,7 @@ local function collect(ctx: Ctx): Objective
 	local count = #layout.spots
 	local taken = 0
 	ctx.setProgress(0, count)
+	setObjective(objective("FIND", count, "PHOTOGRAPHS"))
 
 	for i, cell in layout.spots do
 		local frame = Interactables.spotFrame(world, cell)
@@ -528,6 +547,7 @@ local function hearts(ctx: Ctx): Objective
 	local count = #layout.spots
 	local broken = 0
 	ctx.setProgress(0, count)
+	setObjective(objective("DESTROY", count, "HEARTS"))
 	local CORE = rgb(200, 20, 110)
 
 	for i, cell in layout.spots do
@@ -583,7 +603,7 @@ local function hearts(ctx: Ctx): Objective
 			ctx.setProgress(broken, count)
 			ctx.monster:setAggression(broken)
 			if broken >= count then
-				openExit(ctx, "The last heart is still. The way out is open. RUN.")
+				openExit(ctx, "The last heart is still. The way out is open. RUN.", "GET TO THE PORTAL")
 			else
 				ctx.notifyAll(string.format("A heart stops beating. IT KNOWS WHERE %s IS. (%d/%d)", string.upper(player.DisplayName), broken, count), "danger")
 				ctx.monster:frenzy(14, player)

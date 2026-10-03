@@ -1,7 +1,8 @@
 --!strict
--- On-screen everything, and no words: film grain, vignette, glitches, a few faint dots
--- for how far along you are, stamina, flashlight battery, bottles, the hold-your-breath
--- meter, the night's title, fades, flashes and the red of its rage.
+-- On-screen everything: film grain, vignette, glitches, what to do (in red at the top),
+-- the hour (top right, on nights you have to survive), a few faint dots for how far along
+-- you are, stamina, flashlight battery, bottles, the hold-your-breath meter, the night's
+-- title, fades, flashes and the red of its rage.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -10,6 +11,7 @@ local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 
 local Audio = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Audio"))
+local Nights = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Nights"))
 
 local GameState = ReplicatedStorage:WaitForChild("GameState")
 local player = Players.LocalPlayer
@@ -19,12 +21,20 @@ local Hud = {}
 local TEXT = Color3.fromRGB(205, 205, 200)
 local BLACK = Color3.new(0, 0, 0)
 local DANGER = Color3.fromRGB(220, 70, 60)
+local BLOOD = Color3.fromRGB(170, 14, 12)
+local BLOOD_FRESH = Color3.fromRGB(225, 25, 20)
 Hud.TITLE_FONT = Enum.Font.Garamond
+Hud.OBJECTIVE_FONT = Enum.Font.Creepster
 
 local gui: ScreenGui
 local pips: Frame
 local pipDots: { Frame } = {}
 local pipsShownAt = -math.huge
+local objectiveLabel: TextLabel
+local objectiveShownAt = -math.huge
+local clockLabel: TextLabel
+local clockShownAt = -math.huge
+local hudVisible = false
 local blinkFrame: Frame
 local staminaFrame: Frame
 local staminaFill: Frame
@@ -131,8 +141,17 @@ function Hud.init()
 	crosshair = new("Frame", { Name = "Crosshair", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(4, 4), BackgroundColor3 = TEXT, BackgroundTransparency = 0.55, BorderSizePixel = 0, ZIndex = 5 }, gui)
 	corner(crosshair)
 
-	-- how far along you are: a row of faint dots (top centre) that light up one by one
-	pips = new("Frame", { Name = "Pips", AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 26), Size = UDim2.fromOffset(240, 8), BackgroundTransparency = 1, ZIndex = 5 }, gui)
+	-- what to do: big red letters across the top
+	objectiveLabel = new("TextLabel", { Name = "Objective", AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 16), Size = UDim2.new(0.72, 0, 0, 54), BackgroundTransparency = 1, Font = Hud.OBJECTIVE_FONT, TextScaled = true, TextColor3 = BLOOD, Text = "", ZIndex = 6 }, gui)
+	new("UITextSizeConstraint", { MaxTextSize = 48, MinTextSize = 18 }, objectiveLabel)
+	new("UIStroke", { Color = BLACK, Thickness = 2, Transparency = 0.25 }, objectiveLabel)
+
+	-- the hour (top right), only on nights you have to survive till morning
+	clockLabel = new("TextLabel", { Name = "Clock", AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -30, 0, 20), Size = UDim2.fromOffset(170, 46), BackgroundTransparency = 1, Font = Hud.TITLE_FONT, TextSize = 40, TextXAlignment = Enum.TextXAlignment.Right, TextColor3 = TEXT, Text = "12 AM", Visible = false, ZIndex = 6 }, gui)
+	new("UIStroke", { Color = BLACK, Thickness = 1.5, Transparency = 0.35 }, clockLabel)
+
+	-- how far along you are: a row of faint dots (under the objective) that light up one by one
+	pips = new("Frame", { Name = "Pips", AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 80), Size = UDim2.fromOffset(240, 8), BackgroundTransparency = 1, ZIndex = 5 }, gui)
 	new("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Center, Padding = UDim.new(0, 12), SortOrder = Enum.SortOrder.LayoutOrder }, pips)
 	blinkFrame = new("Frame", { Name = "Blink", Size = UDim2.fromScale(1, 1), BackgroundColor3 = BLACK, BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = 8 }, gui)
 
@@ -190,6 +209,29 @@ function Hud.init()
 	GameState:GetAttributeChangedSignal("Done"):Connect(refreshPips)
 	GameState:GetAttributeChangedSignal("Goal"):Connect(refreshPips)
 	refreshPips()
+
+	local function refreshObjective()
+		local text = GameState:GetAttribute("Objective")
+		objectiveLabel.Text = if typeof(text) == "string" then text else ""
+		objectiveShownAt = os.clock()
+	end
+	GameState:GetAttributeChangedSignal("Objective"):Connect(refreshObjective)
+	refreshObjective()
+
+	local function refreshClock()
+		local hour = GameState:GetAttribute("Hour")
+		local h = if typeof(hour) == "number" then hour else 0
+		local text = string.format("%d AM", if h == 0 then 12 else h)
+		if clockLabel.Text ~= text then
+			clockLabel.Text = text
+			clockShownAt = os.clock()
+		end
+	end
+	GameState:GetAttributeChangedSignal("Hour"):Connect(refreshClock)
+	GameState:GetAttributeChangedSignal("Night"):Connect(function()
+		Hud.setHudVisible(hudVisible)
+	end)
+	refreshClock()
 	-- statue night: everyone blinks
 	GameState:GetAttributeChangedSignal("Blink"):Connect(function()
 		if GameState:GetAttribute("Blink") == true then
@@ -260,13 +302,36 @@ function Hud._update(dt: number)
 		dot.BackgroundTransparency = quiet + (shown - quiet) * loud
 	end
 
+	-- the objective: fresh, bright red when it's new, then it dries darker. It never sits
+	-- quite still: it flickers, and twitches more the closer it is.
+	local fresh = math.clamp(1 - (t - objectiveShownAt - 5) / 3, 0, 1)
+	objectiveLabel.TextColor3 = BLOOD:Lerp(BLOOD_FRESH, fresh)
+	objectiveLabel.TextTransparency = if math.random() < 0.01 then 0.35 + math.random() * 0.3 else 0.05 * (1 - fresh)
+	local twitch = if math.random() < 0.02 + fearLevel * 0.12 then math.random(-2, 2) else 0
+	objectiveLabel.Position = UDim2.new(0.5, twitch, 0, 16)
+
+	-- the hour: when it changes it shows red for a moment, then goes back to grey
+	local struck = math.clamp(1 - (t - clockShownAt - 2) / 3, 0, 1)
+	clockLabel.TextColor3 = TEXT:Lerp(BLOOD_FRESH, struck)
+	clockLabel.TextTransparency = if struck > 0 and math.random() < 0.15 then 0.5 else 0.1
+
 	if breathFrame.Visible then
 		breathFill.BackgroundColor3 = if breathUrgent and math.floor(t * 6) % 2 == 0 then DANGER else TEXT
 	end
 end
 
+-- Is tonight one you survive till 6 AM? Then the hour shows instead of the dots.
+local function clockNight(): boolean
+	local n = GameState:GetAttribute("Night")
+	return Nights.get(if typeof(n) == "number" then n else 1).objective == "survive"
+end
+
 function Hud.setHudVisible(visible: boolean)
-	pips.Visible = visible
+	hudVisible = visible
+	local clock = clockNight()
+	objectiveLabel.Visible = visible
+	clockLabel.Visible = visible and clock
+	pips.Visible = visible and not clock
 	batteryFrame.Visible = visible
 	bottles.Visible = visible
 	staminaFrame.Visible = visible
@@ -348,6 +413,11 @@ end
 function Hud.hideTitle()
 	TweenService:Create(bigTitle, TweenInfo.new(1.6, Enum.EasingStyle.Sine), { TextTransparency = 1 }):Play()
 	TweenService:Create(controlsLabel, TweenInfo.new(1.6, Enum.EasingStyle.Sine), { TextTransparency = 1 }):Play()
+end
+
+-- As you wake up into a night: the objective comes up fresh and red again.
+function Hud.revealObjective()
+	objectiveShownAt = os.clock() + 2
 end
 
 -- 0 = fully black, 1 = clear
