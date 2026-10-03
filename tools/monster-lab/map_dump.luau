@@ -59,19 +59,6 @@ Engine.Maze = Maze
 
 local lobbyMode = process.args[1] == "lobby"
 local night = Nights.get(nightIndex)
--- REDESIGN=1: the proposed new version of this night instead (see redesign.luau)
-local proposed = if process.env.REDESIGN == "1" then (require("./redesign") :: any)[nightIndex] else nil
-if proposed then
-	local copy = table.clone(night)
-	copy.theme = proposed.theme
-	copy.lighting = proposed.lighting
-	local maze = table.clone(night.maze)
-	for k, v in proposed.maze do
-		(maze :: any)[k] = v
-	end
-	copy.maze = maze
-	night = copy
-end
 local layout, world
 local lobby
 if lobbyMode then

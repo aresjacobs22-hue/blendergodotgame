@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Renders the proposed new nights 2-5 (redesign.luau + the new themes in Themes.luau)
-with the real map generator, and puts each one on a single sheet:
+"""Renders nights 2-5 with the real map generator and puts each one on a single sheet
+(a big shot down a corridor, the map from above, a room, where you wake up, and the
+monster in the corridor):
 
-  LUNE=lune GODOT=godot python3 tools/monster-lab/redesign.py [night ...] [--seed N]
-Writes out/redesign/night<N>_<view>.png and out/redesign/night<N>.png (the sheet).
+  LUNE=lune GODOT=godot python3 tools/monster-lab/night_sheets.py [night ...] [--seed N]
+Writes out/nights/night<N>_<view>.png and out/nights/night<N>.png (the sheet).
 """
 import json, math, os, subprocess, sys
 from PIL import Image, ImageDraw, ImageFont
@@ -12,7 +13,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import maps  # noqa: E402
 
-OUT = os.path.join(HERE, "out", "redesign")
+OUT = os.path.join(HERE, "out", "nights")
 SERIF = os.environ.get("SHEET_FONT", "/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf")
 
 TITLES = {
@@ -32,7 +33,7 @@ def dump(n, seed, path, monster=None, face=None):
         args.append(f"{monster[0]},{monster[1]}")
         if face:
             args.append(f"{face[0]},{face[1]}")
-    subprocess.run(args, cwd=maps.ROOT, check=True, env=dict(os.environ, REDESIGN="1"))
+    subprocess.run(args, cwd=maps.ROOT, check=True)
     return json.load(open(path))
 
 

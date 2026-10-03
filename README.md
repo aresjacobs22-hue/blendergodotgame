@@ -17,10 +17,10 @@ for you, not the player: players find it out (or read it on the game page, see
 | Night | Map | Monster | Objective |
 |---|---|---|---|
 | 1 | **The House**: a black-and-white house inside a concrete maze, with a dining room laid for nobody, a nursery and a bathroom with a full tub | **The Hollow**: starved and black, with a deer skull for a head and arms that drag on the floor. It sees your light and hears you run | Survive from 12 AM until **6 AM** |
-| 2 | **The Red Ward**: a hospital in red emergency light, with an operating theatre, a morgue and plastic strip curtains | **The Crawler**: a patient bent over backwards on all fours, four arms too many. Fast, and it **lunges** | Find **4 keys** (each tag shows one digit), unlock the exit, type the code |
-| 3 | **The Drowned Tunnels**: flooded brick tunnels with a dead pump station and a pillared cistern. Pitch black, no power | **The Listener**: blind. Its head **splits open** when it hears you | Start **3 generators** (loud!) to turn the lights back on, then ride the lift out |
-| 4 | **The Atrium**: a marble hall full of statues, reflecting pools and moonlight through the skylights | **The Statue**: the **Mourner** or the **Saint** (a different one each time). It only moves when **nobody is looking**. Some statues are just statues | Collect **6 photographs** |
-| 5 | **The Void**: black glass in near darkness, crystal lamps, and rooms that remember the earlier nights | **The Amalgam**: three heads, six arms, a glowing heart in its ribs. It can smell you through a locker door | Destroy **3 hearts** (it knows each time), then run for the portal |
+| 2 | **The Red Ward**: a 1950s sanatorium's isolation wing. White tile, a black and white checkered floor, tube lights, wards of iron beds behind curtains, an operating theatre and a morgue. The only colour is a red lamp over some of the doors | **The Crawler**: a patient bent over backwards on all fours, four arms too many. Fast, and it **lunges** | Find **4 keys** (each tag shows one digit), unlock the exit, type the code |
+| 3 | **The Drowned Tunnels**: vaulted brick storm drains with black water down the middle, a dead pump station and a cistern full of columns. The lamps are dead until the power's back; the moon comes in through the street grates | **The Listener**: blind. Its head **splits open** when it hears you | Start **3 generators** (loud!) to turn the lights back on, then ride the lift out |
+| 4 | **The Atrium**: a museum after dark. Galleries lit by skylights, faceless portraits, benches facing one painting at the end of a gallery, a rotunda, and dust sheets over everything that might be a statue | **The Statue**: the **Mourner** or the **Saint** (a different one each time). It only moves when **nobody is looking**. Some statues are just statues | Collect **6 photographs** |
+| 5 | **The Void**: the house from night 1, coming apart. The walls stop short, floorboards are missing, bulbs hang from nothing, doors stand on their own, and some rooms are copied from the earlier nights | **The Amalgam**: three heads, six arms, a glowing heart in its ribs. It can smell you through a locker door | Destroy **3 hearts** (it knows each time), then run for the portal |
 
 **Every night is different**:
 
@@ -226,7 +226,7 @@ the Hollow): `LUNE=lune GODOT=godot python3 tools/monster-lab/covers.py`.
 | `src/ReplicatedStorage/Shared/SoundIds.luau` | your uploaded audio IDs |
 | `src/ReplicatedStorage/Shared/Maze.luau` | the maze generator (hubs, rooms, open halls, item placement) |
 | `src/ServerScriptService/Server/Themes.luau` | **each map's look**: materials, lamps, props, wall writing |
-| `src/ServerScriptService/Server/Dressing.luau` | furniture and the special rooms (dining room, morgue, cistern, ...) |
+| `src/ServerScriptService/Server/Dressing.luau` | furniture and the special rooms (dining room, nursery, operating theatre, morgue, pump room, ...) |
 | `src/ServerScriptService/Server/Chaos.luau` | what each curse does, the random events, the rage, breath-holding |
 | `src/ServerScriptService/Server/Throwables.luau` | the bottles |
 | `src/ServerScriptService/Server/Objectives.luau` | survive / keys / generators / photographs / hearts (and their progress dots) |
@@ -236,7 +236,7 @@ the Hollow): `LUNE=lune GODOT=godot python3 tools/monster-lab/covers.py`.
 | `src/ServerScriptService/Server/Progress.luau` | saving how far you've got (which nights you've beaten) |
 | `src/StarterPlayer/StarterPlayerScripts/Client/` | everything on screen: the choice at a door, HUD, wordless prompts, flashlight, fear effects, monster animation, jumpscares |
 | `tools/generate_audio.py` | synthesizes every sound (`python3 tools/generate_audio.py`, needs numpy + ffmpeg) |
-| `tools/monster-lab/` | renders the monsters and the maps to PNGs with Godot, for checking designs without opening Studio |
+| `tools/monster-lab/` | renders the monsters and the maps to PNGs with Godot, for checking designs without opening Studio (`night_sheets.py`: one sheet per night, 2-5) |
 
 ## For developers (Rojo)
 
