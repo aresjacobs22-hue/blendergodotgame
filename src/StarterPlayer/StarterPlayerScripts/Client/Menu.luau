@@ -1,10 +1,12 @@
 --!strict
 -- Everything between you and the dark that isn't the HUD:
 --   * the choice at a door: step into an empty square in the lobby and the screen dims
---     to NIGHT 1..5 (the ones you've reached) and 1 2 3 4 (how many of you). Pick a
---     number and it's decided. A small ring in the corner opens brightness and volume.
---   * black, with the night's number, while you're being sent through (that's also the
---     teleport's loading screen) and black between a night and the lobby.
+--     to NIGHT 1..5 and 1 2 3 4 (how many of you). Above them, in red, what the night
+--     you point at (or picked) asks of you. Pick a number and it's decided. A small ring
+--     in the corner opens brightness and volume.
+--   * black, with the night's number and what you have to do, while you're being sent
+--     through (that's also the teleport's loading screen) and black between a night and
+--     the lobby.
 --   * when you're caught: TRY AGAIN (with how many of your group want to, 1 / 4) or
 --     BACK TO LOBBY.
 -- The music box plays in the lobby and in the dark.
@@ -37,10 +39,12 @@ local MAX_PLAYERS = 4
 local gui: ScreenGui
 local choice: TextButton -- the dimmed screen at a door (a button so it can be Modal)
 local nightEntries: { TextButton } = {}
+local choiceGoal: TextLabel
 local countEntries: { TextButton } = {}
 local settings: Frame
 local overlay: Frame
 local overlayTitle: TextLabel
+local overlayGoal: TextLabel
 local music: Sound? = nil
 local pad = 0 -- which door we're choosing at
 local highest = 1 -- highest night we may pick
@@ -90,8 +94,11 @@ local function refresh()
 	local title = if n then Hud.spaced(string.format("NIGHT %d", n)) else ""
 	if title ~= overlayTitle.Text then
 		overlayTitle.Text = title
-		overlayTitle.TextTransparency = 1
-		TweenService:Create(overlayTitle, TweenInfo.new(2.2, Enum.EasingStyle.Sine), { TextTransparency = 0.05 }):Play()
+		overlayGoal.Text = if n then Nights.get(n).goal else ""
+		for _, label in { overlayTitle, overlayGoal } do
+			label.TextTransparency = 1
+			TweenService:Create(label, TweenInfo.new(2.2, Enum.EasingStyle.Sine), { TextTransparency = 0.05 }):Play()
+		end
 	end
 	if music then
 		local wanted = if dark or w == "lobby" then 0.3 else 0
@@ -109,11 +116,17 @@ local function setAgainCount(again: number, size: number)
 	againCount.Text = string.format("%d / %d", again, size)
 end
 
+-- the red line above the nights: what night n asks of you
+local function showGoal(n: number)
+	choiceGoal.Text = Nights.get(n).goal
+end
+
 local function selectNight(n: number)
 	picked = n
 	for i, entry in nightEntries do
 		entry.TextTransparency = if i > highest then 0.92 elseif i == picked then 0.05 else 0.6
 	end
+	showGoal(n)
 end
 
 local function openChoice(index: number, upTo: number)
@@ -171,6 +184,7 @@ function Menu.init()
 
 	-- the choice at a door: Modal frees the mouse while it's up
 	choice = make("TextButton", { Name = "Choice", Visible = false, Modal = true, AutoButtonColor = false, Text = "", Size = UDim2.fromScale(1, 1), BackgroundColor3 = BLACK, BackgroundTransparency = 0.3 }, gui)
+	choiceGoal = Hud.makeGoal(choice)
 	local column: Frame = make("Frame", { Name = "Nights", BackgroundTransparency = 1, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.42), Size = UDim2.fromOffset(420, Nights.count * 54) }, choice)
 	make("UIListLayout", { FillDirection = Enum.FillDirection.Vertical, HorizontalAlignment = Enum.HorizontalAlignment.Center, Padding = UDim.new(0, 12), SortOrder = Enum.SortOrder.LayoutOrder }, column)
 	for _, night in Nights.list do
@@ -178,8 +192,12 @@ function Menu.init()
 		local entry: TextButton = make("TextButton", { Name = "Night" .. n, LayoutOrder = n, Text = Hud.spaced(string.format("NIGHT %d", n)), Font = FONT, TextSize = 28, TextColor3 = PALE, BackgroundTransparency = 1, AutoButtonColor = false, Size = UDim2.new(1, 0, 0, 40) }, column)
 		entry.MouseEnter:Connect(function()
 			if n <= highest then
+				showGoal(n)
 				Audio.play("MenuHover", nil, 0.3, 0.9)
 			end
+		end)
+		entry.MouseLeave:Connect(function()
+			showGoal(picked)
 		end)
 		entry.Activated:Connect(function()
 			if n <= highest then
@@ -241,6 +259,7 @@ function Menu.init()
 	-- the dark between places, with the night's number on the way in
 	overlay = make("Frame", { Name = "Overlay", Visible = false, Size = UDim2.fromScale(1, 1), BackgroundColor3 = BLACK, BorderSizePixel = 0 }, gui)
 	overlayTitle = make("TextLabel", { Name = "Title", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.48), Size = UDim2.new(0.9, 0, 0, 60), BackgroundTransparency = 1, Font = FONT, TextSize = 40, TextColor3 = PALE, Text = "" }, overlay)
+	overlayGoal = Hud.makeGoal(overlay)
 
 	-- caught: try again (all of you), or go back
 	death = make("Frame", { Name = "Death", Visible = false, Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ZIndex = 5 }, gui)
@@ -297,9 +316,11 @@ function Menu.init()
 				local copy = overlay:Clone()
 				copy.Visible = true
 				copy.Parent = loading
-				local t = copy:FindFirstChild("Title")
-				if t and t:IsA("TextLabel") then
-					t.TextTransparency = 0.05
+				for _, name in { "Title", "Goal" } do
+					local t = copy:FindFirstChild(name)
+					if t and t:IsA("TextLabel") then
+						t.TextTransparency = 0.05
+					end
 				end
 				TeleportService:SetTeleportGui(loading)
 			end)

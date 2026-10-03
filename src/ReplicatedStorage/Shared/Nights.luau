@@ -54,6 +54,7 @@ export type Night = {
 	id: string,
 	name: string,
 	objective: string, -- "survive" | "keys" | "power" | "collect" | "hearts"
+	goal: string, -- what you have to do, in red at the door and before the night starts
 	objectiveCount: number,
 	surviveSeconds: number?, -- survive nights: real seconds from 12 AM to 6 AM
 	theme: string,
@@ -74,6 +75,7 @@ local Nights: { Night } = {
 		id = "house",
 		name = "THE HOUSE",
 		objective = "survive",
+		goal = "SURVIVE UNTIL 6 AM",
 		objectiveCount = 6,
 		surviveSeconds = 300,
 		theme = "house",
@@ -125,6 +127,7 @@ local Nights: { Night } = {
 		id = "ward",
 		name = "THE RED WARD",
 		objective = "keys",
+		goal = "FIND THE FOUR KEYS AND ESCAPE",
 		objectiveCount = 4,
 		theme = "ward",
 		monsterKind = "Crawler",
@@ -184,6 +187,7 @@ local Nights: { Night } = {
 		id = "sewer",
 		name = "THE DROWNED TUNNELS",
 		objective = "power",
+		goal = "START THE THREE GENERATORS AND ESCAPE",
 		objectiveCount = 3,
 		theme = "sewer",
 		monsterKind = "Listener",
@@ -247,6 +251,7 @@ local Nights: { Night } = {
 		id = "atrium",
 		name = "THE ATRIUM",
 		objective = "collect",
+		goal = "FIND THE SIX PHOTOGRAPHS",
 		objectiveCount = 6,
 		theme = "atrium",
 		monsterKind = "Statue",
@@ -300,6 +305,7 @@ local Nights: { Night } = {
 		id = "void",
 		name = "THE VOID",
 		objective = "hearts",
+		goal = "DESTROY THE THREE HEARTS AND ESCAPE",
 		objectiveCount = 3,
 		theme = "void",
 		monsterKind = "Amalgam",

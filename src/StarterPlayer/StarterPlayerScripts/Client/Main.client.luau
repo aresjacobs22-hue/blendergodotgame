@@ -61,6 +61,7 @@ Remotes.Notify.OnClientEvent:Connect(function(text: string, _style: string?)
 end)
 
 local Audio = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Audio"))
+local Nights = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Nights"))
 local GameState = ReplicatedStorage:WaitForChild("GameState")
 
 player.CharacterAdded:Connect(function(character: Model)
@@ -80,19 +81,19 @@ player.CharacterAdded:Connect(function(character: Model)
 		return
 	end
 
-	-- a night: black, its number and the controls, black again, and then you're just...
-	-- there, with what to do in red at the top
+	-- a night: black, its number, what you have to do (in red) and the controls, black
+	-- again, and then you're just... there
 	ClientState.roundStatus = "alive"
 	Hud.setHudVisible(true)
 	local n = GameState:GetAttribute("Night")
 	Audio.play("NightIntro", nil, 0.8)
-	Hud.showTitle(string.format("NIGHT %d", if typeof(n) == "number" then n else 1))
+	local night = Nights.get(if typeof(n) == "number" then n else 1)
+	Hud.showTitle(string.format("NIGHT %d", night.index), night.goal)
 	task.delay(3.6, function()
 		Hud.hideTitle()
 		task.delay(1.4, function()
 			if ClientState.roundStatus == "alive" then
 				Hud.fade(1, 4)
-				Hud.revealObjective()
 				Atmosphere.wakeUp()
 			end
 		end)

@@ -1,8 +1,8 @@
 --!strict
--- On-screen everything: film grain, vignette, glitches, what to do (in red at the top),
--- the hour (top right, on nights you have to survive), a few faint dots for how far along
--- you are, stamina, flashlight battery, bottles, the hold-your-breath meter, the night's
--- title, fades, flashes and the red of its rage.
+-- On-screen everything: film grain, vignette, glitches, the hour (top right, on nights
+-- you have to survive), a few faint dots for how far along you are, stamina, flashlight
+-- battery, bottles, the hold-your-breath meter, the night's title (with what you have to
+-- do in red above it), fades, flashes and the red of its rage.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -21,17 +21,14 @@ local Hud = {}
 local TEXT = Color3.fromRGB(205, 205, 200)
 local BLACK = Color3.new(0, 0, 0)
 local DANGER = Color3.fromRGB(220, 70, 60)
-local BLOOD = Color3.fromRGB(170, 14, 12)
-local BLOOD_FRESH = Color3.fromRGB(225, 25, 20)
+local BLOOD = Color3.fromRGB(225, 25, 20)
 Hud.TITLE_FONT = Enum.Font.Garamond
-Hud.OBJECTIVE_FONT = Enum.Font.Creepster
+Hud.GOAL_FONT = Enum.Font.Creepster
 
 local gui: ScreenGui
 local pips: Frame
 local pipDots: { Frame } = {}
 local pipsShownAt = -math.huge
-local objectiveLabel: TextLabel
-local objectiveShownAt = -math.huge
 local clockLabel: TextLabel
 local clockShownAt = -math.huge
 local hudVisible = false
@@ -41,6 +38,8 @@ local staminaFill: Frame
 local batteryFrame: Frame
 local batterySegments: { Frame } = {}
 local bigTitle: TextLabel
+local goalLabel: TextLabel
+local goalUp = false
 local controlsLabel: TextLabel
 local fadeFrame: Frame
 local flashFrame: Frame
@@ -75,7 +74,16 @@ local function new<T>(className: string, props: { [string]: any }, parent: Insta
 	return (inst :: any) :: T
 end
 
--- "NIGHT 1" -> "N I G H T   1": the only words the game ever shows
+-- What a night asks of you ("SURVIVE UNTIL 6 AM"), in dripping red letters across the
+-- top of the screen: on the choice at a door, and on the black before the night.
+function Hud.makeGoal(parent: Instance, zIndex: number?): TextLabel
+	local label: TextLabel = new("TextLabel", { Name = "Goal", AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 60), Size = UDim2.new(0.8, 0, 0, 64), BackgroundTransparency = 1, Font = Hud.GOAL_FONT, TextScaled = true, TextColor3 = BLOOD, Text = "", ZIndex = zIndex or 1 }, parent)
+	new("UITextSizeConstraint", { MaxTextSize = 54, MinTextSize = 18 }, label)
+	new("UIStroke", { Color = BLACK, Thickness = 2, Transparency = 0.25 }, label)
+	return label
+end
+
+-- "NIGHT 1" -> "N I G H T   1"
 function Hud.spaced(text: string): string
 	local out = {}
 	for _, word in string.split(text, " ") do
@@ -141,17 +149,12 @@ function Hud.init()
 	crosshair = new("Frame", { Name = "Crosshair", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(4, 4), BackgroundColor3 = TEXT, BackgroundTransparency = 0.55, BorderSizePixel = 0, ZIndex = 5 }, gui)
 	corner(crosshair)
 
-	-- what to do: big red letters across the top
-	objectiveLabel = new("TextLabel", { Name = "Objective", AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 16), Size = UDim2.new(0.72, 0, 0, 54), BackgroundTransparency = 1, Font = Hud.OBJECTIVE_FONT, TextScaled = true, TextColor3 = BLOOD, Text = "", ZIndex = 6 }, gui)
-	new("UITextSizeConstraint", { MaxTextSize = 48, MinTextSize = 18 }, objectiveLabel)
-	new("UIStroke", { Color = BLACK, Thickness = 2, Transparency = 0.25 }, objectiveLabel)
-
 	-- the hour (top right), only on nights you have to survive till morning
 	clockLabel = new("TextLabel", { Name = "Clock", AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -30, 0, 20), Size = UDim2.fromOffset(170, 46), BackgroundTransparency = 1, Font = Hud.TITLE_FONT, TextSize = 40, TextXAlignment = Enum.TextXAlignment.Right, TextColor3 = TEXT, Text = "12 AM", Visible = false, ZIndex = 6 }, gui)
 	new("UIStroke", { Color = BLACK, Thickness = 1.5, Transparency = 0.35 }, clockLabel)
 
-	-- how far along you are: a row of faint dots (under the objective) that light up one by one
-	pips = new("Frame", { Name = "Pips", AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 80), Size = UDim2.fromOffset(240, 8), BackgroundTransparency = 1, ZIndex = 5 }, gui)
+	-- how far along you are: a row of faint dots (top centre) that light up one by one
+	pips = new("Frame", { Name = "Pips", AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 26), Size = UDim2.fromOffset(240, 8), BackgroundTransparency = 1, ZIndex = 5 }, gui)
 	new("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Center, Padding = UDim.new(0, 12), SortOrder = Enum.SortOrder.LayoutOrder }, pips)
 	blinkFrame = new("Frame", { Name = "Blink", Size = UDim2.fromScale(1, 1), BackgroundColor3 = BLACK, BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = 8 }, gui)
 
@@ -178,6 +181,8 @@ function Hud.init()
 	-- the red wash while it's enraged
 	rageFrame = new("Frame", { Name = "Rage", Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.fromRGB(150, 0, 0), BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = 2 }, gui)
 
+	goalLabel = Hud.makeGoal(gui, 11)
+	goalLabel.TextTransparency = 1
 	bigTitle = new("TextLabel", { Name = "BigTitle", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.48), Size = UDim2.new(0.9, 0, 0, 60), BackgroundTransparency = 1, Font = Hud.TITLE_FONT, TextSize = 40, TextColor3 = TEXT, Text = "", TextTransparency = 1, ZIndex = 11 }, gui)
 	controlsLabel = new("TextLabel", { Name = "Controls", AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.fromScale(0.5, 0.74), Size = UDim2.new(0.9, 0, 0, 56), BackgroundTransparency = 1, Font = Hud.TITLE_FONT, TextSize = 17, LineHeight = 1.5, TextColor3 = TEXT, Text = "", TextTransparency = 1, ZIndex = 11 }, gui)
 
@@ -209,14 +214,6 @@ function Hud.init()
 	GameState:GetAttributeChangedSignal("Done"):Connect(refreshPips)
 	GameState:GetAttributeChangedSignal("Goal"):Connect(refreshPips)
 	refreshPips()
-
-	local function refreshObjective()
-		local text = GameState:GetAttribute("Objective")
-		objectiveLabel.Text = if typeof(text) == "string" then text else ""
-		objectiveShownAt = os.clock()
-	end
-	GameState:GetAttributeChangedSignal("Objective"):Connect(refreshObjective)
-	refreshObjective()
 
 	local function refreshClock()
 		local hour = GameState:GetAttribute("Hour")
@@ -302,17 +299,14 @@ function Hud._update(dt: number)
 		dot.BackgroundTransparency = quiet + (shown - quiet) * loud
 	end
 
-	-- the objective: fresh, bright red when it's new, then it dries darker. It never sits
-	-- quite still: it flickers, and twitches more the closer it is.
-	local fresh = math.clamp(1 - (t - objectiveShownAt - 5) / 3, 0, 1)
-	objectiveLabel.TextColor3 = BLOOD:Lerp(BLOOD_FRESH, fresh)
-	objectiveLabel.TextTransparency = if math.random() < 0.01 then 0.35 + math.random() * 0.3 else 0.05 * (1 - fresh)
-	local twitch = if math.random() < 0.02 + fearLevel * 0.12 then math.random(-2, 2) else 0
-	objectiveLabel.Position = UDim2.new(0.5, twitch, 0, 16)
+	-- the goal on the black before a night never sits quite still: now and then it flickers
+	if goalUp then
+		goalLabel.TextTransparency = if math.random() < 0.03 then 0.3 + math.random() * 0.4 else 0.05
+	end
 
 	-- the hour: when it changes it shows red for a moment, then goes back to grey
 	local struck = math.clamp(1 - (t - clockShownAt - 2) / 3, 0, 1)
-	clockLabel.TextColor3 = TEXT:Lerp(BLOOD_FRESH, struck)
+	clockLabel.TextColor3 = TEXT:Lerp(BLOOD, struck)
 	clockLabel.TextTransparency = if struck > 0 and math.random() < 0.15 then 0.5 else 0.1
 
 	if breathFrame.Visible then
@@ -329,7 +323,6 @@ end
 function Hud.setHudVisible(visible: boolean)
 	hudVisible = visible
 	local clock = clockNight()
-	objectiveLabel.Visible = visible
 	clockLabel.Visible = visible and clock
 	pips.Visible = visible and not clock
 	batteryFrame.Visible = visible
@@ -399,25 +392,26 @@ local function controlsText(): string
 	return "" -- touch: the buttons on screen say what they do
 end
 
--- The night's title in the middle of the dark ("NIGHT 3", letter-spaced), with the
--- controls faint underneath. The title's already there (the black screen before showed
--- it while the night loaded); both fade out slowly.
-function Hud.showTitle(title: string)
+-- The night's title in the middle of the dark ("NIGHT 3", letter-spaced), what you have
+-- to do in red above it and the controls faint underneath. The title and goal are
+-- already there (the black screen before showed them while the night loaded); it all
+-- fades out slowly.
+function Hud.showTitle(title: string, goal: string?)
 	bigTitle.Text = Hud.spaced(title)
 	bigTitle.TextTransparency = 0.05
+	goalLabel.Text = goal or ""
+	goalLabel.TextTransparency = 0.05
+	goalUp = true
 	controlsLabel.Text = controlsText()
 	controlsLabel.TextTransparency = 1
 	TweenService:Create(controlsLabel, TweenInfo.new(1.2, Enum.EasingStyle.Sine), { TextTransparency = 0.45 }):Play()
 end
 
 function Hud.hideTitle()
+	goalUp = false
+	TweenService:Create(goalLabel, TweenInfo.new(1.6, Enum.EasingStyle.Sine), { TextTransparency = 1 }):Play()
 	TweenService:Create(bigTitle, TweenInfo.new(1.6, Enum.EasingStyle.Sine), { TextTransparency = 1 }):Play()
 	TweenService:Create(controlsLabel, TweenInfo.new(1.6, Enum.EasingStyle.Sine), { TextTransparency = 1 }):Play()
-end
-
--- As you wake up into a night: the objective comes up fresh and red again.
-function Hud.revealObjective()
-	objectiveShownAt = os.clock() + 2
 end
 
 -- 0 = fully black, 1 = clear

@@ -2116,6 +2116,7 @@ export type Night = {
 	id: string,
 	name: string,
 	objective: string, -- "survive" | "keys" | "power" | "collect" | "hearts"
+	goal: string, -- what you have to do, in red at the door and before the night starts
 	objectiveCount: number,
 	surviveSeconds: number?, -- survive nights: real seconds from 12 AM to 6 AM
 	theme: string,
@@ -2136,6 +2137,7 @@ local Nights: { Night } = {
 		id = "house",
 		name = "THE HOUSE",
 		objective = "survive",
+		goal = "SURVIVE UNTIL 6 AM",
 		objectiveCount = 6,
 		surviveSeconds = 300,
 		theme = "house",
@@ -2187,6 +2189,7 @@ local Nights: { Night } = {
 		id = "ward",
 		name = "THE RED WARD",
 		objective = "keys",
+		goal = "FIND THE FOUR KEYS AND ESCAPE",
 		objectiveCount = 4,
 		theme = "ward",
 		monsterKind = "Crawler",
@@ -2246,6 +2249,7 @@ local Nights: { Night } = {
 		id = "sewer",
 		name = "THE DROWNED TUNNELS",
 		objective = "power",
+		goal = "START THE THREE GENERATORS AND ESCAPE",
 		objectiveCount = 3,
 		theme = "sewer",
 		monsterKind = "Listener",
@@ -2309,6 +2313,7 @@ local Nights: { Night } = {
 		id = "atrium",
 		name = "THE ATRIUM",
 		objective = "collect",
+		goal = "FIND THE SIX PHOTOGRAPHS",
 		objectiveCount = 6,
 		theme = "atrium",
 		monsterKind = "Statue",
@@ -2362,6 +2367,7 @@ local Nights: { Night } = {
 		id = "void",
 		name = "THE VOID",
 		objective = "hearts",
+		goal = "DESTROY THE THREE HEARTS AND ESCAPE",
 		objectiveCount = 3,
 		theme = "void",
 		monsterKind = "Amalgam",
@@ -6010,8 +6016,6 @@ return MonsterAI
 --   power    start 3 generators (loud!), then take the service lift
 --   collect  take 6 photographs
 --   hearts   destroy 3 hearts (it knows each time), then run for the portal
--- What to do right now is the "Objective" on GameState: the client puts it at the top
--- of the screen in red.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -6054,21 +6058,9 @@ local function rgb(r: number, g: number, b: number): Color3
 	return Color3.fromRGB(r, g, b)
 end
 
-local NUMBERS = { "ONE", "TWO", "THREE", "FOUR", "FIVE", "SIX", "SEVEN", "EIGHT", "NINE", "TEN" }
-
-local function setObjective(text: string)
-	GameState:SetAttribute("Objective", text)
-end
-
--- "FIND THE FOUR KEYS"
-local function objective(verb: string, count: number, things: string): string
-	return string.format("%s THE %s %s", verb, NUMBERS[count] or tostring(count), things)
-end
-
-local function openExit(ctx: Ctx, message: string, goal: string)
+local function openExit(ctx: Ctx, message: string)
 	ctx.exit:open()
 	GameState:SetAttribute("ExitOpen", true)
-	setObjective(goal)
 	ctx.notifyAll(message, "danger")
 	ctx.monster:onExitOpened()
 end
@@ -6083,7 +6075,6 @@ local function survive(ctx: Ctx): Objective
 	local done = false
 	GameState:SetAttribute("Hour", 0)
 	ctx.setProgress(0, 6)
-	setObjective("SURVIVE UNTIL 6 AM")
 	local connection = RunService.Heartbeat:Connect(function()
 		if done then
 			return
@@ -6144,7 +6135,6 @@ local function keys(ctx: Ctx): Objective
 	-- one dot per key, and one for the door
 	ctx.setProgress(0, count + 1)
 	GameState:SetAttribute("CodeMask", table.concat(mask))
-	setObjective(objective("FIND", count, "KEYS"))
 
 	-- padlocks + chain on the exit, keypad beside it
 	local exit = ctx.exit
@@ -6221,7 +6211,7 @@ local function keys(ctx: Ctx): Objective
 			exitOpen = true
 			refreshKeypad()
 			ctx.setProgress(count + 1, count + 1)
-			openExit(ctx, "The exit is open. RUN.", "GET OUT")
+			openExit(ctx, "The exit is open. RUN.")
 		else
 			Audio.play("KeypadError", keypad, 1.3, 1, 100)
 			screen.Text = "WRONG"
@@ -6299,7 +6289,6 @@ local function keys(ctx: Ctx): Objective
 			ctx.monster:awaken()
 			ctx.monster:hearNoise(crate.Position, 45)
 			if found >= count then
-				setObjective("ENTER THE CODE AT THE EXIT")
 				ctx.notifyAll("Every padlock is open. Get to the keypad by the exit.", "key")
 			end
 		end)
@@ -6327,7 +6316,6 @@ local function power(ctx: Ctx): Objective
 	local count = #layout.spots
 	local running = 0
 	ctx.setProgress(0, count)
-	setObjective(objective("START", count, "GENERATORS"))
 
 	-- each lamp belongs to the nearest generator
 	local maps = {}
@@ -6425,7 +6413,7 @@ local function power(ctx: Ctx): Objective
 					panelLabel.Text = "LIFT\nONLINE"
 					panelLabel.TextColor3 = rgb(80, 255, 120)
 				end
-				openExit(ctx, "The lift has power. GET OUT.", "GET TO THE LIFT")
+				openExit(ctx, "The lift has power. GET OUT.")
 			else
 				ctx.notifyAll(string.format("%s started a generator. That was LOUD. (%d/%d)", player.DisplayName, running, count), "key")
 			end
@@ -6459,7 +6447,6 @@ local function collect(ctx: Ctx): Objective
 	local count = #layout.spots
 	local taken = 0
 	ctx.setProgress(0, count)
-	setObjective(objective("FIND", count, "PHOTOGRAPHS"))
 
 	for i, cell in layout.spots do
 		local frame = Interactables.spotFrame(world, cell)
@@ -6552,7 +6539,6 @@ local function hearts(ctx: Ctx): Objective
 	local count = #layout.spots
 	local broken = 0
 	ctx.setProgress(0, count)
-	setObjective(objective("DESTROY", count, "HEARTS"))
 	local CORE = rgb(200, 20, 110)
 
 	for i, cell in layout.spots do
@@ -6608,7 +6594,7 @@ local function hearts(ctx: Ctx): Objective
 			ctx.setProgress(broken, count)
 			ctx.monster:setAggression(broken)
 			if broken >= count then
-				openExit(ctx, "The last heart is still. The way out is open. RUN.", "GET TO THE PORTAL")
+				openExit(ctx, "The last heart is still. The way out is open. RUN.")
 			else
 				ctx.notifyAll(string.format("A heart stops beating. IT KNOWS WHERE %s IS. (%d/%d)", string.upper(player.DisplayName), broken, count), "danger")
 				ctx.monster:frenzy(14, player)
@@ -7006,7 +6992,6 @@ local function startRound(night: Nights.Night, players: { Player })
 	GameState:SetAttribute("Done", 0)
 	GameState:SetAttribute("Goal", 0)
 	GameState:SetAttribute("CodeMask", "")
-	GameState:SetAttribute("Objective", "")
 	GameState:SetAttribute("ExitOpen", false)
 	GameState:SetAttribute("MonsterAwake", false)
 	GameState:SetAttribute("Hour", 0)
@@ -7373,7 +7358,6 @@ function RoundManager.run()
 	GameState:SetAttribute("NightName", Nights.get(1).name)
 	GameState:SetAttribute("Done", 0)
 	GameState:SetAttribute("Goal", 0)
-	GameState:SetAttribute("Objective", "")
 
 	-- where each player's camera is looking (the Statue can't move while watched)
 	Remotes.Look.OnServerEvent:Connect(function(player: Player, direction: unknown)
@@ -10150,10 +10134,10 @@ return Hiding
           <Properties>
             <string name="Name">Hud</string>
             <string name="Source"><![CDATA[--!strict
--- On-screen everything: film grain, vignette, glitches, what to do (in red at the top),
--- the hour (top right, on nights you have to survive), a few faint dots for how far along
--- you are, stamina, flashlight battery, bottles, the hold-your-breath meter, the night's
--- title, fades, flashes and the red of its rage.
+-- On-screen everything: film grain, vignette, glitches, the hour (top right, on nights
+-- you have to survive), a few faint dots for how far along you are, stamina, flashlight
+-- battery, bottles, the hold-your-breath meter, the night's title (with what you have to
+-- do in red above it), fades, flashes and the red of its rage.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -10172,17 +10156,14 @@ local Hud = {}
 local TEXT = Color3.fromRGB(205, 205, 200)
 local BLACK = Color3.new(0, 0, 0)
 local DANGER = Color3.fromRGB(220, 70, 60)
-local BLOOD = Color3.fromRGB(170, 14, 12)
-local BLOOD_FRESH = Color3.fromRGB(225, 25, 20)
+local BLOOD = Color3.fromRGB(225, 25, 20)
 Hud.TITLE_FONT = Enum.Font.Garamond
-Hud.OBJECTIVE_FONT = Enum.Font.Creepster
+Hud.GOAL_FONT = Enum.Font.Creepster
 
 local gui: ScreenGui
 local pips: Frame
 local pipDots: { Frame } = {}
 local pipsShownAt = -math.huge
-local objectiveLabel: TextLabel
-local objectiveShownAt = -math.huge
 local clockLabel: TextLabel
 local clockShownAt = -math.huge
 local hudVisible = false
@@ -10192,6 +10173,8 @@ local staminaFill: Frame
 local batteryFrame: Frame
 local batterySegments: { Frame } = {}
 local bigTitle: TextLabel
+local goalLabel: TextLabel
+local goalUp = false
 local controlsLabel: TextLabel
 local fadeFrame: Frame
 local flashFrame: Frame
@@ -10226,7 +10209,16 @@ local function new<T>(className: string, props: { [string]: any }, parent: Insta
 	return (inst :: any) :: T
 end
 
--- "NIGHT 1" -> "N I G H T   1": the only words the game ever shows
+-- What a night asks of you ("SURVIVE UNTIL 6 AM"), in dripping red letters across the
+-- top of the screen: on the choice at a door, and on the black before the night.
+function Hud.makeGoal(parent: Instance, zIndex: number?): TextLabel
+	local label: TextLabel = new("TextLabel", { Name = "Goal", AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 60), Size = UDim2.new(0.8, 0, 0, 64), BackgroundTransparency = 1, Font = Hud.GOAL_FONT, TextScaled = true, TextColor3 = BLOOD, Text = "", ZIndex = zIndex or 1 }, parent)
+	new("UITextSizeConstraint", { MaxTextSize = 54, MinTextSize = 18 }, label)
+	new("UIStroke", { Color = BLACK, Thickness = 2, Transparency = 0.25 }, label)
+	return label
+end
+
+-- "NIGHT 1" -> "N I G H T   1"
 function Hud.spaced(text: string): string
 	local out = {}
 	for _, word in string.split(text, " ") do
@@ -10292,17 +10284,12 @@ function Hud.init()
 	crosshair = new("Frame", { Name = "Crosshair", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(4, 4), BackgroundColor3 = TEXT, BackgroundTransparency = 0.55, BorderSizePixel = 0, ZIndex = 5 }, gui)
 	corner(crosshair)
 
-	-- what to do: big red letters across the top
-	objectiveLabel = new("TextLabel", { Name = "Objective", AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 16), Size = UDim2.new(0.72, 0, 0, 54), BackgroundTransparency = 1, Font = Hud.OBJECTIVE_FONT, TextScaled = true, TextColor3 = BLOOD, Text = "", ZIndex = 6 }, gui)
-	new("UITextSizeConstraint", { MaxTextSize = 48, MinTextSize = 18 }, objectiveLabel)
-	new("UIStroke", { Color = BLACK, Thickness = 2, Transparency = 0.25 }, objectiveLabel)
-
 	-- the hour (top right), only on nights you have to survive till morning
 	clockLabel = new("TextLabel", { Name = "Clock", AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -30, 0, 20), Size = UDim2.fromOffset(170, 46), BackgroundTransparency = 1, Font = Hud.TITLE_FONT, TextSize = 40, TextXAlignment = Enum.TextXAlignment.Right, TextColor3 = TEXT, Text = "12 AM", Visible = false, ZIndex = 6 }, gui)
 	new("UIStroke", { Color = BLACK, Thickness = 1.5, Transparency = 0.35 }, clockLabel)
 
-	-- how far along you are: a row of faint dots (under the objective) that light up one by one
-	pips = new("Frame", { Name = "Pips", AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 80), Size = UDim2.fromOffset(240, 8), BackgroundTransparency = 1, ZIndex = 5 }, gui)
+	-- how far along you are: a row of faint dots (top centre) that light up one by one
+	pips = new("Frame", { Name = "Pips", AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 26), Size = UDim2.fromOffset(240, 8), BackgroundTransparency = 1, ZIndex = 5 }, gui)
 	new("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Center, Padding = UDim.new(0, 12), SortOrder = Enum.SortOrder.LayoutOrder }, pips)
 	blinkFrame = new("Frame", { Name = "Blink", Size = UDim2.fromScale(1, 1), BackgroundColor3 = BLACK, BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = 8 }, gui)
 
@@ -10329,6 +10316,8 @@ function Hud.init()
 	-- the red wash while it's enraged
 	rageFrame = new("Frame", { Name = "Rage", Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.fromRGB(150, 0, 0), BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = 2 }, gui)
 
+	goalLabel = Hud.makeGoal(gui, 11)
+	goalLabel.TextTransparency = 1
 	bigTitle = new("TextLabel", { Name = "BigTitle", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.48), Size = UDim2.new(0.9, 0, 0, 60), BackgroundTransparency = 1, Font = Hud.TITLE_FONT, TextSize = 40, TextColor3 = TEXT, Text = "", TextTransparency = 1, ZIndex = 11 }, gui)
 	controlsLabel = new("TextLabel", { Name = "Controls", AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.fromScale(0.5, 0.74), Size = UDim2.new(0.9, 0, 0, 56), BackgroundTransparency = 1, Font = Hud.TITLE_FONT, TextSize = 17, LineHeight = 1.5, TextColor3 = TEXT, Text = "", TextTransparency = 1, ZIndex = 11 }, gui)
 
@@ -10360,14 +10349,6 @@ function Hud.init()
 	GameState:GetAttributeChangedSignal("Done"):Connect(refreshPips)
 	GameState:GetAttributeChangedSignal("Goal"):Connect(refreshPips)
 	refreshPips()
-
-	local function refreshObjective()
-		local text = GameState:GetAttribute("Objective")
-		objectiveLabel.Text = if typeof(text) == "string" then text else ""
-		objectiveShownAt = os.clock()
-	end
-	GameState:GetAttributeChangedSignal("Objective"):Connect(refreshObjective)
-	refreshObjective()
 
 	local function refreshClock()
 		local hour = GameState:GetAttribute("Hour")
@@ -10453,17 +10434,14 @@ function Hud._update(dt: number)
 		dot.BackgroundTransparency = quiet + (shown - quiet) * loud
 	end
 
-	-- the objective: fresh, bright red when it's new, then it dries darker. It never sits
-	-- quite still: it flickers, and twitches more the closer it is.
-	local fresh = math.clamp(1 - (t - objectiveShownAt - 5) / 3, 0, 1)
-	objectiveLabel.TextColor3 = BLOOD:Lerp(BLOOD_FRESH, fresh)
-	objectiveLabel.TextTransparency = if math.random() < 0.01 then 0.35 + math.random() * 0.3 else 0.05 * (1 - fresh)
-	local twitch = if math.random() < 0.02 + fearLevel * 0.12 then math.random(-2, 2) else 0
-	objectiveLabel.Position = UDim2.new(0.5, twitch, 0, 16)
+	-- the goal on the black before a night never sits quite still: now and then it flickers
+	if goalUp then
+		goalLabel.TextTransparency = if math.random() < 0.03 then 0.3 + math.random() * 0.4 else 0.05
+	end
 
 	-- the hour: when it changes it shows red for a moment, then goes back to grey
 	local struck = math.clamp(1 - (t - clockShownAt - 2) / 3, 0, 1)
-	clockLabel.TextColor3 = TEXT:Lerp(BLOOD_FRESH, struck)
+	clockLabel.TextColor3 = TEXT:Lerp(BLOOD, struck)
 	clockLabel.TextTransparency = if struck > 0 and math.random() < 0.15 then 0.5 else 0.1
 
 	if breathFrame.Visible then
@@ -10480,7 +10458,6 @@ end
 function Hud.setHudVisible(visible: boolean)
 	hudVisible = visible
 	local clock = clockNight()
-	objectiveLabel.Visible = visible
 	clockLabel.Visible = visible and clock
 	pips.Visible = visible and not clock
 	batteryFrame.Visible = visible
@@ -10550,25 +10527,26 @@ local function controlsText(): string
 	return "" -- touch: the buttons on screen say what they do
 end
 
--- The night's title in the middle of the dark ("NIGHT 3", letter-spaced), with the
--- controls faint underneath. The title's already there (the black screen before showed
--- it while the night loaded); both fade out slowly.
-function Hud.showTitle(title: string)
+-- The night's title in the middle of the dark ("NIGHT 3", letter-spaced), what you have
+-- to do in red above it and the controls faint underneath. The title and goal are
+-- already there (the black screen before showed them while the night loaded); it all
+-- fades out slowly.
+function Hud.showTitle(title: string, goal: string?)
 	bigTitle.Text = Hud.spaced(title)
 	bigTitle.TextTransparency = 0.05
+	goalLabel.Text = goal or ""
+	goalLabel.TextTransparency = 0.05
+	goalUp = true
 	controlsLabel.Text = controlsText()
 	controlsLabel.TextTransparency = 1
 	TweenService:Create(controlsLabel, TweenInfo.new(1.2, Enum.EasingStyle.Sine), { TextTransparency = 0.45 }):Play()
 end
 
 function Hud.hideTitle()
+	goalUp = false
+	TweenService:Create(goalLabel, TweenInfo.new(1.6, Enum.EasingStyle.Sine), { TextTransparency = 1 }):Play()
 	TweenService:Create(bigTitle, TweenInfo.new(1.6, Enum.EasingStyle.Sine), { TextTransparency = 1 }):Play()
 	TweenService:Create(controlsLabel, TweenInfo.new(1.6, Enum.EasingStyle.Sine), { TextTransparency = 1 }):Play()
-end
-
--- As you wake up into a night: the objective comes up fresh and red again.
-function Hud.revealObjective()
-	objectiveShownAt = os.clock() + 2
 end
 
 -- 0 = fully black, 1 = clear
@@ -10889,6 +10867,7 @@ Remotes.Notify.OnClientEvent:Connect(function(text: string, _style: string?)
 end)
 
 local Audio = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Audio"))
+local Nights = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Nights"))
 local GameState = ReplicatedStorage:WaitForChild("GameState")
 
 player.CharacterAdded:Connect(function(character: Model)
@@ -10908,19 +10887,19 @@ player.CharacterAdded:Connect(function(character: Model)
 		return
 	end
 
-	-- a night: black, its number and the controls, black again, and then you're just...
-	-- there, with what to do in red at the top
+	-- a night: black, its number, what you have to do (in red) and the controls, black
+	-- again, and then you're just... there
 	ClientState.roundStatus = "alive"
 	Hud.setHudVisible(true)
 	local n = GameState:GetAttribute("Night")
 	Audio.play("NightIntro", nil, 0.8)
-	Hud.showTitle(string.format("NIGHT %d", if typeof(n) == "number" then n else 1))
+	local night = Nights.get(if typeof(n) == "number" then n else 1)
+	Hud.showTitle(string.format("NIGHT %d", night.index), night.goal)
 	task.delay(3.6, function()
 		Hud.hideTitle()
 		task.delay(1.4, function()
 			if ClientState.roundStatus == "alive" then
 				Hud.fade(1, 4)
-				Hud.revealObjective()
 				Atmosphere.wakeUp()
 			end
 		end)
@@ -10949,10 +10928,12 @@ end)
             <string name="Source"><![CDATA[--!strict
 -- Everything between you and the dark that isn't the HUD:
 --   * the choice at a door: step into an empty square in the lobby and the screen dims
---     to NIGHT 1..5 (the ones you've reached) and 1 2 3 4 (how many of you). Pick a
---     number and it's decided. A small ring in the corner opens brightness and volume.
---   * black, with the night's number, while you're being sent through (that's also the
---     teleport's loading screen) and black between a night and the lobby.
+--     to NIGHT 1..5 and 1 2 3 4 (how many of you). Above them, in red, what the night
+--     you point at (or picked) asks of you. Pick a number and it's decided. A small ring
+--     in the corner opens brightness and volume.
+--   * black, with the night's number and what you have to do, while you're being sent
+--     through (that's also the teleport's loading screen) and black between a night and
+--     the lobby.
 --   * when you're caught: TRY AGAIN (with how many of your group want to, 1 / 4) or
 --     BACK TO LOBBY.
 -- The music box plays in the lobby and in the dark.
@@ -10985,10 +10966,12 @@ local MAX_PLAYERS = 4
 local gui: ScreenGui
 local choice: TextButton -- the dimmed screen at a door (a button so it can be Modal)
 local nightEntries: { TextButton } = {}
+local choiceGoal: TextLabel
 local countEntries: { TextButton } = {}
 local settings: Frame
 local overlay: Frame
 local overlayTitle: TextLabel
+local overlayGoal: TextLabel
 local music: Sound? = nil
 local pad = 0 -- which door we're choosing at
 local highest = 1 -- highest night we may pick
@@ -11038,8 +11021,11 @@ local function refresh()
 	local title = if n then Hud.spaced(string.format("NIGHT %d", n)) else ""
 	if title ~= overlayTitle.Text then
 		overlayTitle.Text = title
-		overlayTitle.TextTransparency = 1
-		TweenService:Create(overlayTitle, TweenInfo.new(2.2, Enum.EasingStyle.Sine), { TextTransparency = 0.05 }):Play()
+		overlayGoal.Text = if n then Nights.get(n).goal else ""
+		for _, label in { overlayTitle, overlayGoal } do
+			label.TextTransparency = 1
+			TweenService:Create(label, TweenInfo.new(2.2, Enum.EasingStyle.Sine), { TextTransparency = 0.05 }):Play()
+		end
 	end
 	if music then
 		local wanted = if dark or w == "lobby" then 0.3 else 0
@@ -11057,11 +11043,17 @@ local function setAgainCount(again: number, size: number)
 	againCount.Text = string.format("%d / %d", again, size)
 end
 
+-- the red line above the nights: what night n asks of you
+local function showGoal(n: number)
+	choiceGoal.Text = Nights.get(n).goal
+end
+
 local function selectNight(n: number)
 	picked = n
 	for i, entry in nightEntries do
 		entry.TextTransparency = if i > highest then 0.92 elseif i == picked then 0.05 else 0.6
 	end
+	showGoal(n)
 end
 
 local function openChoice(index: number, upTo: number)
@@ -11119,6 +11111,7 @@ function Menu.init()
 
 	-- the choice at a door: Modal frees the mouse while it's up
 	choice = make("TextButton", { Name = "Choice", Visible = false, Modal = true, AutoButtonColor = false, Text = "", Size = UDim2.fromScale(1, 1), BackgroundColor3 = BLACK, BackgroundTransparency = 0.3 }, gui)
+	choiceGoal = Hud.makeGoal(choice)
 	local column: Frame = make("Frame", { Name = "Nights", BackgroundTransparency = 1, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.42), Size = UDim2.fromOffset(420, Nights.count * 54) }, choice)
 	make("UIListLayout", { FillDirection = Enum.FillDirection.Vertical, HorizontalAlignment = Enum.HorizontalAlignment.Center, Padding = UDim.new(0, 12), SortOrder = Enum.SortOrder.LayoutOrder }, column)
 	for _, night in Nights.list do
@@ -11126,8 +11119,12 @@ function Menu.init()
 		local entry: TextButton = make("TextButton", { Name = "Night" .. n, LayoutOrder = n, Text = Hud.spaced(string.format("NIGHT %d", n)), Font = FONT, TextSize = 28, TextColor3 = PALE, BackgroundTransparency = 1, AutoButtonColor = false, Size = UDim2.new(1, 0, 0, 40) }, column)
 		entry.MouseEnter:Connect(function()
 			if n <= highest then
+				showGoal(n)
 				Audio.play("MenuHover", nil, 0.3, 0.9)
 			end
+		end)
+		entry.MouseLeave:Connect(function()
+			showGoal(picked)
 		end)
 		entry.Activated:Connect(function()
 			if n <= highest then
@@ -11189,6 +11186,7 @@ function Menu.init()
 	-- the dark between places, with the night's number on the way in
 	overlay = make("Frame", { Name = "Overlay", Visible = false, Size = UDim2.fromScale(1, 1), BackgroundColor3 = BLACK, BorderSizePixel = 0 }, gui)
 	overlayTitle = make("TextLabel", { Name = "Title", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.48), Size = UDim2.new(0.9, 0, 0, 60), BackgroundTransparency = 1, Font = FONT, TextSize = 40, TextColor3 = PALE, Text = "" }, overlay)
+	overlayGoal = Hud.makeGoal(overlay)
 
 	-- caught: try again (all of you), or go back
 	death = make("Frame", { Name = "Death", Visible = false, Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ZIndex = 5 }, gui)
@@ -11245,9 +11243,11 @@ function Menu.init()
 				local copy = overlay:Clone()
 				copy.Visible = true
 				copy.Parent = loading
-				local t = copy:FindFirstChild("Title")
-				if t and t:IsA("TextLabel") then
-					t.TextTransparency = 0.05
+				for _, name in { "Title", "Goal" } do
+					local t = copy:FindFirstChild(name)
+					if t and t:IsA("TextLabel") then
+						t.TextTransparency = 0.05
+					end
 				end
 				TeleportService:SetTeleportGui(loading)
 			end)
