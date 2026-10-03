@@ -12,6 +12,7 @@ local ClientState = {
 	holdingBreath = false, -- hiding and holding your breath while it's close
 	jumpscaring = false,
 	keypadOpen = false, -- the night 2 keypad screen is up
+	shopOpen = false, -- the Robux shop is up
 	flashlightOn = false,
 	interference = 0, -- 0..1, makes your flashlight stutter
 	sprinting = false,

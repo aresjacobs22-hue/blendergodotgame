@@ -15,11 +15,13 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local SoundService = game:GetService("SoundService")
+local MarketplaceService = game:GetService("MarketplaceService")
 local TeleportService = game:GetService("TeleportService")
 local TweenService = game:GetService("TweenService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Audio = require(Shared:WaitForChild("Audio"))
+local Config = require(Shared:WaitForChild("Config"))
 local Nights = require(Shared:WaitForChild("Nights"))
 local ClientState = require(script.Parent.ClientState)
 local Endings = require(script.Parent.Endings)
@@ -266,6 +268,15 @@ function Menu.init()
 	againButton = make("TextButton", { Name = "Again", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.42), Size = UDim2.fromOffset(520, 56), BackgroundTransparency = 1, AutoButtonColor = false, Modal = true, Font = FONT, TextSize = 38, TextColor3 = PALE, TextTransparency = 0.25, Text = Hud.spaced("TRY AGAIN"), ZIndex = 5 }, death)
 	againCount = make("TextLabel", { Name = "Count", AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0.42, 34), Size = UDim2.fromOffset(200, 30), BackgroundTransparency = 1, Font = FONT, TextSize = 22, TextColor3 = PALE, TextTransparency = 0.45, Text = "0 / 1", ZIndex = 5 }, death)
 	local lobbyButton: TextButton = make("TextButton", { Name = "Lobby", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.62), Size = UDim2.fromOffset(520, 44), BackgroundTransparency = 1, AutoButtonColor = false, Font = FONT, TextSize = 24, TextColor3 = PALE, TextTransparency = 0.5, Text = Hud.spaced("BACK TO LOBBY"), ZIndex = 5 }, death)
+	-- a revive, for Robux (only once it's set up in Config.Shop)
+	local reviveId = Config.Shop.Products.Revive
+	if reviveId ~= 0 then
+		local revive: TextButton = make("TextButton", { Name = "Revive", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.53), Size = UDim2.fromOffset(520, 44), BackgroundTransparency = 1, AutoButtonColor = false, Font = FONT, TextSize = 26, TextColor3 = Color3.fromRGB(225, 40, 30), TextTransparency = 0.15, Text = Hud.spaced("REVIVE"), ZIndex = 5 }, death)
+		revive.Activated:Connect(function()
+			Audio.play("MenuSelect", nil, 0.6, 0.8)
+			MarketplaceService:PromptProductPurchase(player, reviveId)
+		end)
+	end
 	for _, b in { againButton, lobbyButton } do
 		local rest = b.TextTransparency
 		b.MouseEnter:Connect(function()

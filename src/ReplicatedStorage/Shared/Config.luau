@@ -59,6 +59,25 @@ local Config = {
 		ResultsTime = 9, -- black screen after a night before the lobby
 	},
 
+	-- Robux items. Make each one on the Creator Dashboard (your game > Monetization >
+	-- Passes / Developer Products), then paste its ID here. Anything left at 0 doesn't
+	-- show up in the game at all.
+	Shop = {
+		Passes = { -- bought once, kept forever
+			Lantern = 0, -- a brighter, wider flashlight that reaches further
+			LongBattery = 0, -- the battery lasts twice as long
+			Lungs = 0, -- run for longer before you're out of breath
+			Pockets = 0, -- carry 5 bottles instead of 3
+		},
+		Products = { -- bought each time
+			Revive = 0, -- caught? get back up and keep going
+			Batteries = 0, -- a full battery, right now
+			Bottles = 0, -- 3 bottles, right now
+			Adrenaline = 0, -- a minute of running without getting tired
+		},
+		ReviveWait = 12, -- when the last of you is caught, the night waits this long for a revive
+		AdrenalineTime = 60,
+	},
 	Progress = {
 		DataStoreName = "AchromaProgress_v1",
 		UnlockAll = true, -- every night can be played from the start (progress is still saved)

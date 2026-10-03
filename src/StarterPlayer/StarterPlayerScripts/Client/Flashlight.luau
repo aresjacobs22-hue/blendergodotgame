@@ -68,7 +68,8 @@ local function update(dt: number)
 		setOn(false)
 	end
 	if on then
-		battery = math.max(0, battery - Config.Player.BatteryDrain * dt)
+		local drain = if player:GetAttribute("PassLongBattery") == true then 0.5 else 1
+		battery = math.max(0, battery - Config.Player.BatteryDrain * drain * dt)
 		if battery <= 0 then
 			setOn(false)
 		end
@@ -88,9 +89,14 @@ local function update(dt: number)
 	local brightness = if now < dropUntil then settings.brightness * 0.06 else settings.brightness
 	beam.Enabled = on
 	spill.Enabled = on
+	-- the Lantern pass: brighter, wider, further
+	local lantern = player:GetAttribute("PassLantern") == true
+	if lantern then
+		brightness *= 1.4
+	end
 	beam.Brightness = brightness
-	beam.Range = settings.range
-	beam.Angle = settings.angle
+	beam.Range = settings.range * (if lantern then 1.3 else 1)
+	beam.Angle = settings.angle + (if lantern then 10 else 0)
 	spill.Brightness = brightness * (if strong then 0.3 else 0.22)
 	spill.Range = if strong then 24 else 16
 

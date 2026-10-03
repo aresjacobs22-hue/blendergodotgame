@@ -159,6 +159,31 @@ then teleports everyone back to a lobby. There's nothing extra to set up.
 (the doors stay shut until it's over) and you come back to the lobby afterwards. That's
 also what happens if a teleport ever fails.
 
+### 4. Sell things for Robux (optional)
+
+The shop is built in but stays hidden until you give it item IDs. For each item you want
+to sell, go to the [Creator Dashboard](https://create.roblox.com/dashboard/creations), open
+your game, **Monetization**, and make it there (a **Pass** for the forever items, a
+**Developer Product** for the one-off ones). Copy its ID into `Config.Shop` (in
+**ReplicatedStorage → Shared → Config**). Leave an item at 0 and it doesn't appear.
+
+| Item | Kind | What it does | Suggested price |
+|---|---|---|---|
+| `Lantern` | Pass | a brighter, wider flashlight that reaches further | R$ 149 |
+| `LongBattery` | Pass | the battery lasts twice as long | R$ 99 |
+| `Lungs` | Pass | run for longer | R$ 99 |
+| `Pockets` | Pass | carry 5 bottles instead of 3 | R$ 49 |
+| `Revive` | Product | when it catches you, get back up and keep going | R$ 25 |
+| `Batteries` | Product | a full battery, right now | R$ 15 |
+| `Bottles` | Product | 3 bottles, right now | R$ 10 |
+| `Adrenaline` | Product | a minute of running without getting tired | R$ 20 |
+
+Players open the shop with the **R$** button in the lobby or **B** anywhere. The one-off
+items only show during a night, and if one is bought when it can't be used, Roblox keeps
+the purchase and hands it over next time. With `Revive` set up, the death screen gets a red
+**REVIVE** button, and when the last of a group is caught the night waits 12 seconds
+(`ReviveWait`) in case someone revives.
+
 ## Game page description
 
 The game itself never tells anyone anything, so the controls go on the Roblox game page.

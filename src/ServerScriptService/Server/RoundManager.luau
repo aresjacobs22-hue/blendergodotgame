@@ -35,6 +35,7 @@ local Lobby = require(script.Parent.Lobby)
 local MonsterAI = require(script.Parent.MonsterAI)
 local Objectives = require(script.Parent.Objectives)
 local Progress = require(script.Parent.Progress)
+local Shop = require(script.Parent.Shop)
 local Throwables = require(script.Parent.Throwables)
 local WorldBuilder = require(script.Parent.WorldBuilder)
 
@@ -217,6 +218,19 @@ function RoundManager.caught(player: Player, monster: Model?)
 			Remotes.Retry:FireClient(player, "open", RoundManager.againCount(), groupSize)
 		end
 	end)
+end
+
+-- A bought revive: someone caught tonight gets back up where the night started, if the
+-- night's still going.
+function RoundManager.revive(player: Player): boolean
+	if not round or status[player] ~= "caught" or GameState:GetAttribute("Phase") ~= "Playing" then
+		return false
+	end
+	status[player] = nil
+	votes[player] = nil
+	Remotes.Retry:FireClient(player, "close")
+	task.spawn(spawnPlayer, player)
+	return true
 end
 
 -- kind: "escaped" | "survived" | "collected" | "final"
@@ -456,8 +470,23 @@ local function playNight(players: { Player }, nightIndex: number, back: (players
 		table.clear(votes)
 		startRound(Nights.get(nightIndex), present(group))
 		repeat
-			task.wait(0.5)
-		until #alivePlayers() == 0
+			repeat
+				task.wait(0.5)
+			until #alivePlayers() == 0
+			-- the last of you was just caught: give them a moment to buy a revive
+			local revived = false
+			local won = false
+			for _, s in status do
+				won = won or s == "escaped"
+			end
+			if Shop.canRevive() and not won then
+				local deadline = os.clock() + Config.Shop.ReviveWait
+				repeat
+					task.wait(0.25)
+					revived = #alivePlayers() > 0
+				until revived or os.clock() > deadline
+			end
+		until not revived
 		if endRound() then
 			tell(group, "close")
 			break
@@ -641,6 +670,12 @@ local function runNightServer()
 end
 
 function RoundManager.run()
+	Shop.start({
+		revive = RoundManager.revive,
+		isAlive = function(player: Player): boolean
+			return status[player] == "alive"
+		end,
+	})
 	Players.CharacterAutoLoads = false
 	WorldBuilder.setupCollisionGroups()
 

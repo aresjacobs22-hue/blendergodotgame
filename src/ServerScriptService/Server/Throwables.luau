@@ -23,6 +23,11 @@ export type Hooks = {
 export type Throwables = { destroy: () -> () }
 
 Throwables.MAX_CARRY = 3
+
+-- How many you can carry (more with the Pockets pass).
+function Throwables.maxCarry(player: Player): number
+	return if player:GetAttribute("PassPockets") == true then 5 else Throwables.MAX_CARRY
+end
 Throwables.RANGE = 55
 Throwables.NOISE = 120
 
@@ -92,7 +97,7 @@ function Throwables.new(layout: Maze.Layout, world: WorldBuilder.World, hooks: H
 				end
 				local have = player:GetAttribute("Bottles")
 				local n = if typeof(have) == "number" then have else 0
-				if n >= Throwables.MAX_CARRY then
+				if n >= Throwables.maxCarry(player) then
 					Remotes.Notify:FireClient(player, "You can't carry any more.")
 					return
 				end

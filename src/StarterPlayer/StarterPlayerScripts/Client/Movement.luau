@@ -50,7 +50,10 @@ local function update(dt: number)
 	local wantsSprint = sprintHeld and moving and not ClientState.crouching and not exhausted
 
 	if wantsSprint then
-		stamina = math.max(0, stamina - P.StaminaDrain * dt)
+		-- the Lungs pass makes it last longer; Adrenaline (bought) stops it running out
+		local rush = player:GetAttribute("Adrenaline")
+		local drain = if typeof(rush) == "number" and workspace:GetServerTimeNow() < rush then 0 elseif player:GetAttribute("PassLungs") == true then 0.6 else 1
+		stamina = math.max(0, stamina - P.StaminaDrain * drain * dt)
 		lastSprint = now
 		if stamina <= 0 then
 			exhausted = true

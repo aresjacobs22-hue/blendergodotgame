@@ -23,6 +23,7 @@ local Menu = require(script.Parent.Menu)
 local MonsterAnimator = require(script.Parent.MonsterAnimator)
 local Movement = require(script.Parent.Movement)
 local Prompts = require(script.Parent.Prompts)
+local Shop = require(script.Parent.Shop)
 
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local player = Players.LocalPlayer
@@ -53,6 +54,7 @@ Keypad.init()
 Events.init()
 Prompts.init()
 Menu.init()
+Shop.init()
 
 -- The game never puts words on screen. What the server narrates (who found a key,
 -- what the hour is) only goes to the developer console (F9).
@@ -105,10 +107,10 @@ player.CharacterRemoving:Connect(function()
 end)
 
 -- The cursor only shows when there's something to click: the choice at a lobby door,
--- TRY AGAIN / BACK TO LOBBY, and the keypad. Otherwise Roblox would leave its arrow in
+-- TRY AGAIN / BACK TO LOBBY, the keypad and the shop. Otherwise Roblox would leave its arrow in
 -- the middle of the screen in first person.
 RunService.RenderStepped:Connect(function()
-	local wanted = ClientState.choosing or ClientState.keypadOpen
+	local wanted = ClientState.choosing or ClientState.keypadOpen or ClientState.shopOpen
 	if UserInputService.MouseIconEnabled ~= wanted then
 		UserInputService.MouseIconEnabled = wanted
 	end

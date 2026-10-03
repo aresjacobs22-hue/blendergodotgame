@@ -170,7 +170,7 @@ function Hud.init()
 
 	-- bottles you're carrying (above the battery): one small mark each
 	bottles = new("Frame", { Name = "Bottles", AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -30, 1, -48), Size = UDim2.fromOffset(80, 14), BackgroundTransparency = 1, ZIndex = 5 }, gui)
-	for i = 1, 3 do
+	for i = 1, 5 do -- 3, or 5 with the Pockets pass
 		table.insert(bottleMarks, new("Frame", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -(i - 1) * 10, 0, 0), Size = UDim2.fromOffset(4, 14), BackgroundColor3 = TEXT, BackgroundTransparency = 0.45, BorderSizePixel = 0, Visible = false, ZIndex = 5 }, bottles))
 	end
 
